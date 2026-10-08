@@ -6,11 +6,16 @@ package com.muczynski.library.service;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.Favorite;
 import com.muczynski.library.domain.Photo;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorNameNormalizationResultDto;
 import com.muczynski.library.dto.NameNormalizationResultDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.FavoriteRepository;
+import com.muczynski.library.repository.PhotoRepository;
+import com.muczynski.library.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,6 +43,15 @@ class CatalogNameNormalizationServiceTest {
 
     @Autowired
     private AuthorRepository authorRepository;
+
+    @Autowired
+    private PhotoRepository photoRepository;
+
+    @Autowired
+    private FavoriteRepository favoriteRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     void rewritesNonconformingTitlesAndLeavesConformingOnesAlone() {
@@ -168,31 +182,89 @@ class CatalogNameNormalizationServiceTest {
     }
 
     @Test
-    void skipsAnAuthorWhoseCanonicalNameIsAlreadyUsed() {
+    void mergesIntoTheAuthorWhoAlreadyHasTheCanonicalName() {
         String token = token();
-        Author canonical = authorRepository.save(author(token + " Simpson"));
-        Author inverted = authorRepository.save(author("Simpson, " + token));
+        Author canonical = authorRepository.saveAndFlush(author("St. " + token));
+        canonical.setBiographicalEssay("Short");
+        canonical.setReligiousAffiliation("Catholic priest and bishop");
+        Photo keptPhoto = photoRepository.saveAndFlush(portrait(canonical, 1, new byte[] {1}));
+        canonical.getPhotos().add(keptPhoto);
+        authorRepository.saveAndFlush(canonical);
+        Book keptBook = bookRepository.save(book("Kept " + token, canonical));
 
-        List<AuthorNameNormalizationResultDto> results = service.normalizeAuthorNames(List.of(inverted.getId()));
+        Author editor = authorRepository.saveAndFlush(author("St. " + token + " (ed. Frederick M. Jones, C.Ss.R.)"));
+        editor.setBiographicalEssay("A longer biographical essay about the saint");
+        editor.setNationality("Italian");
+        editor.setReligiousAffiliation("Priest");
+        editor.setAlternateNames(new ArrayList<>(List.of("Alfonso " + token)));
+        Photo movedPhoto = photoRepository.saveAndFlush(portrait(editor, 1, new byte[] {2, 3}));
+        editor.getPhotos().add(movedPhoto);
+        authorRepository.saveAndFlush(editor);
+        Book movedBook = bookRepository.save(book("Moved " + token, editor));
 
-        assertFalse(results.get(0).isSuccess());
-        assertEquals("Simpson, " + token, authorRepository.findById(inverted.getId()).orElseThrow().getName());
-        assertEquals(token + " Simpson", authorRepository.findById(canonical.getId()).orElseThrow().getName());
+        User user = new User();
+        user.setUsername("merge-" + token);
+        user.setPassword("x");
+        user.setUserIdentifier(UUID.randomUUID().toString());
+        userRepository.save(user);
+        Favorite shelf = favorite(user, canonical, "Shelf");
+        Favorite duplicate = favorite(user, editor, "Shelf");
+        Favorite reading = favorite(user, editor, "Read");
+
+        List<AuthorNameNormalizationResultDto> results = service.normalizeAuthorNames(List.of(editor.getId()));
+
+        assertTrue(results.get(0).isSuccess());
+        assertTrue(results.get(0).isChanged());
+        assertEquals("St. " + token + " (ed. Frederick M. Jones, C.Ss.R.)", results.get(0).getBefore());
+        assertEquals("St. " + token, results.get(0).getAfter());
+        assertEquals(canonical.getId(), results.get(0).getMergedIntoAuthorId());
+        assertFalse(authorRepository.existsById(editor.getId()));
+
+        Author reloaded = authorRepository.findById(canonical.getId()).orElseThrow();
+        assertEquals("St. " + token, reloaded.getName());
+        assertEquals("A longer biographical essay about the saint", reloaded.getBiographicalEssay());
+        assertEquals("Catholic priest and bishop", reloaded.getReligiousAffiliation());
+        assertEquals("Italian", reloaded.getNationality());
+        assertEquals(List.of("Alfonso " + token), reloaded.getAlternateNames());
+        assertEquals(canonical.getId(), bookRepository.findById(keptBook.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(canonical.getId(), bookRepository.findById(movedBook.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(2, photoRepository.findByAuthorId(canonical.getId()).size());
+        assertEquals(canonical.getId(), photoRepository.findById(keptPhoto.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(canonical.getId(), photoRepository.findById(movedPhoto.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(2, photoRepository.findById(movedPhoto.getId()).orElseThrow().getPhotoOrder());
+        assertEquals(canonical.getId(), favoriteRepository.findById(shelf.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(canonical.getId(), favoriteRepository.findById(reading.getId()).orElseThrow().getAuthor().getId());
+        assertFalse(favoriteRepository.existsById(duplicate.getId()));
     }
 
     @Test
-    void renamesOnlyTheLowestIdWhenTwoAuthorsCanonicalizeToTheSameName() {
+    void mergesTheHigherIdWhenTwoAuthorsCanonicalizeToTheSameName() {
         String token = token();
-        Author first = authorRepository.save(author("Simpson, " + token));
-        Author second = authorRepository.save(author("Simpson, S. (" + token + ")"));
+        Author first = authorRepository.saveAndFlush(author("Simpson, " + token));
+        first.setBiographicalEssay("Short");
+        authorRepository.saveAndFlush(first);
+        Author second = authorRepository.saveAndFlush(author("Simpson, S. (" + token + ")"));
+        second.setBiographicalEssay("A longer note on this author");
+        Photo photo = photoRepository.saveAndFlush(portrait(second, 1, new byte[] {4}));
+        second.getPhotos().add(photo);
+        authorRepository.saveAndFlush(second);
+        Book firstBook = bookRepository.save(book("First " + token, first));
+        Book secondBook = bookRepository.save(book("Second " + token, second));
 
         List<AuthorNameNormalizationResultDto> results = service.normalizeAuthorNames(List.of(second.getId(), first.getId()));
 
         assertEquals(second.getId(), results.get(0).getAuthorId());
-        assertFalse(results.get(0).isSuccess());
+        assertTrue(results.get(0).isSuccess());
+        assertEquals(first.getId(), results.get(0).getMergedIntoAuthorId());
         assertTrue(results.get(1).isChanged());
-        assertEquals(token + " Simpson", authorRepository.findById(first.getId()).orElseThrow().getName());
-        assertEquals("Simpson, S. (" + token + ")", authorRepository.findById(second.getId()).orElseThrow().getName());
+        assertEquals(token + " Simpson", results.get(1).getAfter());
+        assertFalse(authorRepository.existsById(second.getId()));
+        Author kept = authorRepository.findById(first.getId()).orElseThrow();
+        assertEquals(token + " Simpson", kept.getName());
+        assertEquals("A longer note on this author", kept.getBiographicalEssay());
+        assertEquals(first.getId(), bookRepository.findById(firstBook.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(first.getId(), bookRepository.findById(secondBook.getId()).orElseThrow().getAuthor().getId());
+        assertEquals(first.getId(), photoRepository.findById(photo.getId()).orElseThrow().getAuthor().getId());
     }
 
     @Test
@@ -225,5 +297,22 @@ class CatalogNameNormalizationServiceTest {
         book.setAuthor(author);
         book.setStatus(BookStatus.ACTIVE);
         return book;
+    }
+
+    private static Photo portrait(Author author, int order, byte[] image) {
+        Photo photo = new Photo();
+        photo.setAuthor(author);
+        photo.setPhotoOrder(order);
+        photo.setImage(image);
+        photo.setContentType("image/jpeg");
+        return photo;
+    }
+
+    private Favorite favorite(User user, Author author, String listName) {
+        Favorite favorite = new Favorite();
+        favorite.setUser(user);
+        favorite.setAuthor(author);
+        favorite.setListName(listName);
+        return favoriteRepository.save(favorite);
     }
 }

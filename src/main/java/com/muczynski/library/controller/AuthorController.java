@@ -479,8 +479,8 @@ public class AuthorController {
 
     /**
      * Rewrites selected authors into canonical given-name-then-family-name form.
-     * The author row is renamed in place. A name already used by another author
-     * is reported and skipped.
+     * The author row is renamed in place. When that name is already used, the
+     * selected author is merged into the existing one and deleted.
      */
     @PostMapping("/normalize-names-bulk")
     @PreAuthorize("hasAuthority('LIBRARIAN')")

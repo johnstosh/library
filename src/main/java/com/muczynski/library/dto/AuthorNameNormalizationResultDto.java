@@ -26,5 +26,10 @@ public class AuthorNameNormalizationResultDto {
     private boolean changed;
     private boolean success;
     private String errorMessage;
+    /**
+     * Set when this author was merged into another row and then deleted.
+     * The client should open that author, not this id.
+     */
+    private Long mergedIntoAuthorId;
     private AuthorDto updatedAuthor;
 }

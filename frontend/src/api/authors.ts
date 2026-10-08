@@ -317,12 +317,17 @@ export function useNormalizeAuthorNamesBulk() {
       api.post<AuthorNameNormalizationResultDto[]>('/authors/normalize-names-bulk', ids),
     onSuccess: (results) => {
       for (const result of results) {
+        if (result.mergedIntoAuthorId) {
+          queryClient.removeQueries({ queryKey: queryKeys.authors.detail(result.authorId) })
+          continue
+        }
         if (result.updatedAuthor) {
           queryClient.setQueryData(queryKeys.authors.detail(result.authorId), result.updatedAuthor)
         }
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }

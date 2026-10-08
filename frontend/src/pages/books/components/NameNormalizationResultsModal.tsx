@@ -29,8 +29,23 @@ export function NameNormalizationResultsModal({
   const changedCount = results.filter((result) => result.changed).length
   const failedCount = results.filter((result) => !result.success).length
   const unchangedCount = results.length - changedCount - failedCount
+  const mergedCount = results.filter(
+    (result) => isAuthorResult(result) && result.mergedIntoAuthorId != null
+  ).length
+  const rewrittenCount = changedCount - mergedCount
   const singular = subject
   const plural = subject === 'author' ? 'authors' : 'books'
+  const summary = [
+    rewrittenCount > 0 ? `${rewrittenCount} ${rewrittenCount === 1 ? singular : plural} rewritten` : null,
+    mergedCount > 0
+      ? `${mergedCount} ${mergedCount === 1 ? singular : plural} merged into an existing author`
+      : null,
+    rewrittenCount === 0 && mergedCount === 0 ? `0 ${plural} rewritten` : null,
+    unchangedCount > 0 ? `${unchangedCount} already conformed` : null,
+    failedCount > 0 ? `${failedCount} skipped or failed` : null,
+  ]
+    .filter((part) => part != null)
+    .join(', ')
 
   return (
     <Modal
@@ -49,9 +64,7 @@ export function NameNormalizationResultsModal({
       <div className="space-y-4" data-test="name-normalization-results">
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
           <p className="text-primary-800 font-medium">
-            {changedCount} {changedCount === 1 ? singular : plural} rewritten
-            {unchangedCount > 0 && `, ${unchangedCount} already conformed`}
-            {failedCount > 0 && `, ${failedCount} skipped or failed`}
+            {summary}
           </p>
         </div>
 
@@ -59,7 +72,8 @@ export function NameNormalizationResultsModal({
           {results.map((result) => {
             const id = isAuthorResult(result) ? result.authorId : result.bookId
             const label = isAuthorResult(result) ? result.name : result.title
-            const href = isAuthorResult(result) ? `/authors/${id}` : `/books/${id}`
+            const mergedInto = isAuthorResult(result) ? result.mergedIntoAuthorId : undefined
+            const href = isAuthorResult(result) ? `/authors/${mergedInto ?? id}` : `/books/${id}`
             const fallback = isAuthorResult(result) ? `Author #${id}` : `Book #${id}`
             return (
             <div
@@ -79,11 +93,18 @@ export function NameNormalizationResultsModal({
                 </EntityLink>
               </p>
               {result.success && result.changed ? (
-                <p className="text-sm text-green-800 mt-1" data-test="name-normalization-before-after">
-                  <span className="line-through">{result.before || '(blank)'}</span>
-                  {' → '}
-                  <span className="font-medium">{result.after}</span>
-                </p>
+                <>
+                  <p className="text-sm text-green-800 mt-1" data-test="name-normalization-before-after">
+                    <span className="line-through">{result.before || '(blank)'}</span>
+                    {' → '}
+                    <span className="font-medium">{result.after}</span>
+                  </p>
+                  {mergedInto != null && (
+                    <p className="text-sm text-green-800 mt-1" data-test="name-normalization-merged">
+                      Merged into the existing author, and this duplicate was removed.
+                    </p>
+                  )}
+                </>
               ) : result.success ? (
                 <p className="text-sm text-gray-600 mt-1">
                   {result.before ? 'Already conforms' : 'Nothing to rewrite'}

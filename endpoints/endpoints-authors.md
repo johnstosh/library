@@ -69,18 +69,20 @@ Rewrites selected authors into canonical given-name-then-family-name form.
 
 **Response:** Array of `AuthorNameNormalizationResultDto`
 - `authorId`, `name` (name after the operation), `before`, `after`
-- `changed` — true when the stored name changed
-- `success` — false when the author is missing or the canonical name is already used
-- `errorMessage` — `Author not found`, or `Name "..." is already used by another author`
-- `updatedAuthor` — set only when the name changed
+- `changed` — true when the stored name changed or this author was merged away
+- `success` — false when the author is missing
+- `errorMessage` — `Author not found`
+- `mergedIntoAuthorId` — set when this author was merged into that row and deleted
+- `updatedAuthor` — set only when this same row was renamed
 
 **Behavior:**
 - Comma inversion (`Simpson, Richard` → `Richard Simpson`), birth and death years, and initials with a parenthetical expansion (`Johnson, B. J.-P. (Barney John-Paul)` → `Barney John Paul Johnson`) are cleaned. Initials without an expansion stay initials. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered.
 - Editor and translator credits are removed (`Gasquet (ed.)`, `Bagshawe (tr.)`, `translated by …`, `, editor`). The credit is not saved. A fuller name in parentheses (`Almedingen, E. M. (Edith Martha)`) and an edition note (`(Benziger ed.)`, `(English edition)`) stay.
 - A suffix stays after the name and loses its comma. The letters and periods stay as stored. A no-space run of 2–6 capital letters is a suffix (`SJ`, `S.J.`, `OCD`, `O.S.B.`, `D.D.`), as are the mixed forms `CSSp` and `O.Praem.` Spaced initials in the given-name slot (`B. J.`, `C. L`, `T. E`) stay given names and are turned around. `Inc` and `LLC` stay at the end and lose the comma (`Japan Travel Bureau, Inc` becomes `Japan Travel Bureau Inc`, `Acme, LLC` becomes `Acme LLC`).
 - The managed author row is renamed in place, so portraits stay attached. The old form is not stored as an alternate name.
-- When two selected authors canonicalize to a name that is already used, or to the same new name, the lowest id is renamed and the other is skipped.
-- Authors that already conform are left unchanged.
+- When the canonical name already belongs to another author, that author is kept. Every book, portrait, and favorite moves onto it, and the duplicate author is deleted. A blank field is filled from the other row. When both rows have different text, the longer text is kept. A missing birth or death date is filled in. A date that both rows already have stays with the kept author. The kept author's name is the canonical name, even when the other name is longer.
+- When two selected authors canonicalize to the same new name, the lowest id is kept, the other is merged into it, and the kept row is renamed.
+- Authors that already conform are left unchanged. The Books page tool still relinks only the selected books and does not delete an author.
 
 **Use Case:** Authors page filter "Not canonical" and bulk-action carousel "Canonical Author Names"
 

@@ -13,6 +13,7 @@ import { AiIcon, GrokipediaIcon } from '@/components/ui/Icons'
 import type { AuthorEnrichmentResultDto, AuthorNameNormalizationResultDto, BulkDeleteResultDto } from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 import { NameNormalizationResultsModal } from '@/pages/books/components/NameNormalizationResultsModal'
+import { useUiStore } from '@/stores/uiStore'
 import { PiUser } from 'react-icons/pi'
 
 interface AuthorBulkActionsToolbarProps {
@@ -37,6 +38,7 @@ export function AuthorBulkActionsToolbar({
   isLoading = false,
 }: AuthorBulkActionsToolbarProps) {
   const toast = useToast()
+  const setSelectedIds = useUiStore((state) => state.setSelectedIds)
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -120,6 +122,16 @@ export function AuthorBulkActionsToolbar({
   const handleNormalizeNames = async () => {
     try {
       const results = await normalizeNames.mutateAsync(Array.from(selectedIds))
+      const removedIds = results
+        .filter((result) => result.mergedIntoAuthorId != null)
+        .map((result) => result.authorId)
+      if (removedIds.length > 0) {
+        const next = new Set(selectedIds)
+        for (const id of removedIds) {
+          next.delete(id)
+        }
+        setSelectedIds('authorsTable', next)
+      }
       setNameNormalizationResults(results)
       setShowNameNormalization(true)
     } catch (error) {

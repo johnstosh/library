@@ -36,9 +36,10 @@ import java.util.Set;
  * the existing canonical author, or to one new author created for that name.
  * The managed author is edited directly so its photos stay put.
  * <p>
- * The Authors page renames selected author rows in place. A canonical name
- * that is already used is reported and skipped. The old form is not stored
- * as an alternate name.
+ * The Authors page renames selected author rows in place. When the canonical
+ * name already belongs to another author, that author is kept and the selected
+ * author is merged into it and deleted. The old form is not stored as an
+ * alternate name.
  */
 @Service
 public class CatalogNameNormalizationService {
@@ -48,6 +49,9 @@ public class CatalogNameNormalizationService {
 
     @Autowired
     private AuthorRepository authorRepository;
+
+    @Autowired
+    private AuthorMerger authorMerger;
 
     @Autowired
     private BookMapper bookMapper;
@@ -191,8 +195,9 @@ public class CatalogNameNormalizationService {
 
     /**
      * Rewrites selected author rows into canonical form. The managed author is
-     * renamed in place so its photos stay. A name already used by another
-     * author is left unchanged and reported.
+     * renamed in place so its photos stay. When the canonical name already
+     * belongs to another author, that author is kept and this one is merged
+     * into it and deleted.
      */
     @Transactional
     public List<AuthorNameNormalizationResultDto> normalizeAuthorNames(List<Long> authorIds) {
@@ -226,16 +231,37 @@ public class CatalogNameNormalizationService {
         candidates.sort(Comparator.comparing(Author::getId));
 
         Set<Long> renamed = new HashSet<>();
-        Map<Long, String> blocked = new HashMap<>();
+        Set<Long> mergedAway = new HashSet<>();
+        Map<Long, Long> mergedInto = new HashMap<>();
+        Map<String, List<Author>> groups = new LinkedHashMap<>();
         for (Author author : candidates) {
-            String desired = desiredById.get(author.getId());
-            if (authorNameTaken(desired, author.getId())) {
-                blocked.put(author.getId(), "Name \"" + desired + "\" is already used by another author");
+            groups.computeIfAbsent(desiredById.get(author.getId()), key -> new ArrayList<>()).add(author);
+        }
+        for (Map.Entry<String, List<Author>> entry : groups.entrySet()) {
+            String desired = entry.getKey();
+            List<Author> sources = new ArrayList<>(entry.getValue());
+            Author occupant = authorRepository.findAllByNameOrderByIdAsc(desired).stream().findFirst().orElse(null);
+            Author keeper;
+            if (occupant != null) {
+                keeper = occupant;
+            } else {
+                keeper = sources.remove(0);
+                if (!desired.equals(keeper.getName())) {
+                    keeper.setName(desired);
+                    renamed.add(keeper.getId());
+                }
+            }
+            if (sources.isEmpty()) {
+                if (renamed.contains(keeper.getId())) {
+                    authorRepository.saveAndFlush(keeper);
+                }
                 continue;
             }
-            author.setName(desired);
-            authorRepository.saveAndFlush(author);
-            renamed.add(author.getId());
+            for (Author source : sources) {
+                authorMerger.merge(keeper, source);
+                mergedAway.add(source.getId());
+                mergedInto.put(source.getId(), keeper.getId());
+            }
         }
 
         List<AuthorNameNormalizationResultDto> results = new ArrayList<>();
@@ -252,7 +278,17 @@ public class CatalogNameNormalizationService {
             }
             String before = originalNames.get(id);
             String after = desiredById.getOrDefault(id, before);
-            if (renamed.contains(id)) {
+            if (mergedAway.contains(id)) {
+                results.add(AuthorNameNormalizationResultDto.builder()
+                        .authorId(id)
+                        .name(after)
+                        .before(before)
+                        .after(after)
+                        .changed(true)
+                        .success(true)
+                        .mergedIntoAuthorId(mergedInto.get(id))
+                        .build());
+            } else if (renamed.contains(id)) {
                 results.add(AuthorNameNormalizationResultDto.builder()
                         .authorId(id)
                         .name(author.getName())
@@ -261,16 +297,6 @@ public class CatalogNameNormalizationService {
                         .changed(true)
                         .success(true)
                         .updatedAuthor(authorMapper.toDto(author))
-                        .build());
-            } else if (blocked.containsKey(id)) {
-                results.add(AuthorNameNormalizationResultDto.builder()
-                        .authorId(id)
-                        .name(before)
-                        .before(before)
-                        .after(after)
-                        .changed(false)
-                        .success(false)
-                        .errorMessage(blocked.get(id))
                         .build());
             } else {
                 results.add(AuthorNameNormalizationResultDto.builder()
@@ -284,18 +310,6 @@ public class CatalogNameNormalizationService {
             }
         }
         return results;
-    }
-
-    private boolean authorNameTaken(String name, Long exceptId) {
-        if (name == null || name.isBlank()) {
-            return true;
-        }
-        for (Author occupant : authorRepository.findAllByNameOrderByIdAsc(name)) {
-            if (occupant.getId() != null && !occupant.getId().equals(exceptId)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private Map<Long, Book> loadBooks(List<Long> ids) {

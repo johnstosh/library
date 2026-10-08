@@ -284,7 +284,9 @@ export interface AuthorNameNormalizationResultDto {
   changed: boolean
   success: boolean
   errorMessage?: string
-  /** Set when this author changed, so the client can refresh that row. */
+  /** Set when this author was merged into another row and deleted. */
+  mergedIntoAuthorId?: number
+  /** Set when this same row was renamed, so the client can refresh it. */
   updatedAuthor?: AuthorDto
 }
 
