@@ -139,6 +139,40 @@ describe('canonical author names', () => {
     expect(toCanonicalAuthorName('Bernard, of Clairvaux, Saint')).toBe('Bernard, of Clairvaux, Saint')
     expect(toCanonicalAuthorName('Puente, Luis de la')).toBe('Luis de la Puente')
     expect(toCanonicalAuthorName('Venerable Louis of Granada, OP')).toBe('Venerable Louis of Granada OP')
+    expect(toCanonicalAuthorName('Christoph Cardinal Schönborn (editor)')).toBe('Christoph Cardinal Schönborn')
+    expect(toCanonicalAuthorName('St. Francis de Sales (ed. John Kirvan)')).toBe('St. Francis de Sales')
+    expect(toCanonicalAuthorName('Francis Aidan Gasquet (ed.)')).toBe('Francis Aidan Gasquet')
+    expect(toCanonicalAuthorName('Edward G. Bagshawe (tr.)')).toBe('Edward G. Bagshawe')
+    expect(toCanonicalAuthorName('Louis Lallemant, SJ (ed. Rigoleuc / Champion; Faber English)')).toBe(
+      'Louis Lallemant SJ',
+    )
+    expect(toCanonicalAuthorName('Félix Martin, S.J.; translated by John Gilmary Shea')).toBe('Félix Martin S.J.')
+    expect(toCanonicalAuthorName('Dinnis, Enid Maud, editor')).toBe('Enid Maud Dinnis')
+    expect(toCanonicalAuthorName('John L. Stoddard, editor')).toBe('John L. Stoddard')
+    expect(toCanonicalAuthorName('Bourdaloue & Massillon. Edited by D. O\'Mahony Bossuet')).toBe(
+      'Bourdaloue & Massillon',
+    )
+    expect(toCanonicalAuthorName('Desert Fathers (Verba Seniorum; tr. Richard J. Goodrich)')).toBe(
+      'Desert Fathers (Verba Seniorum)',
+    )
+    expect(toCanonicalAuthorName('James Socias (editor); Midwest Theological Forum')).toBe(
+      'James Socias; Midwest Theological Forum',
+    )
+    expect(toCanonicalAuthorName('Pierre de Bérulle et al. (ed. William M. Thompson)')).toBe(
+      'Pierre de Bérulle et al.',
+    )
+    expect(toCanonicalAuthorName('Almedingen, E. M. (Edith Martha)')).toBe('Edith Martha Almedingen')
+    expect(toCanonicalAuthorName('St. Edith Stein (Teresa Benedicta of the Cross)')).toBe(
+      'St. Edith Stein (Teresa Benedicta of the Cross)',
+    )
+    expect(toCanonicalAuthorName('Catholic Church (Benziger ed.)')).toBe('Catholic Church (Benziger ed.)')
+    expect(toCanonicalAuthorName("Reader's Digest Editors")).toBe("Reader's Digest Editors")
+    expect(toCanonicalAuthorName('Editors of Fine Homebuilding')).toBe('Editors of Fine Homebuilding')
+    expect(toCanonicalAuthorName('Libreria Editrice Vaticana (English edition)')).toBe(
+      'Libreria Editrice Vaticana (English edition)',
+    )
+    expect(authorNeedsCanonicalName('Francis Aidan Gasquet (ed.)')).toBe(true)
+    expect(authorNeedsCanonicalName('Francis Aidan Gasquet')).toBe(false)
   })
 })
 

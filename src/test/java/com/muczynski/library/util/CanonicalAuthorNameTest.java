@@ -63,4 +63,46 @@ class CanonicalAuthorNameTest {
         assertEquals("Venerable Louis of Granada OP",
                 CanonicalAuthorName.canonical("Venerable Louis of Granada, OP"));
     }
+
+    @Test
+    void removesEditorAndTranslatorCredits() {
+        assertEquals("Christoph Cardinal Schönborn",
+                CanonicalAuthorName.canonical("Christoph Cardinal Schönborn (editor)"));
+        assertEquals("St. Francis de Sales",
+                CanonicalAuthorName.canonical("St. Francis de Sales (ed. John Kirvan)"));
+        assertEquals("Francis Aidan Gasquet",
+                CanonicalAuthorName.canonical("Francis Aidan Gasquet (ed.)"));
+        assertEquals("Edward G. Bagshawe",
+                CanonicalAuthorName.canonical("Edward G. Bagshawe (tr.)"));
+        assertEquals("Louis Lallemant SJ",
+                CanonicalAuthorName.canonical("Louis Lallemant, SJ (ed. Rigoleuc / Champion; Faber English)"));
+        assertEquals("Félix Martin S.J.",
+                CanonicalAuthorName.canonical("Félix Martin, S.J.; translated by John Gilmary Shea"));
+        assertEquals("Enid Maud Dinnis",
+                CanonicalAuthorName.canonical("Dinnis, Enid Maud, editor"));
+        assertEquals("John L. Stoddard",
+                CanonicalAuthorName.canonical("John L. Stoddard, editor"));
+        assertEquals("Bourdaloue & Massillon",
+                CanonicalAuthorName.canonical("Bourdaloue & Massillon. Edited by D. O'Mahony Bossuet"));
+        assertEquals("Desert Fathers (Verba Seniorum)",
+                CanonicalAuthorName.canonical("Desert Fathers (Verba Seniorum; tr. Richard J. Goodrich)"));
+        assertEquals("James Socias; Midwest Theological Forum",
+                CanonicalAuthorName.canonical("James Socias (editor); Midwest Theological Forum"));
+        assertEquals("Pierre de Bérulle et al.",
+                CanonicalAuthorName.canonical("Pierre de Bérulle et al. (ed. William M. Thompson)"));
+        assertEquals("Edith Martha Almedingen",
+                CanonicalAuthorName.canonical("Almedingen, E. M. (Edith Martha)"));
+        assertEquals("St. Edith Stein (Teresa Benedicta of the Cross)",
+                CanonicalAuthorName.canonical("St. Edith Stein (Teresa Benedicta of the Cross)"));
+        assertEquals("Catholic Church (Benziger ed.)",
+                CanonicalAuthorName.canonical("Catholic Church (Benziger ed.)"));
+        assertEquals("Reader's Digest Editors",
+                CanonicalAuthorName.canonical("Reader's Digest Editors"));
+        assertEquals("Editors of Fine Homebuilding",
+                CanonicalAuthorName.canonical("Editors of Fine Homebuilding"));
+        assertEquals("Libreria Editrice Vaticana (English edition)",
+                CanonicalAuthorName.canonical("Libreria Editrice Vaticana (English edition)"));
+        assertTrue(CanonicalAuthorName.needsWork("Francis Aidan Gasquet (ed.)"));
+        assertFalse(CanonicalAuthorName.needsWork("Francis Aidan Gasquet"));
+    }
 }

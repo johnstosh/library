@@ -12,7 +12,7 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 - `zeroBooks` — no books
 - `withoutPhotos` / `withPhotos` — author photos (photos not attached to a book)
 - `withoutBirthDate` / `withoutDeathDate`
-- `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). A comma inside a phrase is not an inversion. Blank names are not flagged.
+- `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, or an editor or translator credit). A comma inside a phrase is not an inversion. Blank names are not flagged.
 - Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
 
@@ -76,6 +76,7 @@ Rewrites selected authors into canonical given-name-then-family-name form.
 
 **Behavior:**
 - Comma inversion (`Simpson, Richard` → `Richard Simpson`), birth and death years, and initials with a parenthetical expansion (`Johnson, B. J.-P. (Barney John-Paul)` → `Barney John Paul Johnson`) are cleaned. Initials without an expansion stay initials. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered.
+- Editor and translator credits are removed (`Gasquet (ed.)`, `Bagshawe (tr.)`, `translated by …`, `, editor`). The credit is not saved. A fuller name in parentheses (`Almedingen, E. M. (Edith Martha)`) and an edition note (`(Benziger ed.)`, `(English edition)`) stay.
 - The managed author row is renamed in place, so portraits stay attached. The old form is not stored as an alternate name.
 - When two selected authors canonicalize to a name that is already used, or to the same new name, the lowest id is renamed and the other is skipped.
 - Authors that already conform are left unchanged.

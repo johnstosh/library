@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
  * form drops parentheses, dashes, and periods. An initial with no
  * parenthetical expansion is left as written. A comma inside a phrase
  * ({@code Sisters of Charity of Our Lady, Mother of the Church},
- * {@code Ignatius, of Loyola}) is left in place.
+ * {@code Ignatius, of Loyola}) is left in place. Editor and translator
+ * credits are removed and are not stored anywhere else.
  * <p>
  * The TypeScript twin is {@code frontend/src/utils/canonicalAuthorName.ts}.
  * This is not a place for pen names or Latin forms; those are alternate names.
@@ -53,6 +54,22 @@ public final class CanonicalAuthorName {
     private static final Pattern ROMAN = Pattern.compile(
             "(?i)^(?=[ivxlcdm]+$)m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$");
 
+    /**
+     * An editor or translator role. {@code ed} does not match {@code Edith}
+     * or {@code edition}; the two-letter forms require the period.
+     */
+    private static final String CREDIT_ROLE =
+            "edited\\s+by|editors|editor|translated\\s+by|translated|translators|translator|transl\\.|trans\\.|tr\\.|eds\\.|eds|ed\\.|ed";
+
+    private static final Pattern CREDIT_PAREN = Pattern.compile(
+            "\\s*\\(\\s*(?:" + CREDIT_ROLE + ")(?=[\\s).;])[^)]*\\)",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CREDIT_CLAUSE = Pattern.compile(
+            ";\\s*(?:" + CREDIT_ROLE + ")(?=[\\s).;])[^);]*",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CREDIT_TRAIL = Pattern.compile(
+            "(?i)(?:\\s*[.;])?\\s+(?:edited|translated)\\s+by\\b.*$|,\\s*(?:editors?|translators?|trans\\.?|transl\\.?|tr\\.)\\s*$");
+
     private CanonicalAuthorName() {
     }
 
@@ -81,8 +98,12 @@ public final class CanonicalAuthorName {
         if (yearStripped.isBlank()) {
             return raw;
         }
+        String prepared = stripCredits(yearStripped);
+        if (prepared.isBlank()) {
+            return raw;
+        }
 
-        Matcher paren = PAREN.matcher(yearStripped);
+        Matcher paren = PAREN.matcher(prepared);
         String expansion = null;
         if (paren.find()) {
             String inside = paren.group(1).trim();
@@ -90,7 +111,7 @@ public final class CanonicalAuthorName {
                 expansion = inside;
             }
         }
-        String outside = PAREN.matcher(yearStripped).replaceAll(" ");
+        String outside = PAREN.matcher(prepared).replaceAll(" ");
         outside = outside.trim().replaceAll("\\s+", " ");
         outside = outside.replaceAll("\\s+,", ",").replaceAll(",\\s*", ", ");
         outside = outside.replaceAll("\\s+", " ").trim();
@@ -102,12 +123,40 @@ public final class CanonicalAuthorName {
         if (expansion != null && containsInitial(outside)) {
             result = finishExpanded(expansion, outside);
         } else {
-            result = invertCommas(yearStripped);
+            result = invertCommas(prepared);
         }
         if (result == null || result.isBlank()) {
             return raw;
         }
         return result;
+    }
+
+    /**
+     * Drops editor and translator credits. A parenthetical that only names
+     * the person more fully, and an edition note such as {@code (Benziger ed.)},
+     * stay. The removed credit is not saved.
+     */
+    private static String stripCredits(String value) {
+        String current = value;
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            String next = CREDIT_PAREN.matcher(current).replaceAll("");
+            next = CREDIT_CLAUSE.matcher(next).replaceAll("");
+            next = CREDIT_TRAIL.matcher(next).replaceAll("");
+            next = next.replaceAll("\\(\\s*\\)", "");
+            next = next.replaceAll("\\s+", " ").trim();
+            next = next.replaceAll("\\s+([,;])", "$1");
+            next = next.replaceAll("([,;])(?!\\s)", "$1 ");
+            while (next.endsWith(",") || next.endsWith(";")) {
+                next = next.substring(0, next.length() - 1).trim();
+            }
+            if (!next.equals(current)) {
+                current = next;
+                changed = true;
+            }
+        }
+        return current;
     }
 
     private static String stripYears(String value) {

@@ -8,7 +8,8 @@
  * spells them out. The expanded form drops parentheses, dashes, and periods.
  * An initial with no parenthetical expansion is left as written. A comma
  * inside a phrase ("Sisters of Charity of Our Lady, Mother of the Church",
- * "Ignatius, of Loyola") is left in place.
+ * "Ignatius, of Loyola") is left in place. Editor and translator credits
+ * are removed and are not stored anywhere else.
  */
 
 const SUFFIXES = new Set([
@@ -28,6 +29,13 @@ const YEAR_PREFIX = '(?:(?:b|d|c|ca|fl)\\.?|born|died|circa|floruit)?'
 const YEAR_BODY = '\\d{3,4}\\??\\s*(?:[-\\u2013\\u2014]\\s*\\d{0,4}\\??)?'
 const ROMAN = /^(?=[ivxlcdm]+$)m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i
 
+/**
+ * An editor or translator role. "ed" does not match "Edith" or "edition";
+ * the two-letter forms require the period.
+ */
+const CREDIT_ROLE =
+  'edited\\s+by|editors|editor|translated\\s+by|translated|translators|translator|transl\\.|trans\\.|tr\\.|eds\\.|eds|ed\\.|ed'
+
 /** True when a non-blank name is not already in canonical form. */
 export function authorNeedsCanonicalName(name: string | null | undefined): boolean {
   if (name == null || name.trim() === '') return false
@@ -41,19 +49,57 @@ export function toCanonicalAuthorName(raw: string | null | undefined): string {
   const collapsed = raw.trim().replace(/\s+/g, ' ')
   const yearStripped = stripYears(collapsed)
   if (yearStripped.trim() === '') return raw
+  const prepared = stripCredits(yearStripped)
+  if (prepared.trim() === '') return raw
 
-  const paren = /\(([^)]*)\)/.exec(yearStripped)
+  const paren = /\(([^)]*)\)/.exec(prepared)
   const expansion = paren && paren[1].trim() !== '' ? paren[1].trim() : null
-  let outside = yearStripped.replace(/\([^)]*\)/g, ' ')
+  let outside = prepared.replace(/\([^)]*\)/g, ' ')
   outside = outside.trim().replace(/\s+/g, ' ').replace(/\s+,/g, ',').replace(/,\s*/g, ', ')
   outside = outside.replace(/\s+/g, ' ').trim()
   while (outside.endsWith(',')) outside = outside.slice(0, -1).trim()
 
   const result = expansion != null && containsInitial(outside)
     ? finishExpanded(expansion, outside)
-    : invertCommas(yearStripped)
+    : invertCommas(prepared)
   if (result.trim() === '') return raw
   return result
+}
+
+/** Drops editor and translator credits. Fuller-name parentheticals and edition notes stay. */
+function stripCredits(value: string): string {
+  let current = value
+  let changed = true
+  while (changed) {
+    changed = false
+    let next = current
+      .replace(creditParen(), '')
+      .replace(creditClause(), '')
+      .replace(creditTrail(), '')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\s+([,;])/g, '$1')
+      .replace(/([,;])(?!\s)/g, '$1 ')
+    while (next.endsWith(',') || next.endsWith(';')) next = next.slice(0, -1).trim()
+    if (next !== current) {
+      current = next
+      changed = true
+    }
+  }
+  return current
+}
+
+function creditParen(): RegExp {
+  return new RegExp(`\\s*\\(\\s*(?:${CREDIT_ROLE})(?=[\\s).;])[^)]*\\)`, 'gi')
+}
+
+function creditClause(): RegExp {
+  return new RegExp(`;\\s*(?:${CREDIT_ROLE})(?=[\\s).;])[^);]*`, 'gi')
+}
+
+function creditTrail(): RegExp {
+  return /(?:\s*[.;])?\s+(?:edited|translated)\s+by\b.*$|,\s*(?:editors?|translators?|trans\.?|transl\.?|tr\.)\s*$/i
 }
 
 function parenYear(): RegExp {
