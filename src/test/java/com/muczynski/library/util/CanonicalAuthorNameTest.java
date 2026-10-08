@@ -66,6 +66,19 @@ class CanonicalAuthorNameTest {
                 CanonicalAuthorName.canonical("John E. Rotelle, O.S.A. (ed.)"));
         assertEquals("Benedicta Ward SLG",
                 CanonicalAuthorName.canonical("Benedicta Ward, SLG (translator; Desert Fathers)"));
+        assertEquals("Conrad De Meester OCD", CanonicalAuthorName.canonical("Conrad De Meester, OCD"));
+        assertEquals("Michael E. Gaitley MIC", CanonicalAuthorName.canonical("Michael E. Gaitley, MIC"));
+        assertEquals("Fr. Ignatius of the Side of Jesus CP",
+                CanonicalAuthorName.canonical("Fr. Ignatius of the Side of Jesus, CP"));
+        assertEquals("Edward Leen CSSp", CanonicalAuthorName.canonical("Edward Leen, CSSp"));
+        assertEquals("Fr. Frederick Schmit O.Praem.",
+                CanonicalAuthorName.canonical("Fr. Frederick Schmit, O.Praem."));
+        assertEquals("JOHN HENRY NEWMAN D.D.", CanonicalAuthorName.canonical("JOHN HENRY NEWMAN, D.D."));
+        assertEquals("Raoul Plus S. J.", CanonicalAuthorName.canonical("Plus, Raoul, S. J."));
+        assertEquals("C. L White", CanonicalAuthorName.canonical("White, C. L"));
+        assertEquals("T. E Bridgett", CanonicalAuthorName.canonical("Bridgett, T. E"));
+        assertEquals("Joseph Keller", CanonicalAuthorName.canonical("Keller, Joseph"));
+        assertEquals("Inc Japan Travel Bureau", CanonicalAuthorName.canonical("Japan Travel Bureau, Inc"));
     }
 
     @Test

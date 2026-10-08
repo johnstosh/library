@@ -143,6 +143,19 @@ describe('canonical author names', () => {
     expect(toCanonicalAuthorName('Benedicta Ward, SLG (translator; Desert Fathers)')).toBe(
       'Benedicta Ward SLG',
     )
+    expect(toCanonicalAuthorName('Conrad De Meester, OCD')).toBe('Conrad De Meester OCD')
+    expect(toCanonicalAuthorName('Michael E. Gaitley, MIC')).toBe('Michael E. Gaitley MIC')
+    expect(toCanonicalAuthorName('Fr. Ignatius of the Side of Jesus, CP')).toBe(
+      'Fr. Ignatius of the Side of Jesus CP',
+    )
+    expect(toCanonicalAuthorName('Edward Leen, CSSp')).toBe('Edward Leen CSSp')
+    expect(toCanonicalAuthorName('Fr. Frederick Schmit, O.Praem.')).toBe('Fr. Frederick Schmit O.Praem.')
+    expect(toCanonicalAuthorName('JOHN HENRY NEWMAN, D.D.')).toBe('JOHN HENRY NEWMAN D.D.')
+    expect(toCanonicalAuthorName('Plus, Raoul, S. J.')).toBe('Raoul Plus S. J.')
+    expect(toCanonicalAuthorName('White, C. L')).toBe('C. L White')
+    expect(toCanonicalAuthorName('Bridgett, T. E')).toBe('T. E Bridgett')
+    expect(toCanonicalAuthorName('Keller, Joseph')).toBe('Joseph Keller')
+    expect(toCanonicalAuthorName('Japan Travel Bureau, Inc')).toBe('Inc Japan Travel Bureau')
     expect(toCanonicalAuthorName('Christoph Cardinal Schönborn (editor)')).toBe('Christoph Cardinal Schönborn')
     expect(toCanonicalAuthorName('St. Francis de Sales (ed. John Kirvan)')).toBe('St. Francis de Sales')
     expect(toCanonicalAuthorName('Francis Aidan Gasquet (ed.)')).toBe('Francis Aidan Gasquet')

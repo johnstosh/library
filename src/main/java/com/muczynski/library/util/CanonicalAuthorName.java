@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
  * parenthetical expansion is left as written. A comma inside a phrase
  * ({@code Sisters of Charity of Our Lady, Mother of the Church},
  * {@code Ignatius, of Loyola}) is left in place. Editor and translator
- * credits are removed and are not stored anywhere else.
+ * credits are removed and are not stored anywhere else. A no-space run of
+ * two to six capital letters is a postnominal suffix ({@code OCD}, {@code D.D.}).
+ * Spaced initials such as {@code C. L} stay in the given-name slot.
  * <p>
  * The TypeScript twin is {@code frontend/src/utils/canonicalAuthorName.ts}.
  * This is not a place for pen names or Latin forms; those are alternate names.
@@ -28,7 +30,8 @@ public final class CanonicalAuthorName {
 
     private static final Set<String> SUFFIXES = Set.of(
             "jr", "sr", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
-            "esq", "phd", "md", "op", "sj", "osb", "ofm", "cssr", "osa", "slg", "fr", "rev", "dr"
+            "esq", "phd", "md", "op", "sj", "osb", "ofm", "cssr", "osa", "slg", "cssp", "opraem",
+            "fr", "rev", "dr"
     );
 
     private static final Set<String> ROMAN_DENY = Set.of(
@@ -53,6 +56,8 @@ public final class CanonicalAuthorName {
     private static final Pattern PAREN = Pattern.compile("\\(([^)]*)\\)");
     private static final Pattern ROMAN = Pattern.compile(
             "(?i)^(?=[ivxlcdm]+$)m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$");
+    /** Single-letter initials with a space, such as {@code S. J.} after a given name. */
+    private static final Pattern SPACED_INITIALS = Pattern.compile("^(?:[A-Za-z]\\.\\s+)+[A-Za-z]\\.?$");
 
     /**
      * An editor or translator role. {@code ed} does not match {@code Edith}
@@ -278,7 +283,7 @@ public final class CanonicalAuthorName {
             return parts.get(0) + " " + parts.get(1);
         }
         for (int i = 2; i < parts.size(); i++) {
-            if (!isSuffix(parts.get(i))) {
+            if (!isSuffix(parts.get(i)) && !isSpacedInitials(parts.get(i))) {
                 return collapsed;
             }
         }
@@ -308,9 +313,41 @@ public final class CanonicalAuthorName {
         return false;
     }
 
+    /**
+     * A postnominal with no spaces whose letters are all capitals, two to six
+     * of them, periods allowed: {@code SJ}, {@code S.J.}, {@code OCD}, {@code D.D.}
+     * A word with a lowercase letter ({@code Joseph}, {@code Inc}) is not one.
+     */
+    private static boolean isPostnominalInitialism(String part) {
+        int letters = 0;
+        for (int i = 0; i < part.length(); i++) {
+            char c = part.charAt(i);
+            if (Character.isLetter(c)) {
+                if (!Character.isUpperCase(c)) {
+                    return false;
+                }
+                letters++;
+            } else if (c != '.') {
+                return false;
+            }
+        }
+        return letters >= 2 && letters <= 6;
+    }
+
+    /** {@code S. J.} after a given name. Spaced initials in the given-name slot are not suffixes. */
+    private static boolean isSpacedInitials(String part) {
+        return SPACED_INITIALS.matcher(part).matches();
+    }
+
     private static boolean isSuffix(String part) {
-        String key = part.replace(".", "").replace(" ", "").toLowerCase(Locale.ROOT);
+        if (part.chars().anyMatch(Character::isWhitespace)) {
+            return false;
+        }
+        String key = part.replace(".", "").toLowerCase(Locale.ROOT);
         if (SUFFIXES.contains(key)) {
+            return true;
+        }
+        if (isPostnominalInitialism(part)) {
             return true;
         }
         if (ROMAN_DENY.contains(key) || key.length() < 2 || key.length() > 6) {

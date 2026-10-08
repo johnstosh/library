@@ -9,12 +9,15 @@
  * An initial with no parenthetical expansion is left as written. A comma
  * inside a phrase ("Sisters of Charity of Our Lady, Mother of the Church",
  * "Ignatius, of Loyola") is left in place. Editor and translator credits
- * are removed and are not stored anywhere else.
+ * are removed and are not stored anywhere else. A no-space run of two to
+ * six capital letters is a postnominal suffix ("OCD", "D.D."). Spaced
+ * initials such as "C. L" stay in the given-name slot.
  */
 
 const SUFFIXES = new Set([
   'jr', 'sr', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
-  'esq', 'phd', 'md', 'op', 'sj', 'osb', 'ofm', 'cssr', 'osa', 'slg', 'fr', 'rev', 'dr',
+  'esq', 'phd', 'md', 'op', 'sj', 'osb', 'ofm', 'cssr', 'osa', 'slg', 'cssp', 'opraem',
+  'fr', 'rev', 'dr',
 ])
 
 const ROMAN_DENY = new Set([
@@ -28,6 +31,8 @@ const PHRASE_WORDS = new Set(['of', 'the'])
 const YEAR_PREFIX = '(?:(?:b|d|c|ca|fl)\\.?|born|died|circa|floruit)?'
 const YEAR_BODY = '\\d{3,4}\\??\\s*(?:[-\\u2013\\u2014]\\s*\\d{0,4}\\??)?'
 const ROMAN = /^(?=[ivxlcdm]+$)m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i
+/** Single-letter initials with a space, such as "S. J." after a given name. */
+const SPACED_INITIALS = /^(?:[A-Za-z]\.\s+)+[A-Za-z]\.?$/
 
 /**
  * An editor or translator role. "ed" does not match "Edith" or "edition";
@@ -184,7 +189,7 @@ function invertCommas(value: string): string {
   if (parts.length < 2) return collapsed
   if (parts.length === 2 && isSuffix(parts[1])) return `${parts[0]} ${parts[1]}`
   for (let i = 2; i < parts.length; i++) {
-    if (!isSuffix(parts[i])) return collapsed
+    if (!isSuffix(parts[i]) && !isSpacedInitials(parts[i])) return collapsed
   }
   if (isPhrase(parts[0]) || isPhrase(parts[1])) return collapsed
   return [parts[1], parts[0], ...parts.slice(2)].join(' ').replace(/\s+/g, ' ').trim()
@@ -198,9 +203,30 @@ function isPhrase(part: string): boolean {
   })
 }
 
+/** No-space all-caps postnominal: SJ, S.J., OCD, D.D. A lowercase letter keeps Joseph and Inc out. */
+function isPostnominalInitialism(part: string): boolean {
+  let letters = 0
+  for (const c of part) {
+    if (/\p{L}/u.test(c)) {
+      if (c !== c.toUpperCase()) return false
+      letters++
+    } else if (c !== '.') {
+      return false
+    }
+  }
+  return letters >= 2 && letters <= 6
+}
+
+/** "S. J." after a given name. Spaced initials in the given-name slot are not suffixes. */
+function isSpacedInitials(part: string): boolean {
+  return SPACED_INITIALS.test(part)
+}
+
 function isSuffix(part: string): boolean {
-  const key = part.replace(/\./g, '').replace(/ /g, '').toLowerCase()
+  if (/\s/.test(part)) return false
+  const key = part.replace(/\./g, '').toLowerCase()
   if (SUFFIXES.has(key)) return true
+  if (isPostnominalInitialism(part)) return true
   if (ROMAN_DENY.has(key) || key.length < 2 || key.length > 6) return false
   return ROMAN.test(key)
 }

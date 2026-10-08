@@ -77,7 +77,7 @@ Rewrites selected authors into canonical given-name-then-family-name form.
 **Behavior:**
 - Comma inversion (`Simpson, Richard` → `Richard Simpson`), birth and death years, and initials with a parenthetical expansion (`Johnson, B. J.-P. (Barney John-Paul)` → `Barney John Paul Johnson`) are cleaned. Initials without an expansion stay initials. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered.
 - Editor and translator credits are removed (`Gasquet (ed.)`, `Bagshawe (tr.)`, `translated by …`, `, editor`). The credit is not saved. A fuller name in parentheses (`Almedingen, E. M. (Edith Martha)`) and an edition note (`(Benziger ed.)`, `(English edition)`) stay.
-- A listed suffix stays after the name and loses its comma. That includes generational suffixes and religious-order initials such as `S.J.`, `O.S.B.`, `O.S.A.` (Order of Saint Augustine), and `SLG` (Sisters of the Love of God). The letters and periods stay as stored.
+- A suffix stays after the name and loses its comma. The letters and periods stay as stored. A no-space run of 2–6 capital letters is a suffix (`SJ`, `S.J.`, `OCD`, `O.S.B.`, `D.D.`), as are the mixed forms `CSSp` and `O.Praem.` Spaced initials in the given-name slot (`B. J.`, `C. L`, `T. E`) stay given names and are turned around. `Inc` is left as a word.
 - The managed author row is renamed in place, so portraits stay attached. The old form is not stored as an alternate name.
 - When two selected authors canonicalize to a name that is already used, or to the same new name, the lowest id is renamed and the other is skipped.
 - Authors that already conform are left unchanged.
