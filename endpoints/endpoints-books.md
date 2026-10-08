@@ -180,7 +180,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
-- `titleNotChicago` keeps books whose title, including the subtitle after a colon, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). The two chips AND together. Blank titles and blank author names are not flagged.
+- `titleNotChicago` keeps books whose title, including the subtitle after a colon and the sentence after a period, question mark, or exclamation point, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). The two chips AND together. Blank titles and blank author names are not flagged.
 - Each row includes `dateAddedToLibrary`. The list is most-recent first, with missing dates last.
 - The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
@@ -489,7 +489,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 ---
 
 ## POST /api/books/normalize-titles-bulk
-Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon. Short function words stay lower unless they start the title or the subtitle. A trailing catalog copy suffix (`, c. N`) is preserved.
+Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon. Short function words stay lower unless they start or end the title, the subtitle, or a sentence. A sentence starts again after a period, question mark, or exclamation point. Periods in initials (`J.`) and abbreviations (`St.`, `U.S.`, `Mr.`) do not. A trailing catalog copy suffix (`, c. N`) is preserved.
 
 **Authentication:** Librarian
 

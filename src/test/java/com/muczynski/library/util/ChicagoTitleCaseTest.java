@@ -42,6 +42,36 @@ class ChicagoTitleCaseTest {
     }
 
     @Test
+    void capitalizesTheWordAfterASentenceBreak() {
+        String council = "The Seventh Ecumenical Council. The Second Council of Nice";
+        assertEquals(council, ChicagoTitleCase.toChicago(council));
+        assertEquals(council, ChicagoTitleCase.toChicago(
+                "The Seventh Ecumenical Council. the Second Council of Nice"));
+        assertEquals(council, ChicagoTitleCase.toChicago(
+                "the seventh ecumenical council. the second council of nice"));
+        assertFalse(ChicagoTitleCase.needsWork(council));
+        assertTrue(ChicagoTitleCase.needsWork(
+                "The Seventh Ecumenical Council. the Second Council of Nice"));
+        assertEquals("The End. Of Mice and Men", ChicagoTitleCase.toChicago("the end. of mice and men"));
+        assertEquals("The World We Live In. A History",
+                ChicagoTitleCase.toChicago("the world we live in. a history"));
+        assertEquals("What Is It? The Answer", ChicagoTitleCase.toChicago("what is it? the answer"));
+        assertEquals("Stop! The Book", ChicagoTitleCase.toChicago("stop! the book"));
+        assertEquals("Wait... The End", ChicagoTitleCase.toChicago("wait... the end"));
+        assertEquals("Done. Next-to Last", ChicagoTitleCase.toChicago("done. next-to last"));
+    }
+
+    @Test
+    void leavesAbbreviationsAndInitialsLowerThanANewSentence() {
+        assertEquals("Mr. and Mrs. Smith", ChicagoTitleCase.toChicago("mr. and mrs. smith"));
+        assertEquals("Poems, Etc. and Essays", ChicagoTitleCase.toChicago("poems, etc. and essays"));
+        assertEquals("J. R. R. Tolkien", ChicagoTitleCase.toChicago("j. r. r. tolkien"));
+        assertEquals("U.S. History", ChicagoTitleCase.toChicago("u.s. history"));
+        assertEquals("Volume II. The Council", ChicagoTitleCase.toChicago("volume ii. the council"));
+        assertEquals("World War II.", ChicagoTitleCase.toChicago("world war ii."));
+    }
+
+    @Test
     void keepsCatalogCopySuffix() {
         assertEquals("The Lord of the Rings, c. 2",
                 ChicagoTitleCase.toChicago("the lord of the rings, c. 2"));

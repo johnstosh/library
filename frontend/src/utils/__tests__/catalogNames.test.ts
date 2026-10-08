@@ -27,6 +27,30 @@ describe('Chicago title case', () => {
     expect(toChicagoTitleCase('the lord of the rings, c. 2')).toBe('The Lord of the Rings, c. 2')
     expect(toChicagoTitleCase('THE LORD OF THE RINGS, C. 2')).toBe('The Lord of the Rings, c. 2')
   })
+
+  it('capitalizes the word after a sentence break', () => {
+    const council = 'The Seventh Ecumenical Council. The Second Council of Nice'
+    expect(toChicagoTitleCase(council)).toBe(council)
+    expect(toChicagoTitleCase('The Seventh Ecumenical Council. the Second Council of Nice')).toBe(council)
+    expect(toChicagoTitleCase('the seventh ecumenical council. the second council of nice')).toBe(council)
+    expect(titleNeedsChicagoCase(council)).toBe(false)
+    expect(titleNeedsChicagoCase('The Seventh Ecumenical Council. the Second Council of Nice')).toBe(true)
+    expect(toChicagoTitleCase('the end. of mice and men')).toBe('The End. Of Mice and Men')
+    expect(toChicagoTitleCase('the world we live in. a history')).toBe('The World We Live In. A History')
+    expect(toChicagoTitleCase('what is it? the answer')).toBe('What Is It? The Answer')
+    expect(toChicagoTitleCase('stop! the book')).toBe('Stop! The Book')
+    expect(toChicagoTitleCase('wait... the end')).toBe('Wait... The End')
+    expect(toChicagoTitleCase('done. next-to last')).toBe('Done. Next-to Last')
+  })
+
+  it('leaves abbreviations and initials alone', () => {
+    expect(toChicagoTitleCase('mr. and mrs. smith')).toBe('Mr. and Mrs. Smith')
+    expect(toChicagoTitleCase('poems, etc. and essays')).toBe('Poems, Etc. and Essays')
+    expect(toChicagoTitleCase('j. r. r. tolkien')).toBe('J. R. R. Tolkien')
+    expect(toChicagoTitleCase('u.s. history')).toBe('U.S. History')
+    expect(toChicagoTitleCase('volume ii. the council')).toBe('Volume II. The Council')
+    expect(toChicagoTitleCase('world war ii.')).toBe('World War II.')
+  })
 })
 
 describe('canonical author names', () => {
