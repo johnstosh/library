@@ -191,7 +191,7 @@ describe('BooksPage title filter', () => {
     expect(screen.getByTestId('url-q')).toHaveTextContent('Initial')
     expect(screen.getByTestId('book-row-1')).toBeInTheDocument()
 
-    fireEvent.submit(input.closest('form')!)
+    fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(screen.getByTestId('url-q')).toHaveTextContent('NoSuchTitleZZZ')
     expect(screen.queryByTestId('book-row-1')).not.toBeInTheDocument()

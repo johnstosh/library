@@ -181,9 +181,18 @@ export function BooksPage() {
     writeUrl({ statuses: next })
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    writeUrl({ q: inputValue.trim() })
+    const field = e.currentTarget.elements.namedItem('q')
+    const typed = field instanceof HTMLInputElement ? field.value : inputValue
+    writeUrl({ q: typed.trim() })
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    // Read the box, not React state. A fast Enter can arrive before onChange commits.
+    e.preventDefault()
+    writeUrl({ q: e.currentTarget.value.trim() })
   }
 
   return (
@@ -225,11 +234,13 @@ export function BooksPage() {
             <div className="flex-1">
               <Input
                 type="search"
+                name="q"
                 label="Filter by title or author"
                 hideLabel
                 placeholder="Filter by title or author..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 data-test="books-title-filter"
               />
             </div>

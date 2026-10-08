@@ -455,6 +455,7 @@ public class BooksUITest {
         Assertions.assertTrue(page.url().contains("q=Initial"),
                 "Unsubmitted typing should keep the previous query, got: " + page.url());
         assertThat(page.locator("text=Initial Book")).isVisible();
+        assertThat(page.locator("[data-test='books-title-filter']")).hasValue("NoSuchTitleZZZ");
 
         page.press("[data-test='books-title-filter']", "Enter");
         page.waitForURL(url -> url.contains("q=NoSuchTitleZZZ"), new Page.WaitForURLOptions().setTimeout(10000L));

@@ -273,8 +273,11 @@ public class AuthorsUITest {
             new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
         page.click("[data-test='author-view-edit']");
         page.waitForURL("**/edit");
-        page.locator("[data-test='author-name']").waitFor();
-        assertThat(page.locator("[data-test='author-name']")).hasValue("Initial Author");
+        // The view heading also uses data-test=author-name. hasValue does not retry
+        // when that heading is still mounted, so wait for the edit field itself.
+        Locator name = page.locator("input[data-test='author-name']");
+        name.waitFor();
+        assertThat(name).hasValue("Initial Author");
 
         page.fill("[data-test='author-alternate-names']", "Saint Augustine\nAurelius Augustinus");
         page.click("[data-test='author-form-submit']");
