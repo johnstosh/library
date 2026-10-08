@@ -17,7 +17,7 @@
 const SUFFIXES = new Set([
   'jr', 'sr', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
   'esq', 'phd', 'md', 'op', 'sj', 'osb', 'ofm', 'cssr', 'osa', 'slg', 'cssp', 'opraem',
-  'fr', 'rev', 'dr', 'inc',
+  'fr', 'rev', 'dr', 'inc', 'llc',
 ])
 
 const ROMAN_DENY = new Set([

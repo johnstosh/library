@@ -31,7 +31,7 @@ public final class CanonicalAuthorName {
     private static final Set<String> SUFFIXES = Set.of(
             "jr", "sr", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
             "esq", "phd", "md", "op", "sj", "osb", "ofm", "cssr", "osa", "slg", "cssp", "opraem",
-            "fr", "rev", "dr", "inc"
+            "fr", "rev", "dr", "inc", "llc"
     );
 
     private static final Set<String> ROMAN_DENY = Set.of(
