@@ -31,7 +31,7 @@ public final class CanonicalAuthorName {
     private static final Set<String> SUFFIXES = Set.of(
             "jr", "sr", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x",
             "esq", "phd", "md", "op", "sj", "osb", "ofm", "cssr", "osa", "slg", "cssp", "opraem",
-            "fr", "rev", "dr"
+            "fr", "rev", "dr", "inc"
     );
 
     private static final Set<String> ROMAN_DENY = Set.of(
@@ -316,7 +316,7 @@ public final class CanonicalAuthorName {
     /**
      * A postnominal with no spaces whose letters are all capitals, two to six
      * of them, periods allowed: {@code SJ}, {@code S.J.}, {@code OCD}, {@code D.D.}
-     * A word with a lowercase letter ({@code Joseph}, {@code Inc}) is not one.
+     * A word with a lowercase letter ({@code Joseph}) is not one. {@code Inc} is listed separately.
      */
     private static boolean isPostnominalInitialism(String part) {
         int letters = 0;

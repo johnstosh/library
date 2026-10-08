@@ -155,7 +155,7 @@ describe('canonical author names', () => {
     expect(toCanonicalAuthorName('White, C. L')).toBe('C. L White')
     expect(toCanonicalAuthorName('Bridgett, T. E')).toBe('T. E Bridgett')
     expect(toCanonicalAuthorName('Keller, Joseph')).toBe('Joseph Keller')
-    expect(toCanonicalAuthorName('Japan Travel Bureau, Inc')).toBe('Inc Japan Travel Bureau')
+    expect(toCanonicalAuthorName('Japan Travel Bureau, Inc')).toBe('Japan Travel Bureau Inc')
     expect(toCanonicalAuthorName('Christoph Cardinal Schönborn (editor)')).toBe('Christoph Cardinal Schönborn')
     expect(toCanonicalAuthorName('St. Francis de Sales (ed. John Kirvan)')).toBe('St. Francis de Sales')
     expect(toCanonicalAuthorName('Francis Aidan Gasquet (ed.)')).toBe('Francis Aidan Gasquet')

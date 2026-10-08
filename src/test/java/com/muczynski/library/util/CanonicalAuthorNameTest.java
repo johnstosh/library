@@ -78,7 +78,7 @@ class CanonicalAuthorNameTest {
         assertEquals("C. L White", CanonicalAuthorName.canonical("White, C. L"));
         assertEquals("T. E Bridgett", CanonicalAuthorName.canonical("Bridgett, T. E"));
         assertEquals("Joseph Keller", CanonicalAuthorName.canonical("Keller, Joseph"));
-        assertEquals("Inc Japan Travel Bureau", CanonicalAuthorName.canonical("Japan Travel Bureau, Inc"));
+        assertEquals("Japan Travel Bureau Inc", CanonicalAuthorName.canonical("Japan Travel Bureau, Inc"));
     }
 
     @Test

@@ -17,7 +17,7 @@
 const SUFFIXES = new Set([
   'jr', 'sr', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
   'esq', 'phd', 'md', 'op', 'sj', 'osb', 'ofm', 'cssr', 'osa', 'slg', 'cssp', 'opraem',
-  'fr', 'rev', 'dr',
+  'fr', 'rev', 'dr', 'inc',
 ])
 
 const ROMAN_DENY = new Set([
@@ -203,7 +203,7 @@ function isPhrase(part: string): boolean {
   })
 }
 
-/** No-space all-caps postnominal: SJ, S.J., OCD, D.D. A lowercase letter keeps Joseph and Inc out. */
+/** No-space all-caps postnominal: SJ, S.J., OCD, D.D. A lowercase letter keeps Joseph out. Inc is listed separately. */
 function isPostnominalInitialism(part: string): boolean {
   let letters = 0
   for (const c of part) {
