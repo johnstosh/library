@@ -64,11 +64,82 @@ class ChicagoTitleCaseTest {
     @Test
     void leavesAbbreviationsAndInitialsLowerThanANewSentence() {
         assertEquals("Mr. and Mrs. Smith", ChicagoTitleCase.toChicago("mr. and mrs. smith"));
-        assertEquals("Poems, Etc. and Essays", ChicagoTitleCase.toChicago("poems, etc. and essays"));
+        assertEquals("Body, Etc. From Original Mss.",
+                ChicagoTitleCase.toChicago("body, etc. From original mss."));
+        assertEquals("Pass from Me,' Etc., and Against",
+                ChicagoTitleCase.toChicago("pass from me,' etc., and against"));
         assertEquals("J. R. R. Tolkien", ChicagoTitleCase.toChicago("j. r. r. tolkien"));
         assertEquals("U.S. History", ChicagoTitleCase.toChicago("u.s. history"));
         assertEquals("Volume II. The Council", ChicagoTitleCase.toChicago("volume ii. the council"));
         assertEquals("World War II.", ChicagoTitleCase.toChicago("world war ii."));
+        assertEquals("I. The Mystical Explanation",
+                ChicagoTitleCase.toChicago("i. the mystical explanation"));
+        assertEquals("Life of Mrs. Eliza A. Seton",
+                ChicagoTitleCase.toChicago("life of mrs. eliza a. seton"));
+    }
+
+    @Test
+    void keepsCatalogShapesThatChicagoWouldOtherwiseFlatten() {
+        assertEquals("The Soul's Journey into God; The Tree of Life; The Life of St. Francis",
+                ChicagoTitleCase.toChicago(
+                        "The Soul's Journey into God; The Tree of Life; The Life of St. Francis"));
+        assertEquals("Fabiola; Or, The Church of the Catacombs",
+                ChicagoTitleCase.toChicago("fabiola; or, the church of the catacombs"));
+        assertEquals("All for Jesus: Or, The Easy Ways of Divine Love",
+                ChicagoTitleCase.toChicago("all for jesus: or, the easy ways of divine love"));
+        assertEquals("Sophocles II: Ajax, the Women of Trachis, Electra, Philoctetes",
+                ChicagoTitleCase.toChicago(
+                        "Sophocles II: Ajax, The Women of Trachis, Electra, Philoctetes"));
+        assertEquals("The Founding of Christendom, a History of Christendom Vol. 1",
+                ChicagoTitleCase.toChicago(
+                        "the founding of christendom, a history of christendom vol. 1"));
+        assertEquals("St. Martin de Porres", ChicagoTitleCase.toChicago("st. martin de porres"));
+        assertEquals("Francis de Sales", ChicagoTitleCase.toChicago("francis de sales"));
+        assertEquals("Saint John Baptist de la Salle",
+                ChicagoTitleCase.toChicago("saint john baptist de la salle"));
+        assertEquals("Claude La Colombière", ChicagoTitleCase.toChicago("claude la colombière"));
+        assertEquals("Ricordo di Roma", ChicagoTitleCase.toChicago("ricordo di roma"));
+        assertEquals("John Paul II's Theology", ChicagoTitleCase.toChicago("john paul ii's theology"));
+        assertEquals("The Rosary: The Great Weapon of the 21st Century",
+                ChicagoTitleCase.toChicago("the rosary: the great weapon of the 21st century"));
+        assertEquals("Blessed Miguel Pro: 20th-Century Mexican Martyr",
+                ChicagoTitleCase.toChicago("blessed miguel pro: 20th-century mexican martyr"));
+        assertEquals("SQL Pocket Guide", ChicagoTitleCase.toChicago("SQL Pocket Guide"));
+        assertEquals("Head First HTML with CSS & XHTML",
+                ChicagoTitleCase.toChicago("Head First HTML with CSS & XHTML"));
+        assertEquals("YOUCAT: Youth Catechism of the Catholic Church",
+                ChicagoTitleCase.toChicago("YOUCAT: Youth Catechism of the Catholic Church"));
+        assertEquals("The Kanji ABC", ChicagoTitleCase.toChicago("The Kanji ABC"));
+        assertEquals("The Miracle of Our Lady of Fatima (DVD)",
+                ChicagoTitleCase.toChicago("The Miracle of Our Lady of Fatima (DVD)"));
+        assertEquals("Mr. McFadden's Hallowe'en", ChicagoTitleCase.toChicago("mr. mcfadden's hallowe'en"));
+        assertEquals("Mother Mary Catherine McAuley",
+                ChicagoTitleCase.toChicago("mother mary catherine mcauley"));
+        assertEquals("The Story of Saint Jeanne d'Arc",
+                ChicagoTitleCase.toChicago("the story of saint jeanne d'arc"));
+        assertEquals("The Passion of SS. Perpetua and Felicity, MM",
+                ChicagoTitleCase.toChicago("the passion of ss. perpetua and felicity, mm"));
+        assertEquals("John N. Neumann, D.D., Fourth Bishop",
+                ChicagoTitleCase.toChicago("john n. neumann, d.d., fourth bishop"));
+        assertEquals("Father Chaignon, S.J., Volume 1",
+                ChicagoTitleCase.toChicago("father chaignon, s.j., volume 1"));
+        assertEquals(
+                "The Story of Thomas More / Weddings in the Family / The Road to Damascus / From an Altar Screen",
+                ChicagoTitleCase.toChicago(
+                        "the story of thomas more / weddings in the family / the road to damascus / from an altar screen"));
+        assertEquals("Men & Women Are from Eden: A Study Guide to John Paul II's Theology of the Body",
+                ChicagoTitleCase.toChicago(
+                        "Men & Women Are From Eden: A Study Guide to John Paul II's Theology of the Body"));
+        assertEquals("The Lion, the Witch and the Wardrobe",
+                ChicagoTitleCase.toChicago("The Lion, the Witch and the Wardrobe"));
+        assertEquals("Life of Father Damien, the Apostle of the Lepers",
+                ChicagoTitleCase.toChicago("life of father damien, the apostle of the lepers"));
+        assertEquals("In the 16th, 17th and 18th Centuries",
+                ChicagoTitleCase.toChicago("in the 16th, 17th and 18th centuries"));
+        assertEquals("De Trinitate (On the Trinity)",
+                ChicagoTitleCase.toChicago("De Trinitate (On the Trinity)"));
+        assertEquals("Spy × Family, v. 3", ChicagoTitleCase.toChicago("Spy × Family, v. 3"));
+        assertEquals("The GIFTionary", ChicagoTitleCase.toChicago("The GIFTionary"));
     }
 
     @Test

@@ -489,7 +489,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 ---
 
 ## POST /api/books/normalize-titles-bulk
-Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon. Short function words stay lower unless they start or end the title, the subtitle, or a sentence. A sentence starts again after a period, question mark, or exclamation point. Periods in initials (`J.`) and abbreviations (`St.`, `U.S.`, `Mr.`) do not. A trailing catalog copy suffix (`, c. N`) is preserved.
+Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon, semicolon, or slash. Short function words stay lower unless they start or end the title, the subtitle, or a sentence. A sentence starts again after a period, question mark, or exclamation point. Periods in initials (`J.`) and abbreviations (`St.`, `U.S.`, `Mr.`) do not. An alternative title after `or,` stays capitalized. Name particles (`de`, `di`, `van`, `von`, and `de la`) stay lower. Ordinals (`21st`), possessives on roman numerals (`II's`), `Mc` names, French `d'` / `l'`, and short acronyms (`HTML`, `YOUCAT`, `SS.`) keep their shape. A trailing catalog copy suffix (`, c. N`) is preserved.
 
 **Authentication:** Librarian
 

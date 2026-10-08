@@ -45,11 +45,75 @@ describe('Chicago title case', () => {
 
   it('leaves abbreviations and initials alone', () => {
     expect(toChicagoTitleCase('mr. and mrs. smith')).toBe('Mr. and Mrs. Smith')
-    expect(toChicagoTitleCase('poems, etc. and essays')).toBe('Poems, Etc. and Essays')
+    expect(toChicagoTitleCase('body, etc. from original mss.')).toBe('Body, Etc. From Original Mss.')
+    expect(toChicagoTitleCase("pass from me,' etc., and against")).toBe("Pass from Me,' Etc., and Against")
     expect(toChicagoTitleCase('j. r. r. tolkien')).toBe('J. R. R. Tolkien')
     expect(toChicagoTitleCase('u.s. history')).toBe('U.S. History')
     expect(toChicagoTitleCase('volume ii. the council')).toBe('Volume II. The Council')
     expect(toChicagoTitleCase('world war ii.')).toBe('World War II.')
+    expect(toChicagoTitleCase('i. the mystical explanation')).toBe('I. The Mystical Explanation')
+    expect(toChicagoTitleCase('life of mrs. eliza a. seton')).toBe('Life of Mrs. Eliza A. Seton')
+  })
+
+  it('keeps catalog shapes that headline style would otherwise flatten', () => {
+    expect(toChicagoTitleCase("The Soul's Journey into God; The Tree of Life; The Life of St. Francis")).toBe(
+      "The Soul's Journey into God; The Tree of Life; The Life of St. Francis",
+    )
+    expect(toChicagoTitleCase('fabiola; or, the church of the catacombs')).toBe(
+      'Fabiola; Or, The Church of the Catacombs',
+    )
+    expect(toChicagoTitleCase('all for jesus: or, the easy ways of divine love')).toBe(
+      'All for Jesus: Or, The Easy Ways of Divine Love',
+    )
+    expect(toChicagoTitleCase('Sophocles II: Ajax, The Women of Trachis, Electra, Philoctetes')).toBe(
+      'Sophocles II: Ajax, the Women of Trachis, Electra, Philoctetes',
+    )
+    expect(toChicagoTitleCase('st. martin de porres')).toBe('St. Martin de Porres')
+    expect(toChicagoTitleCase('saint john baptist de la salle')).toBe('Saint John Baptist de la Salle')
+    expect(toChicagoTitleCase('claude la colombière')).toBe('Claude La Colombière')
+    expect(toChicagoTitleCase('ricordo di roma')).toBe('Ricordo di Roma')
+    expect(toChicagoTitleCase("john paul ii's theology")).toBe("John Paul II's Theology")
+    expect(toChicagoTitleCase('the rosary: the great weapon of the 21st century')).toBe(
+      'The Rosary: The Great Weapon of the 21st Century',
+    )
+    expect(toChicagoTitleCase('blessed miguel pro: 20th-century mexican martyr')).toBe(
+      'Blessed Miguel Pro: 20th-Century Mexican Martyr',
+    )
+    expect(toChicagoTitleCase('Head First HTML with CSS & XHTML')).toBe('Head First HTML with CSS & XHTML')
+    expect(toChicagoTitleCase('SQL Pocket Guide')).toBe('SQL Pocket Guide')
+    expect(toChicagoTitleCase('The Kanji ABC')).toBe('The Kanji ABC')
+    expect(toChicagoTitleCase('The Miracle of Our Lady of Fatima (DVD)')).toBe(
+      'The Miracle of Our Lady of Fatima (DVD)',
+    )
+    expect(toChicagoTitleCase('YOUCAT: Youth Catechism of the Catholic Church')).toBe(
+      'YOUCAT: Youth Catechism of the Catholic Church',
+    )
+    expect(toChicagoTitleCase('mr. mcfadden\'s hallowe\'en')).toBe("Mr. McFadden's Hallowe'en")
+    expect(toChicagoTitleCase('the story of saint jeanne d\'arc')).toBe("The Story of Saint Jeanne d'Arc")
+    expect(toChicagoTitleCase('the passion of ss. perpetua and felicity, mm')).toBe(
+      'The Passion of SS. Perpetua and Felicity, MM',
+    )
+    expect(toChicagoTitleCase('john n. neumann, d.d., fourth bishop')).toBe(
+      'John N. Neumann, D.D., Fourth Bishop',
+    )
+    expect(toChicagoTitleCase('father chaignon, s.j., volume 1')).toBe('Father Chaignon, S.J., Volume 1')
+    expect(
+      toChicagoTitleCase(
+        'the story of thomas more / weddings in the family / the road to damascus / from an altar screen',
+      ),
+    ).toBe('The Story of Thomas More / Weddings in the Family / The Road to Damascus / From an Altar Screen')
+    expect(
+      toChicagoTitleCase('Men & Women Are From Eden: A Study Guide to John Paul II\'s Theology of the Body'),
+    ).toBe("Men & Women Are from Eden: A Study Guide to John Paul II's Theology of the Body")
+    expect(toChicagoTitleCase('The Lion, the Witch and the Wardrobe')).toBe(
+      'The Lion, the Witch and the Wardrobe',
+    )
+    expect(toChicagoTitleCase('in the 16th, 17th and 18th centuries')).toBe(
+      'In the 16th, 17th and 18th Centuries',
+    )
+    expect(toChicagoTitleCase('De Trinitate (On the Trinity)')).toBe('De Trinitate (On the Trinity)')
+    expect(toChicagoTitleCase('Spy × Family, v. 3')).toBe('Spy × Family, v. 3')
+    expect(toChicagoTitleCase('The GIFTionary')).toBe('The GIFTionary')
   })
 })
 
