@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -58,18 +58,21 @@ export function BooksPage() {
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
-  // Apply the URL query in this render so a delayed effect cannot restore the
-  // previous query after the next title has been typed.
+  // React Router updates the address bar before this component renders. Copy an
+  // outside query into the box. A query this page just wrote must not replace a
+  // title typed after that search.
   const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  const ownQuery = useRef<string | null>(null)
   if (urlQuery !== syncedQuery) {
+    const own = ownQuery.current === urlQuery
+    ownQuery.current = null
     setSyncedQuery(urlQuery)
-    setInputValue(urlQuery)
+    if (!own) setInputValue(urlQuery)
   }
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
   const queryClient = useQueryClient()
-  const [, startTransition] = useTransition()
 
   const writeUrl = (next: {
     chips?: BookChipFilters
@@ -81,23 +84,23 @@ export function BooksPage() {
     q?: string
     priceOlderDays?: number
   }) => {
-    startTransition(() => {
-      setSearchParams(
-        bookFilterParamsForUrl(
-          {
-            chips: next.chips ?? chips,
-            labels: next.labels ?? selectedLabels,
-            readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
-            bindings: next.bindings ?? selectedBindings,
-            statuses: next.statuses ?? selectedStatuses,
-            favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
-            q: next.q !== undefined ? next.q : urlQuery,
-            priceOlderDays: next.priceOlderDays ?? priceOlderDays,
-          },
-          'books',
-        ),
-      )
-    })
+    const q = next.q !== undefined ? next.q : urlQuery
+    if (next.q !== undefined) ownQuery.current = q
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? chips,
+          labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          bindings: next.bindings ?? selectedBindings,
+          statuses: next.statuses ?? selectedStatuses,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
+          q,
+          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+        },
+        'books',
+      ),
+    )
   }
 
   const listFilters = useMemo((): BookListFilters => ({
