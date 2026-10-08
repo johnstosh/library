@@ -7,6 +7,7 @@ import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
+import com.muczynski.library.dto.AuthorNameNormalizationResultDto;
 import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BookDto;
@@ -21,6 +22,7 @@ import com.muczynski.library.dto.GrokJobDto;
 import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
+import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
@@ -58,6 +60,9 @@ public class AuthorController {
 
     @Autowired
     private CatalogFilterService catalogFilterService;
+
+    @Autowired
+    private CatalogNameNormalizationService catalogNameNormalizationService;
 
     @Autowired
     private PhotoService photoService;
@@ -125,6 +130,7 @@ public class AuthorController {
             @RequestParam(defaultValue = "false") boolean withPhotos,
             @RequestParam(defaultValue = "false") boolean withoutBirthDate,
             @RequestParam(defaultValue = "false") boolean withoutDeathDate,
+            @RequestParam(defaultValue = "false") boolean notCanonical,
             @RequestParam(defaultValue = "false") boolean hasYdlBook,
             @RequestParam(defaultValue = "false") boolean hasYdlEbook,
             @RequestParam(defaultValue = "false") boolean hasYdlAudio,
@@ -147,6 +153,7 @@ public class AuthorController {
             filter.withPhotos = withPhotos;
             filter.withoutBirthDate = withoutBirthDate;
             filter.withoutDeathDate = withoutDeathDate;
+            filter.notCanonical = notCanonical;
             filter.ydlBook = hasYdlBook;
             filter.ydlEbook = hasYdlEbook;
             filter.ydlAudio = hasYdlAudio;
@@ -468,6 +475,19 @@ public class AuthorController {
     public ResponseEntity<GrokJobDto> startGenerateMissingData(@PathVariable Long id) {
         return GrokJobController.accepted(
                 grokJobService.start("author-generate-missing", () -> authorService.generateMissingData(id)));
+    }
+
+    /**
+     * Rewrites selected authors into canonical given-name-then-family-name form.
+     * The author row is renamed in place. A name already used by another author
+     * is reported and skipped.
+     */
+    @PostMapping("/normalize-names-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<AuthorNameNormalizationResultDto>> normalizeNamesBulk(
+            @RequestBody List<Long> authorIds) {
+        logger.info("Normalizing names for {} authors", authorIds == null ? 0 : authorIds.size());
+        return ResponseEntity.ok(catalogNameNormalizationService.normalizeAuthorNames(authorIds));
     }
 
     @PostMapping("/grokipedia-lookup-bulk")

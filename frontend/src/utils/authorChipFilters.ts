@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import type { AuthorDto } from '@/types/dtos'
+import { authorNeedsCanonicalName } from '@/utils/canonicalAuthorName'
 
 /**
  * Independent boolean chip filters for the Authors page.
@@ -8,7 +9,7 @@ import type { AuthorDto } from '@/types/dtos'
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
  *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
- *   zeroBooks, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
+ *   zeroBooks, notCanonical, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */
 export interface AuthorChipFilters {
   hasYdlBook: boolean
@@ -25,6 +26,7 @@ export interface AuthorChipFilters {
   withoutGrokipedia: boolean
   withGrokipedia: boolean
   zeroBooks: boolean
+  notCanonical: boolean
   withoutPhotos: boolean
   withPhotos: boolean
   withoutBirthDate: boolean
@@ -48,6 +50,7 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   withoutGrokipedia: false,
   withGrokipedia: false,
   zeroBooks: false,
+  notCanonical: false,
   withoutPhotos: false,
   withPhotos: false,
   withoutBirthDate: false,
@@ -122,6 +125,7 @@ export function applyAuthorChipFilters(
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.zeroBooks && (author.bookCount ?? 0) > 0) return false
+    if (chips.notCanonical && !authorNeedsCanonicalName(author.name)) return false
     if (chips.withoutPhotos && author.firstPhotoId) return false
     if (chips.withPhotos && !author.firstPhotoId) return false
     if (chips.withoutBirthDate && author.dateOfBirth) return false

@@ -179,6 +179,13 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           dataTest="filter-zero-books"
         />
         <FilterChip
+          label="Not canonical"
+          active={chips.notCanonical}
+          onClick={() => onToggle('notCanonical')}
+          tooltip="Only authors whose name is comma-inverted, has birth or death years, or has initials that can be expanded"
+          dataTest="filter-not-canonical"
+        />
+        <FilterChip
           label="Without Photos"
           active={chips.withoutPhotos}
           onClick={() => onToggle('withoutPhotos')}

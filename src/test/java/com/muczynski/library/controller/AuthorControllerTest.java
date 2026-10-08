@@ -7,12 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
+import com.muczynski.library.dto.AuthorNameNormalizationResultDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
@@ -63,6 +65,9 @@ class AuthorControllerTest {
 
     @MockitoBean
     private GrokipediaLookupService grokipediaLookupService;
+
+    @MockitoBean
+    private CatalogNameNormalizationService catalogNameNormalizationService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -265,6 +270,37 @@ class AuthorControllerTest {
                 .andExpect(jsonPath("$.skipped").value(false))
                 .andExpect(jsonPath("$.filledFields.length()").value(2))
                 .andExpect(jsonPath("$.updatedAuthor.name").value("Jane Austen"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void normalizeNamesBulk() throws Exception {
+        List<Long> authorIds = List.of(7L);
+        AuthorNameNormalizationResultDto changed = AuthorNameNormalizationResultDto.builder()
+                .authorId(7L)
+                .name("Richard Simpson")
+                .before("Simpson, Richard")
+                .after("Richard Simpson")
+                .changed(true)
+                .success(true)
+                .build();
+        when(catalogNameNormalizationService.normalizeAuthorNames(authorIds)).thenReturn(List.of(changed));
+
+        mockMvc.perform(post("/api/authors/normalize-names-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(authorIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].before").value("Simpson, Richard"))
+                .andExpect(jsonPath("$[0].after").value("Richard Simpson"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void normalizeNamesBulk_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(post("/api/authors/normalize-names-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[7]"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

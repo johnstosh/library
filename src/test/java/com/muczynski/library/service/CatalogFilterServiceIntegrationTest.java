@@ -156,6 +156,15 @@ class CatalogFilterServiceIntegrationTest {
         List<Long> none = authorIds(catalogFilterService.authorSummaries(described, null));
         assertTrue(none.contains(noBooks.getId()));
         assertFalse(none.contains(recent.getId()));
+
+        Author inverted = authorRepository.save(authorNamed("Simpson, " + token));
+        Author ready = authorRepository.save(authorNamed(token + " Ready"));
+        CatalogFilterService.AuthorCatalogFilter names = new CatalogFilterService.AuthorCatalogFilter();
+        names.notCanonical = true;
+        List<Long> nameIds = authorIds(catalogFilterService.authorSummaries(names, null));
+        assertTrue(nameIds.contains(inverted.getId()));
+        assertFalse(nameIds.contains(ready.getId()));
+        assertFalse(nameIds.contains(recent.getId()));
     }
 
     private static CatalogFilterService.BookCatalogFilter query(String text) {

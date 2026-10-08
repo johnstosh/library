@@ -12,6 +12,7 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 - `zeroBooks` — no books
 - `withoutPhotos` / `withPhotos` — author photos (photos not attached to a book)
 - `withoutBirthDate` / `withoutDeathDate`
+- `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). Blank names are not flagged.
 - Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
 
@@ -56,6 +57,30 @@ Returns authors that are missing a Grokipedia URL.
 - Filter to find authors needing Grokipedia links
 - Systematic data enrichment workflow
 - Includes authors whose `grokipediaUrl` is `"-"` (N/A after a slow lookup found no working URL)
+
+---
+
+## POST /api/authors/normalize-names-bulk
+Rewrites selected authors into canonical given-name-then-family-name form.
+
+**Authentication:** Requires `LIBRARIAN` authority
+
+**Request Body:** JSON array of author IDs, e.g. `[1, 2, 3]`
+
+**Response:** Array of `AuthorNameNormalizationResultDto`
+- `authorId`, `name` (name after the operation), `before`, `after`
+- `changed` — true when the stored name changed
+- `success` — false when the author is missing or the canonical name is already used
+- `errorMessage` — `Author not found`, or `Name "..." is already used by another author`
+- `updatedAuthor` — set only when the name changed
+
+**Behavior:**
+- Comma inversion (`Simpson, Richard` → `Richard Simpson`), birth and death years, and initials with a parenthetical expansion (`Johnson, B. J.-P. (Barney John-Paul)` → `Barney John Paul Johnson`) are cleaned. Initials without an expansion stay initials.
+- The managed author row is renamed in place, so portraits stay attached. The old form is not stored as an alternate name.
+- When two selected authors canonicalize to a name that is already used, or to the same new name, the lowest id is renamed and the other is skipped.
+- Authors that already conform are left unchanged.
+
+**Use Case:** Authors page filter "Not canonical" and bulk-action carousel "Canonical Author Names"
 
 ---
 

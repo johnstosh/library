@@ -6,7 +6,7 @@ import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
-import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
+import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorNameNormalizationResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
 const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
   'hasYdlBook',
@@ -23,6 +23,7 @@ const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
   'withoutGrokipedia',
   'withGrokipedia',
   'zeroBooks',
+  'notCanonical',
   'withoutPhotos',
   'withPhotos',
   'withoutBirthDate',
@@ -304,6 +305,24 @@ export function useDeleteAuthor() {
       queryClient.removeQueries({ queryKey: queryKeys.authors.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+/** Rewrite selected authors into canonical given-name-then-family-name form. */
+export function useNormalizeAuthorNamesBulk() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<AuthorNameNormalizationResultDto[]>('/authors/normalize-names-bulk', ids),
+    onSuccess: (results) => {
+      for (const result of results) {
+        if (result.updatedAuthor) {
+          queryClient.setQueryData(queryKeys.authors.detail(result.authorId), result.updatedAuthor)
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
     },
   })
 }

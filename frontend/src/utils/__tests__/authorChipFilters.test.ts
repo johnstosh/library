@@ -42,6 +42,7 @@ describe('isOtherAuthorChipActive', () => {
   it('ignores mostRecent and detects any other chip', () => {
     expect(isOtherAuthorChipActive(chips({ mostRecent: true }))).toBe(false)
     expect(isOtherAuthorChipActive(chips({ mostRecent: true, withoutDescription: true }))).toBe(true)
+    expect(isOtherAuthorChipActive(chips({ notCanonical: true }))).toBe(true)
   })
 })
 
@@ -60,6 +61,15 @@ describe('applyAuthorChipFilters', () => {
     expect(
       applyAuthorChipFilters(sample, chips({ mostRecent: true }), new Set([1])).map((a) => a.id)
     ).toEqual([1])
+  })
+
+  it('not-canonical keeps only names the canonical rewrite would change', () => {
+    const authors = [
+      author({ id: 1, name: 'Richard Simpson' }),
+      author({ id: 2, name: 'Simpson, Richard' }),
+      author({ id: 3, name: 'Johnson, B. J.-P. (Barney John-Paul)' }),
+    ]
+    expect(applyAuthorChipFilters(authors, chips({ notCanonical: true })).map((a) => a.id)).toEqual([2, 3])
   })
 
   it('without-photos keeps authors with no firstPhotoId', () => {

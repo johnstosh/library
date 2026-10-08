@@ -276,6 +276,18 @@ export interface GenreLookupResultDto {
   updatedBook?: BookDto
 }
 
+export interface AuthorNameNormalizationResultDto {
+  authorId: number
+  name?: string
+  before?: string
+  after?: string
+  changed: boolean
+  success: boolean
+  errorMessage?: string
+  /** Set when this author changed, so the client can refresh that row. */
+  updatedAuthor?: AuthorDto
+}
+
 export interface NameNormalizationResultDto {
   bookId: number
   title?: string

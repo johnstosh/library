@@ -5,7 +5,9 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.dto.AuthorNameNormalizationResultDto;
 import com.muczynski.library.dto.NameNormalizationResultDto;
+import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -33,6 +35,10 @@ import java.util.Set;
  * and the canonical name is free. Otherwise the selected books are relinked to
  * the existing canonical author, or to one new author created for that name.
  * The managed author is edited directly so its photos stay put.
+ * <p>
+ * The Authors page renames selected author rows in place. A canonical name
+ * that is already used is reported and skipped. The old form is not stored
+ * as an alternate name.
  */
 @Service
 public class CatalogNameNormalizationService {
@@ -45,6 +51,9 @@ public class CatalogNameNormalizationService {
 
     @Autowired
     private BookMapper bookMapper;
+
+    @Autowired
+    private AuthorMapper authorMapper;
 
     @Transactional
     public List<NameNormalizationResultDto> normalizeTitles(List<Long> bookIds) {
@@ -178,6 +187,115 @@ public class CatalogNameNormalizationService {
             results.add(changed(book, before, after));
         }
         return results;
+    }
+
+    /**
+     * Rewrites selected author rows into canonical form. The managed author is
+     * renamed in place so its photos stay. A name already used by another
+     * author is left unchanged and reported.
+     */
+    @Transactional
+    public List<AuthorNameNormalizationResultDto> normalizeAuthorNames(List<Long> authorIds) {
+        List<Long> ids = distinctIds(authorIds);
+        Map<Long, Author> authors = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (Author author : authorRepository.findAllById(ids)) {
+                authors.put(author.getId(), author);
+            }
+        }
+
+        Map<Long, String> originalNames = new HashMap<>();
+        Map<Long, String> desiredById = new HashMap<>();
+        List<Author> candidates = new ArrayList<>();
+        for (Long id : ids) {
+            Author author = authors.get(id);
+            if (author == null) {
+                continue;
+            }
+            String original = author.getName();
+            originalNames.put(id, original);
+            String desired = CanonicalAuthorName.canonical(original);
+            if (desired == null || desired.isBlank()) {
+                desired = original;
+            }
+            desiredById.put(id, desired);
+            if (desired != null && !desired.equals(original)) {
+                candidates.add(author);
+            }
+        }
+        candidates.sort(Comparator.comparing(Author::getId));
+
+        Set<Long> renamed = new HashSet<>();
+        Map<Long, String> blocked = new HashMap<>();
+        for (Author author : candidates) {
+            String desired = desiredById.get(author.getId());
+            if (authorNameTaken(desired, author.getId())) {
+                blocked.put(author.getId(), "Name \"" + desired + "\" is already used by another author");
+                continue;
+            }
+            author.setName(desired);
+            authorRepository.saveAndFlush(author);
+            renamed.add(author.getId());
+        }
+
+        List<AuthorNameNormalizationResultDto> results = new ArrayList<>();
+        for (Long id : ids) {
+            Author author = authors.get(id);
+            if (author == null) {
+                results.add(AuthorNameNormalizationResultDto.builder()
+                        .authorId(id)
+                        .changed(false)
+                        .success(false)
+                        .errorMessage("Author not found")
+                        .build());
+                continue;
+            }
+            String before = originalNames.get(id);
+            String after = desiredById.getOrDefault(id, before);
+            if (renamed.contains(id)) {
+                results.add(AuthorNameNormalizationResultDto.builder()
+                        .authorId(id)
+                        .name(author.getName())
+                        .before(before)
+                        .after(after)
+                        .changed(true)
+                        .success(true)
+                        .updatedAuthor(authorMapper.toDto(author))
+                        .build());
+            } else if (blocked.containsKey(id)) {
+                results.add(AuthorNameNormalizationResultDto.builder()
+                        .authorId(id)
+                        .name(before)
+                        .before(before)
+                        .after(after)
+                        .changed(false)
+                        .success(false)
+                        .errorMessage(blocked.get(id))
+                        .build());
+            } else {
+                results.add(AuthorNameNormalizationResultDto.builder()
+                        .authorId(id)
+                        .name(before == null ? "" : before)
+                        .before(before == null ? "" : before)
+                        .after(after == null ? "" : after)
+                        .changed(false)
+                        .success(true)
+                        .build());
+            }
+        }
+        return results;
+    }
+
+    private boolean authorNameTaken(String name, Long exceptId) {
+        if (name == null || name.isBlank()) {
+            return true;
+        }
+        for (Author occupant : authorRepository.findAllByNameOrderByIdAsc(name)) {
+            if (occupant.getId() != null && !occupant.getId().equals(exceptId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Map<Long, Book> loadBooks(List<Long> ids) {

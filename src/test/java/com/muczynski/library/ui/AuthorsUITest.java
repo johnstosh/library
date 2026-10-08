@@ -138,9 +138,17 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-not-canonical']")).isVisible();
+        assertThat(page.locator("[data-test='filter-not-canonical']")).containsText("Not canonical");
         // Recent Arrivals starts on (faster /authors/most-recent-day backend).
         assertThat(page.locator("[data-test='filter-most-recent']")).hasAttribute("aria-pressed", "true");
         assertThat(page.locator("text=Initial Author")).isVisible();
+
+        page.setViewportSize(375, 667);
+        assertThat(page.locator("[data-test='filter-not-canonical']")).isVisible();
+        page.click("[data-test='filter-not-canonical']");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        assertThat(page.locator("text=Initial Author")).hasCount(0);
     }
 
     @Test
@@ -307,7 +315,15 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).containsText("Quick Grokipedia lookup");
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).containsText("Slow Grokipedia lookup");
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).containsText("Canonical Author Names");
         assertThat(page.locator("[data-test='bulk-delete']")).isVisible();
         assertThat(page.locator("[data-test='bulk-delete']")).containsText("Delete Selected");
+
+        page.setViewportSize(375, 667);
+        page.click("[data-test='bulk-canonical-author']");
+        assertThat(page.locator("[data-test='name-normalization-results']")).isVisible();
+        assertThat(page.locator("[data-test='name-normalization-results']")).containsText("Already conforms");
+        page.click("[data-test='name-normalization-results-close']");
     }
 }
