@@ -138,6 +138,8 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-most-recent']")).containsText("Recent Arrivals");
         assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-title-not-chicago']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-author-not-canonical']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-genres']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-not-active-status']")).hasCount(0);
@@ -162,6 +164,8 @@ public class SearchUITest {
             assertThat(mobilePage.locator("[data-test='filter-without-loc']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='status-filter-without-loc']")).isVisible();
             assertThat(mobilePage.locator("[data-test='filter-without-grokipedia']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-title-not-chicago']")).hasCount(0);
+            assertThat(mobilePage.locator("[data-test='filter-author-not-canonical']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-without-genres']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-without-free-text-urls']")).hasCount(0);
             assertThat(mobilePage.locator("[data-test='filter-not-active-status']")).hasCount(0);

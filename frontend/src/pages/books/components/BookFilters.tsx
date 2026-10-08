@@ -220,6 +220,20 @@ export function BookFilters({
           tooltip="Cataloger filter: books missing a proper plot summary OR detailed description (proper = trimmed length ≥ 400 characters in both fields)"
           dataTest="filter-without-proper-plot-or-description"
         />
+        <FilterChip
+          label="Title not Chicago case"
+          active={chips.titleNotChicago}
+          onClick={() => toggle('titleNotChicago')}
+          tooltip="Only books whose title, including the subtitle, is not Chicago title case"
+          dataTest="filter-title-not-chicago"
+        />
+        <FilterChip
+          label="Author not canonical"
+          active={chips.authorNotCanonical}
+          onClick={() => toggle('authorNotCanonical')}
+          tooltip="Only books whose author is comma-inverted, has birth or death years, or has initials that can be expanded"
+          dataTest="filter-author-not-canonical"
+        />
       </div>
       )}
     </div>

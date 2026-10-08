@@ -42,6 +42,8 @@ describe('isOtherBookChipActive', () => {
   it('ignores mostRecent and detects any other chip', () => {
     expect(isOtherBookChipActive(chips({ mostRecent: true }))).toBe(false)
     expect(isOtherBookChipActive(chips({ withoutGrokipedia: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ titleNotChicago: true }))).toBe(true)
+    expect(isOtherBookChipActive(chips({ authorNotCanonical: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ hasYdlAudio: true }))).toBe(true)
     expect(isOtherBookChipActive(chips({ mostRecent: true, freeText: true }))).toBe(true)
   })

@@ -153,6 +153,10 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-price-other-unknown']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-price-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-title-not-chicago']")).isVisible();
+        assertThat(page.locator("[data-test='filter-title-not-chicago']")).containsText("Title not Chicago case");
+        assertThat(page.locator("[data-test='filter-author-not-canonical']")).isVisible();
+        assertThat(page.locator("[data-test='filter-author-not-canonical']")).containsText("Author not canonical");
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
         assertThat(page.locator("[data-test='status-filters']")).isVisible();
@@ -794,6 +798,10 @@ public class BooksUITest {
 
         assertThat(page.locator("[data-test='bulk-fill-reading-difficulty']")).isVisible();
         assertThat(page.locator("[data-test='bulk-fill-reading-difficulty']")).containsText("Fill Reading Difficulty");
+        assertThat(page.locator("[data-test='bulk-chicago-title']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-chicago-title']")).containsText("Chicago Title Case");
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).containsText("Canonical Author Names");
     }
 
     @Test

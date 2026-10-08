@@ -172,7 +172,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
-- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
+- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto
 
@@ -180,6 +180,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
+- `titleNotChicago` keeps books whose title, including the subtitle after a colon, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, or initials with a parenthetical expansion). The two chips AND together. Blank titles and blank author names are not flagged.
 - Each row includes `dateAddedToLibrary`. The list is most-recent first, with missing dates last.
 - The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
@@ -487,4 +488,41 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 
 ---
 
-**Related:** BookController.java, BookService.java, AskGrok.java, BookDto.java, BookSummaryDto.java, BulkDeleteResultDto.java, ReadingDifficultyLookupResultDto.java
+## POST /api/books/normalize-titles-bulk
+Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon. Short function words stay lower unless they start the title or the subtitle. A trailing catalog copy suffix (`, c. N`) is preserved.
+
+**Authentication:** Librarian
+
+**Request Body:** JSON array of book IDs
+
+**Response:** Array of `NameNormalizationResultDto` (`bookId`, `title`, `before`, `after`, `changed`, `success`, `errorMessage`, `updatedBook`)
+
+**Behavior:**
+- A title that already conforms is returned with `changed: false` and is not saved
+- A title that would match another book's title is skipped (`success: false`) and left unchanged
+- `updatedBook` is present only when the title changed
+
+**Use Case:** Books page bulk-action carousel "Chicago Title Case"
+
+---
+
+## POST /api/books/normalize-authors-bulk
+Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). Initials with no expansion are left as written, including their periods and hyphens.
+
+**Authentication:** Librarian
+
+**Request Body:** JSON array of book IDs
+
+**Response:** Array of `NameNormalizationResultDto`
+
+**Behavior:**
+- An author that already conforms is left unchanged
+- When every book by that author is selected and the canonical name is free, the author row is renamed in place. Its photos stay on that row
+- Otherwise only the selected books are relinked to the existing author of that canonical name, or to one new author created for it. Unselected books keep the old author
+- Does not write alternate names. Pen names and Latin forms stay on issue #372
+
+**Use Case:** Books page bulk-action carousel "Canonical Author Names"
+
+---
+
+**Related:** BookController.java, BookService.java, CatalogNameNormalizationService.java, AskGrok.java, BookDto.java, BookSummaryDto.java, BulkDeleteResultDto.java, ReadingDifficultyLookupResultDto.java, NameNormalizationResultDto.java

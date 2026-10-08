@@ -105,6 +105,23 @@ class CatalogFilterServiceIntegrationTest {
         CatalogFilterService.BookCatalogFilter errors = query(token);
         errors.lookupErrors = true;
         assertEquals(List.of(errored.getId()), ids(catalogFilterService.bookSummaries(errors, null, true)));
+
+        Book lowerTitle = bookRepository.save(book("the history of " + token, author, null, null));
+        Book chicagoTitle = bookRepository.save(book("Already " + token, author, null, null));
+        Author inverted = authorRepository.save(authorNamed("Simpson, " + token));
+        Book invertedBook = bookRepository.save(book("Canonical " + token, inverted, null, null));
+
+        CatalogFilterService.BookCatalogFilter titles = query(token);
+        titles.titleNotChicago = true;
+        List<Long> titleIds = ids(catalogFilterService.bookSummaries(titles, null, true));
+        assertTrue(titleIds.contains(lowerTitle.getId()));
+        assertFalse(titleIds.contains(chicagoTitle.getId()));
+
+        CatalogFilterService.BookCatalogFilter authors = query(token);
+        authors.authorNotCanonical = true;
+        List<Long> authorIds = ids(catalogFilterService.bookSummaries(authors, null, true));
+        assertTrue(authorIds.contains(invertedBook.getId()));
+        assertFalse(authorIds.contains(lowerTitle.getId()));
     }
 
     @Test

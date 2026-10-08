@@ -147,7 +147,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
-Cataloger chips (`mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`) are **not** shown or written on Search. They remain on `/books`. Status chips (including Without LOC) are shown on Search, Books, and Prices.
+Cataloger chips (`mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `titleNotChicago`, `authorNotCanonical`) are **not** shown or written on Search. They remain on `/books` (and on `/prices`, which shares that cataloger row). `titleNotChicago` keeps books whose title is not Chicago title case. `authorNotCanonical` keeps books whose author is comma-inverted, has birth or death years, or has initials that can be expanded. Status chips (including Without LOC) are shown on Search, Books, and Prices.
 
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)

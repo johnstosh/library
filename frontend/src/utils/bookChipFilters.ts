@@ -1,5 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import type { BookDto, BookPriceDto } from '@/types/dtos'
+import { authorNeedsCanonicalName } from '@/utils/canonicalAuthorName'
+import { titleNeedsChicagoCase } from '@/utils/chicagoTitleCase'
 
 /** Default "price older than N days" window on the Books page. */
 export const DEFAULT_PRICE_OLDER_DAYS = 90
@@ -14,7 +16,8 @@ export const PROPER_TEXT_MIN_CHARS = 400
  * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
  *   hasAclaAudio, hasAclaBook, hasAclaEbook
  * Row 2: freeText, audio, mostRecent
- * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls, withoutProperPlotOrDescription
+ * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls,
+ *   withoutProperPlotOrDescription, titleNotChicago, authorNotCanonical
  * Pricing (Books, librarians): withPrices, noPrices, priceOlder, lookupErrors
  *
  * Status (in-library, electronic-resource, without-loc, lost, withdrawn,
@@ -38,6 +41,8 @@ export interface BookChipFilters {
   withoutGenres: boolean
   withoutFreeTextUrls: boolean
   withoutProperPlotOrDescription: boolean
+  titleNotChicago: boolean
+  authorNotCanonical: boolean
   withPrices: boolean
   noPrices: boolean
   priceOlder: boolean
@@ -64,6 +69,8 @@ export const defaultBookChipFilters: BookChipFilters = {
   withoutGenres: false,
   withoutFreeTextUrls: false,
   withoutProperPlotOrDescription: false,
+  titleNotChicago: false,
+  authorNotCanonical: false,
   withPrices: false,
   noPrices: false,
   priceOlder: false,
@@ -123,6 +130,7 @@ export function applyChipFilters<T extends Pick<
   | 'aclaEbookAvailable'
   | 'plotSummary'
   | 'detailedDescription'
+  | 'author'
 >>(books: T[], chips: BookChipFilters): T[] {
   let maxDate: Date | null = null
   if (chips.mostRecent) {
@@ -175,6 +183,9 @@ export function applyChipFilters<T extends Pick<
     ) {
       return false
     }
+
+    if (chips.titleNotChicago && !titleNeedsChicagoCase(book.title)) return false
+    if (chips.authorNotCanonical && !authorNeedsCanonicalName(book.author)) return false
 
     return true
   })

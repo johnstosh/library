@@ -11,6 +11,7 @@ import type {
   BookSummaryDto,
   BulkDeleteResultDto,
   GenreLookupResultDto,
+  NameNormalizationResultDto,
   ReadingDifficultyLookupResultDto,
 } from '@/types/dtos'
 
@@ -48,6 +49,8 @@ const BOOK_CHIP_API_KEYS: Record<keyof BookChipFilters, string> = {
   withoutGenres: 'withoutGenres',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
   withoutProperPlotOrDescription: 'withoutProperPlotOrDescription',
+  titleNotChicago: 'titleNotChicago',
+  authorNotCanonical: 'authorNotCanonical',
   withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',
@@ -585,6 +588,42 @@ export function useLookupGenresBulk() {
       queryClient.invalidateQueries({ queryKey: queryKeys.books.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
     },
+  })
+}
+
+function cacheNormalizationResults(
+  queryClient: ReturnType<typeof useQueryClient>,
+  results: NameNormalizationResultDto[],
+  refreshAuthors: boolean,
+) {
+  for (const result of results) {
+    if (result.updatedBook) {
+      queryClient.setQueryData(queryKeys.books.detail(result.bookId), result.updatedBook)
+    }
+  }
+  queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+  if (refreshAuthors) {
+    queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+  }
+}
+
+/** Rewrite selected books' titles into Chicago title case. */
+export function useNormalizeTitlesBulk() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<NameNormalizationResultDto[]>('/books/normalize-titles-bulk', ids),
+    onSuccess: (results) => cacheNormalizationResults(queryClient, results, false),
+  })
+}
+
+/** Rewrite selected books' authors into canonical given-name-then-family-name form. */
+export function useNormalizeAuthorsBulk() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<NameNormalizationResultDto[]>('/books/normalize-authors-bulk', ids),
+    onSuccess: (results) => cacheNormalizationResults(queryClient, results, true),
   })
 }
 

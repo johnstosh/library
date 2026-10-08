@@ -583,6 +583,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b.id, b.plotEssay, b.detailedDescription FROM Book b WHERE b.id IN :ids")
     List<Object[]> findPlotFieldsByIds(@Param("ids") List<Long> ids);
 
+    @Query("SELECT b.id, b.title, a.name FROM Book b LEFT JOIN b.author a WHERE b.id IN :ids")
+    List<Object[]> findTitleAndAuthorByIds(@Param("ids") List<Long> ids);
+
     @Query("SELECT DISTINCT b.author.id FROM Book b WHERE b.author IS NOT NULL AND b.dateAddedToLibrary >= :start AND b.dateAddedToLibrary < :end")
     List<Long> findAuthorIdsAddedBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 

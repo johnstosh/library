@@ -10,6 +10,8 @@ import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.util.CanonicalAuthorName;
+import com.muczynski.library.util.ChicagoTitleCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -159,6 +161,13 @@ public class CatalogFilterService {
             Set<Long> keep = plotIdsToKeep(rows.stream().map(BookRepository.BookSummaryProjection::getId).toList());
             rows = rows.stream().filter(row -> keep.contains(row.getId())).toList();
         }
+        if ((filter.titleNotChicago || filter.authorNotCanonical) && !rows.isEmpty()) {
+            Set<Long> keep = namingIdsToKeep(
+                    rows.stream().map(BookRepository.BookSummaryProjection::getId).toList(),
+                    filter.titleNotChicago,
+                    filter.authorNotCanonical);
+            rows = rows.stream().filter(row -> keep.contains(row.getId())).toList();
+        }
         return rows.stream().map(this::toBookSummary).toList();
     }
 
@@ -223,6 +232,32 @@ public class CatalogFilterService {
         return keep;
     }
 
+    /**
+     * Keeps books whose title or author fails the naming rules. When both
+     * chips are on, a book must fail both (the chips AND together).
+     */
+    private Set<Long> namingIdsToKeep(List<Long> ids, boolean titleNotChicago, boolean authorNotCanonical) {
+        Set<Long> keep = new HashSet<>();
+        for (int offset = 0; offset < ids.size(); offset += ID_CHUNK) {
+            List<Long> chunk = ids.subList(offset, Math.min(offset + ID_CHUNK, ids.size()));
+            for (Object[] row : bookRepository.findTitleAndAuthorByIds(chunk)) {
+                Long id = ((Number) row[0]).longValue();
+                String title = row[1] == null ? null : row[1].toString();
+                String author = row[2] == null ? null : row[2].toString();
+                boolean titleBad = titleNotChicago && ChicagoTitleCase.needsWork(title);
+                boolean authorBad = authorNotCanonical && CanonicalAuthorName.needsWork(author);
+                if (titleNotChicago && authorNotCanonical) {
+                    if (titleBad && authorBad) {
+                        keep.add(id);
+                    }
+                } else if (titleBad || authorBad) {
+                    keep.add(id);
+                }
+            }
+        }
+        return keep;
+    }
+
     private BookSummaryDto toBookSummary(BookRepository.DatedBookSummaryProjection projection) {
         BookSummaryDto dto = new BookSummaryDto();
         dto.setId(projection.getId());
@@ -250,6 +285,8 @@ public class CatalogFilterService {
         public boolean withoutGenres;
         public boolean withoutFreeTextUrls;
         public boolean withoutProperPlotOrDescription;
+        public boolean titleNotChicago;
+        public boolean authorNotCanonical;
         public boolean ydlAudio;
         public boolean ydlBook;
         public boolean ydlEbook;
