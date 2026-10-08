@@ -109,11 +109,14 @@ vi.mock('@/api/favorites', () => ({
 }))
 
 function UrlQuery() {
-  const [params] = useSearchParams()
+  const [params, setSearchParams] = useSearchParams()
   const location = useLocation()
   return (
     <>
       <div data-test="url-q">{params.get('q') ?? ''}</div>
+      <button type="button" data-test="set-url-q" onClick={() => setSearchParams({ q: 'FromUrl' })}>
+        set url
+      </button>
       <div data-test="url-reading-difficulty">{params.get('readingDifficulty') ?? ''}</div>
       <div data-test="url-binding">{params.get('binding') ?? ''}</div>
       <div data-test="url-status">{params.get('status') ?? ''}</div>
@@ -196,6 +199,18 @@ describe('BooksPage title filter', () => {
     expect(screen.getByTestId('url-q')).toHaveTextContent('NoSuchTitleZZZ')
     expect(screen.queryByTestId('book-row-1')).not.toBeInTheDocument()
     expect(screen.queryByTestId('book-row-2')).not.toBeInTheDocument()
+  })
+
+  it('replaces a typed title when the URL query changes', () => {
+    renderBooksPage('/books?q=Initial')
+    const input = screen.getByTestId('books-title-filter')
+    expect(input).toHaveValue('Initial')
+
+    fireEvent.change(input, { target: { value: 'Typed' } })
+    expect(input).toHaveValue('Typed')
+
+    fireEvent.click(screen.getByTestId('set-url-q'))
+    expect(input).toHaveValue('FromUrl')
   })
 })
 

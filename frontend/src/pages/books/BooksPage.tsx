@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -58,15 +58,18 @@ export function BooksPage() {
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
+  // Apply the URL query in this render so a delayed effect cannot restore the
+  // previous query after the next title has been typed.
+  const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  if (urlQuery !== syncedQuery) {
+    setSyncedQuery(urlQuery)
+    setInputValue(urlQuery)
+  }
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
   const queryClient = useQueryClient()
   const [, startTransition] = useTransition()
-
-  useEffect(() => {
-    setInputValue(urlQuery)
-  }, [urlQuery])
 
   const writeUrl = (next: {
     chips?: BookChipFilters
