@@ -178,11 +178,15 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     List<Long> findAuthorIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 
     /**
-     * Summaries for the Authors page. Every active chip ANDs. mostRecent ids come
-     * from books added on the catalog's latest day, the same set as /most-recent-day.
+     * Summaries for the Authors page. Every active chip ANDs with {@code query}.
+     * A blank query matches every name. Otherwise the name or an alternate name
+     * must contain the text, ignoring case. mostRecent ids come from books added
+     * on the catalog's latest day, the same set as /most-recent-day.
      * biographicalEssay is a PostgreSQL OID, so only IS NULL is valid.
      */
     @Query("SELECT a.id as id, a.lastModified as lastModified, a.name as name FROM Author a WHERE " +
+        "(:query = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+        "LOWER(COALESCE(array_to_string(a.alternateNames, '||'), '')) LIKE LOWER(CONCAT('%', :query, '%'))) AND " +
         "(:filterMostRecent = false OR a.id IN :mostRecentAuthorIds) AND " +
         "(:filterWithoutDescription = false OR a.biographicalEssay IS NULL) AND " +
         "(:filterWithoutGrokipedia = false OR a.grokipediaUrl IS NULL OR a.grokipediaUrl = '' OR a.grokipediaUrl = '-') AND " +
@@ -223,5 +227,6 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
         @Param("filterEmuAudio") boolean filterEmuAudio,
         @Param("filterAclaBook") boolean filterAclaBook,
         @Param("filterAclaEbook") boolean filterAclaEbook,
-        @Param("filterAclaAudio") boolean filterAclaAudio);
+        @Param("filterAclaAudio") boolean filterAclaAudio,
+        @Param("query") String query);
 }

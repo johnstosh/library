@@ -34,11 +34,15 @@ const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
 export interface AuthorListFilters {
   chips: AuthorChipFilters
   favoriteLists?: readonly string[]
+  /** Name or alternate name. Blank returns every author that passes the chips. */
+  q?: string
 }
 
 /** Query string for GET /authors/filtered-summaries. Names match the controller. */
 export function authorListFilterQuery(filters: AuthorListFilters): string {
   const params = new URLSearchParams()
+  const q = (filters.q ?? '').trim()
+  if (q) params.set('q', q)
   for (const key of AUTHOR_FILTER_KEYS) {
     if (filters.chips[key]) params.set(key, 'true')
   }

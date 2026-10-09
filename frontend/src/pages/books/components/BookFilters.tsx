@@ -231,7 +231,7 @@ export function BookFilters({
           label="Author not canonical"
           active={chips.authorNotCanonical}
           onClick={() => toggle('authorNotCanonical')}
-          tooltip="Only books whose author is comma-inverted, has birth or death years, or has initials that can be expanded"
+          tooltip="Only books whose author is comma-inverted, has years, expandable initials, a catalog note, or is all capitals or all lowercase"
           dataTest="filter-author-not-canonical"
         />
       </div>

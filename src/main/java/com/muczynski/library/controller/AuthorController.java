@@ -141,9 +141,11 @@ public class AuthorController {
             @RequestParam(defaultValue = "false") boolean hasAclaEbook,
             @RequestParam(defaultValue = "false") boolean hasAclaAudio,
             @RequestParam(required = false) String favoriteLists,
+            @RequestParam(required = false) String q,
             Principal principal) {
         try {
             CatalogFilterService.AuthorCatalogFilter filter = new CatalogFilterService.AuthorCatalogFilter();
+            filter.query = q == null ? "" : q;
             filter.mostRecent = mostRecent;
             filter.withoutDescription = withoutDescription;
             filter.withoutGrokipedia = withoutGrokipedia;

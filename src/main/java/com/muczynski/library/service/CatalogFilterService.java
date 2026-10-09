@@ -173,6 +173,7 @@ public class CatalogFilterService {
 
     @Transactional(readOnly = true)
     public List<AuthorSummaryDto> authorSummaries(AuthorCatalogFilter filter, Long userId) {
+        String query = filter.query == null ? "" : filter.query.trim();
         boolean filterFavorites = false;
         List<Long> favoriteAuthorIds = NO_IDS;
         if (userId != null && filter.favoriteLists != null && !filter.favoriteLists.isEmpty()) {
@@ -199,7 +200,8 @@ public class CatalogFilterService {
                 filterFavorites, favoriteAuthorIds,
                 filter.ydlBook, filter.ydlEbook, filter.ydlAudio,
                 filter.emuBook, filter.emuEbook, filter.emuAudio,
-                filter.aclaBook, filter.aclaEbook, filter.aclaAudio);
+                filter.aclaBook, filter.aclaEbook, filter.aclaAudio,
+                query);
         if (filter.notCanonical) {
             rows = rows.stream()
                     .filter(row -> CanonicalAuthorName.needsWork(row.getName()))
@@ -315,6 +317,8 @@ public class CatalogFilterService {
 
     /** Parsed Authors page filter. */
     public static final class AuthorCatalogFilter {
+        /** Case-insensitive partial match on the name or an alternate name. Blank matches every author. */
+        public String query = "";
         public boolean mostRecent;
         public boolean withoutDescription;
         public boolean withoutGrokipedia;
@@ -324,7 +328,7 @@ public class CatalogFilterService {
         public boolean withPhotos;
         public boolean withoutBirthDate;
         public boolean withoutDeathDate;
-        /** Author name is comma-inverted, has years, or has initials that can be expanded. */
+        /** Author name is comma-inverted, has years, expandable initials, a catalog note, or uniform case. */
         public boolean notCanonical;
         public boolean ydlBook;
         public boolean ydlEbook;

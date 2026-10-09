@@ -182,7 +182,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           label="Not canonical"
           active={chips.notCanonical}
           onClick={() => onToggle('notCanonical')}
-          tooltip="Only authors whose name is comma-inverted, has birth or death years, or has initials that can be expanded"
+          tooltip="Only authors whose name is comma-inverted, has years, expandable initials, a catalog note, or is all capitals or all lowercase"
           dataTest="filter-not-canonical"
         />
         <FilterChip

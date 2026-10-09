@@ -150,7 +150,7 @@ describe('canonical author names', () => {
     )
     expect(toCanonicalAuthorName('Edward Leen, CSSp')).toBe('Edward Leen CSSp')
     expect(toCanonicalAuthorName('Fr. Frederick Schmit, O.Praem.')).toBe('Fr. Frederick Schmit O.Praem.')
-    expect(toCanonicalAuthorName('JOHN HENRY NEWMAN, D.D.')).toBe('JOHN HENRY NEWMAN D.D.')
+    expect(toCanonicalAuthorName('JOHN HENRY NEWMAN, D.D.')).toBe('John Henry Newman D.D.')
     expect(toCanonicalAuthorName('Plus, Raoul, S. J.')).toBe('Raoul Plus S. J.')
     expect(toCanonicalAuthorName('White, C. L')).toBe('C. L White')
     expect(toCanonicalAuthorName('Bridgett, T. E')).toBe('T. E Bridgett')
@@ -192,6 +192,108 @@ describe('canonical author names', () => {
     )
     expect(authorNeedsCanonicalName('Francis Aidan Gasquet (ed.)')).toBe(true)
     expect(authorNeedsCanonicalName('Francis Aidan Gasquet')).toBe(false)
+  })
+
+  it('strips approximate years instead of moving them in front', () => {
+    expect(toCanonicalAuthorName('Peter Riga, approximately 1140-1209')).toBe('Peter Riga')
+    expect(toCanonicalAuthorName('approximately 1140-1209 Peter Riga')).toBe('Peter Riga')
+    expect(toCanonicalAuthorName('Riga, Peter, approximately 1140-1209')).toBe('Peter Riga')
+    expect(toCanonicalAuthorName('Peter Riga, approx. 1140-1209')).toBe('Peter Riga')
+    expect(toCanonicalAuthorName('PETER RIGA, APPROXIMATELY 1140-1209')).toBe('Peter Riga')
+    expect(authorNeedsCanonicalName('Peter Riga')).toBe(false)
+  })
+
+  it('replaces two-letter initials and drops redundant initials', () => {
+    expect(toCanonicalAuthorName('Fillion, L.-Cl. (Louis-Claude)')).toBe('Louis Claude Fillion')
+    expect(toCanonicalAuthorName('Stang, Wm. (William)')).toBe('William Stang')
+    expect(toCanonicalAuthorName('Martindale, Cyril Charles (C. C.)')).toBe('Cyril Charles Martindale')
+    expect(toCanonicalAuthorName('Martindale, Cyril Charles (C.C.)')).toBe('Cyril Charles Martindale')
+    expect(toCanonicalAuthorName('John Smith (D.D.)')).toBe('John Smith (D.D.)')
+    expect(toCanonicalAuthorName('John Smith (S.J.)')).toBe('John Smith (S.J.)')
+    expect(toCanonicalAuthorName('John Smith (S. J.)')).toBe('John Smith (S. J.)')
+    expect(toCanonicalAuthorName('St. Edith Stein (Teresa Benedicta of the Cross)')).toBe(
+      'St. Edith Stein (Teresa Benedicta of the Cross)',
+    )
+  })
+
+  it('removes old catalog notes', () => {
+    expect(toCanonicalAuthorName('John Smith [from old catalog]')).toBe('John Smith')
+    expect(toCanonicalAuthorName('Smith, John [from old catalog]')).toBe('John Smith')
+    expect(toCanonicalAuthorName('John Smith [From Old Catalog]')).toBe('John Smith')
+    expect(toCanonicalAuthorName('Peter Riga, approximately 1140-1209 [from old catalog]')).toBe('Peter Riga')
+    expect(authorNeedsCanonicalName('John Smith [from old catalog]')).toBe(true)
+  })
+
+  it('normalizes all-upper and all-lower names to initial capitals', () => {
+    const sister = 'Sister Mary Antonia, B.V.M. Ph, D and Rev. Thomas J. Shahan D.D.'
+    expect(toCanonicalAuthorName('sister mary antonia, b.v.m. ph, d and rev. thomas j. shahan d.d.')).toBe(sister)
+    expect(toCanonicalAuthorName('sister mary antonia, b.v.m. ph,d and rev. thomas j. shahan d.d.')).toBe(sister)
+    const keppler = 'Rt. Rev. Paul William von Keppler D.D.'
+    expect(toCanonicalAuthorName('RT. REV. PAUL WILLIAM VON KEPPLER D.D.')).toBe(keppler)
+    expect(toCanonicalAuthorName('RT. REV. PAUL WILLIAM VON KEPPLER, D.D.')).toBe(keppler)
+    expect(toCanonicalAuthorName('JOHN HENRY NEWMAN D.D.')).toBe('John Henry Newman D.D.')
+    expect(toCanonicalAuthorName('LUIS DE LA PUENTE')).toBe('Luis de la Puente')
+    expect(toCanonicalAuthorName('CLAUDE LA COLOMBIÈRE')).toBe('Claude La Colombière')
+    expect(toCanonicalAuthorName('JEANNE D\'ARC')).toBe("Jeanne d'Arc")
+    expect(toCanonicalAuthorName('JOHN MCDONALD')).toBe('John McDonald')
+    expect(toCanonicalAuthorName('JOHN O\'BRIEN')).toBe("John O'Brien")
+    expect(toCanonicalAuthorName('VENERABLE LOUIS OF GRANADA, OP')).toBe('Venerable Louis of Granada OP')
+    expect(toCanonicalAuthorName('LOUIS XIV')).toBe('Louis XIV')
+    expect(authorNeedsCanonicalName(keppler)).toBe(false)
+    expect(authorNeedsCanonicalName('John Henry Newman D.D.')).toBe(false)
+    expect(authorNeedsCanonicalName('RT. REV. PAUL WILLIAM VON KEPPLER D.D.')).toBe(true)
+    expect(authorNeedsCanonicalName('sister mary antonia')).toBe(true)
+  })
+
+  it('expands a longer dotted abbreviation from the parenthetical name', () => {
+    expect(toCanonicalAuthorName('Belser, Joh. Evang. (Johannes Evangelist)')).toBe(
+      'Johannes Evangelist Belser',
+    )
+  })
+
+  it('repairs UTF-8 names that were read as Latin-1', () => {
+    expect(toCanonicalAuthorName('Garesch\u00C3\u00A9, Edward F. (Edward Francis)')).toBe(
+      'Edward Francis Garesché',
+    )
+    expect(toCanonicalAuthorName('Gr\u00C3\u00B6nings, Jakob')).toBe('Jakob Grönings')
+    expect(toCanonicalAuthorName('Trotti de La Ch\u00C3\u00A9tardie, Joachim]')).toBe(
+      'Joachim Trotti de La Chétardie',
+    )
+    expect(toCanonicalAuthorName('Schouppe, F. X. (Fran\u00C3\u00A7ois Xavier)')).toBe(
+      'François Xavier Schouppe',
+    )
+    expect(toCanonicalAuthorName('Pr\u00C3\u00A9vot, Andr\u00C3\u00A9')).toBe('André Prévot')
+    expect(toCanonicalAuthorName('Schouppe, F. X. (François Xavier)')).toBe('François Xavier Schouppe')
+  })
+
+  it('keeps the longer form when one name repeats inside the other', () => {
+    expect(toCanonicalAuthorName('Joseph Hergenröther , Joseph Adam Gustav Hergenröther')).toBe(
+      'Joseph Adam Gustav Hergenröther',
+    )
+    expect(toCanonicalAuthorName('García Márquez, Gabriel José')).toBe('Gabriel José García Márquez')
+  })
+
+  it('keeps Thomas à Kempis in reading order', () => {
+    expect(toCanonicalAuthorName('Thomas, à Kempis')).toBe('Thomas à Kempis')
+    expect(toCanonicalAuthorName('Thomas, a\u0300 Kempis')).toBe('Thomas à Kempis')
+    expect(toCanonicalAuthorName('à Kempis Thomas')).toBe('Thomas à Kempis')
+    expect(toCanonicalAuthorName('a\u0300 Kempis Thomas')).toBe('Thomas à Kempis')
+    expect(toCanonicalAuthorName('Thomas à Kempis')).toBe('Thomas à Kempis')
+    expect(authorNeedsCanonicalName('Thomas à Kempis')).toBe(false)
+  })
+
+  it('does not merge Scaramelli with Manning', () => {
+    expect(toCanonicalAuthorName('john baptist scaramelli, rev. cardinal archbishop manning')).toBe(
+      'John Baptist Scaramelli, Rev. Cardinal Archbishop Manning',
+    )
+    expect(toCanonicalAuthorName('Maria Paula, Sister')).toBe('Sister Maria Paula')
+    expect(toCanonicalAuthorName('Gregory I, Pope, ca. 540-604')).toBe('Pope Gregory I')
+  })
+
+  it('strips a translator relator', () => {
+    expect(toCanonicalAuthorName('FULLERTON, GEORGIANA TR.')).toBe('Georgiana Fullerton')
+    expect(toCanonicalAuthorName('GEORGIANA TR. FULLERTON')).toBe('Georgiana Fullerton')
+    expect(toCanonicalAuthorName('John Troy')).toBe('John Troy')
   })
 })
 
