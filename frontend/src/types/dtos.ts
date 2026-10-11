@@ -49,6 +49,8 @@ export interface BranchStatisticsDto {
 export interface AuthorDto {
   id: number
   name: string
+  /** Other catalog forms of this person, such as a pen name or a Latin name. */
+  alternateNames?: string[]
   dateOfBirth?: string
   dateOfDeath?: string
   religiousAffiliation?: string
@@ -271,6 +273,32 @@ export interface GenreLookupResultDto {
   suggestedGenres?: string[]
   errorMessage?: string
   /** Populated on success so the frontend can seed the book cache without a follow-up by-ids fetch. */
+  updatedBook?: BookDto
+}
+
+export interface AuthorNameNormalizationResultDto {
+  authorId: number
+  name?: string
+  before?: string
+  after?: string
+  changed: boolean
+  success: boolean
+  errorMessage?: string
+  /** Set when this author was merged into another row and deleted. */
+  mergedIntoAuthorId?: number
+  /** Set when this same row was renamed, so the client can refresh it. */
+  updatedAuthor?: AuthorDto
+}
+
+export interface NameNormalizationResultDto {
+  bookId: number
+  title?: string
+  before?: string
+  after?: string
+  changed: boolean
+  success: boolean
+  errorMessage?: string
+  /** Set when this book changed, so the client can refresh that row. */
   updatedBook?: BookDto
 }
 

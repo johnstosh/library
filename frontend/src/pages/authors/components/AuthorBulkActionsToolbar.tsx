@@ -4,14 +4,17 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/hooks/useToast'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Modal } from '@/components/ui/Modal'
-import { useDeleteAuthors, useGenerateAuthorsMissingDataWithProgress } from '@/api/authors'
+import { useDeleteAuthors, useGenerateAuthorsMissingDataWithProgress, useNormalizeAuthorNamesBulk } from '@/api/authors'
 import { useBranches } from '@/api/branches'
 import { useLookupBulkAuthorsGrokipediaWithProgress, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { GrokipediaLookupResultsModal } from '@/components/GrokipediaLookupResultsModal'
 import { AuthorEnrichmentResultsModal } from './AuthorEnrichmentResultsModal'
 import { AiIcon, GrokipediaIcon } from '@/components/ui/Icons'
-import type { AuthorEnrichmentResultDto, BulkDeleteResultDto } from '@/types/dtos'
+import type { AuthorEnrichmentResultDto, AuthorNameNormalizationResultDto, BulkDeleteResultDto } from '@/types/dtos'
 import { ActionCarousel, SelectionSummary, SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { NameNormalizationResultsModal } from '@/pages/books/components/NameNormalizationResultsModal'
+import { useUiStore } from '@/stores/uiStore'
+import { PiUser } from 'react-icons/pi'
 
 interface AuthorBulkActionsToolbarProps {
   selectedIds: Set<number>
@@ -35,6 +38,7 @@ export function AuthorBulkActionsToolbar({
   isLoading = false,
 }: AuthorBulkActionsToolbarProps) {
   const toast = useToast()
+  const setSelectedIds = useUiStore((state) => state.setSelectedIds)
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -47,8 +51,11 @@ export function AuthorBulkActionsToolbar({
   const [showEnrichmentResults, setShowEnrichmentResults] = useState(false)
   const [enrichmentResults, setEnrichmentResults] = useState<AuthorEnrichmentResultDto[]>([])
   const [enrichmentProgress, setEnrichmentProgress] = useState(0)
+  const [showNameNormalization, setShowNameNormalization] = useState(false)
+  const [nameNormalizationResults, setNameNormalizationResults] = useState<AuthorNameNormalizationResultDto[]>([])
 
   const deleteAuthors = useDeleteAuthors()
+  const normalizeNames = useNormalizeAuthorNamesBulk()
   const lookupGrokipediaQuick = useLookupBulkAuthorsGrokipediaWithProgress((completed) => {
     setGrokipediaQuickProgress(completed)
   })
@@ -61,7 +68,11 @@ export function AuthorBulkActionsToolbar({
 
   const selectedCount = selectedIds.size
   const isOperationPending =
-    lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || generateMissing.isPending || deleteAuthors.isPending
+    lookupGrokipediaQuick.isPending ||
+    lookupGrokipediaSlow.isPending ||
+    generateMissing.isPending ||
+    deleteAuthors.isPending ||
+    normalizeNames.isPending
 
   const handleBulkDelete = async () => {
     try {
@@ -105,6 +116,27 @@ export function AuthorBulkActionsToolbar({
     } catch (error) {
       console.error('Failed to generate missing author data:', error)
       toast.error('Failed to generate missing author data')
+    }
+  }
+
+  const handleNormalizeNames = async () => {
+    try {
+      const results = await normalizeNames.mutateAsync(Array.from(selectedIds))
+      const removedIds = results
+        .filter((result) => result.mergedIntoAuthorId != null)
+        .map((result) => result.authorId)
+      if (removedIds.length > 0) {
+        const next = new Set(selectedIds)
+        for (const id of removedIds) {
+          next.delete(id)
+        }
+        setSelectedIds('authorsTable', next)
+      }
+      setNameNormalizationResults(results)
+      setShowNameNormalization(true)
+    } catch (error) {
+      console.error('Failed to normalize author names:', error)
+      toast.error('Failed to normalize author names')
     }
   }
 
@@ -188,6 +220,17 @@ export function AuthorBulkActionsToolbar({
               )}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNormalizeNames}
+              isLoading={normalizeNames.isPending}
+              disabled={isOperationPending}
+              leftIcon={<PiUser />}
+              data-test="bulk-canonical-author"
+            >
+              Canonical Author Names
+            </Button>
+            <Button
               variant="danger"
               size="sm"
               onClick={() => setShowDeleteConfirm(true)}
@@ -224,6 +267,14 @@ export function AuthorBulkActionsToolbar({
         isOpen={showEnrichmentResults}
         onClose={() => setShowEnrichmentResults(false)}
         results={enrichmentResults}
+      />
+
+      <NameNormalizationResultsModal
+        isOpen={showNameNormalization}
+        onClose={() => setShowNameNormalization(false)}
+        title="Canonical Author Names"
+        subject="author"
+        results={nameNormalizationResults}
       />
 
       <Modal

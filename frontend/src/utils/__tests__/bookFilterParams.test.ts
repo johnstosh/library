@@ -27,6 +27,8 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('hasAclaAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutGrokipedia')).toBe(false)
     expect(isSearchVisibleChip('withoutProperPlotOrDescription')).toBe(false)
+    expect(isSearchVisibleChip('titleNotChicago')).toBe(false)
+    expect(isSearchVisibleChip('authorNotCanonical')).toBe(false)
     expect(isSearchVisibleChip('mostRecent')).toBe(true)
     expect(isSearchVisibleChip('withPrices')).toBe(false)
     expect(isSearchVisibleChip('noPrices')).toBe(false)

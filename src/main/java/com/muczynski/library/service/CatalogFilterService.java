@@ -10,6 +10,8 @@ import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.util.CanonicalAuthorName;
+import com.muczynski.library.util.ChicagoTitleCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -159,11 +161,19 @@ public class CatalogFilterService {
             Set<Long> keep = plotIdsToKeep(rows.stream().map(BookRepository.BookSummaryProjection::getId).toList());
             rows = rows.stream().filter(row -> keep.contains(row.getId())).toList();
         }
+        if ((filter.titleNotChicago || filter.authorNotCanonical) && !rows.isEmpty()) {
+            Set<Long> keep = namingIdsToKeep(
+                    rows.stream().map(BookRepository.BookSummaryProjection::getId).toList(),
+                    filter.titleNotChicago,
+                    filter.authorNotCanonical);
+            rows = rows.stream().filter(row -> keep.contains(row.getId())).toList();
+        }
         return rows.stream().map(this::toBookSummary).toList();
     }
 
     @Transactional(readOnly = true)
     public List<AuthorSummaryDto> authorSummaries(AuthorCatalogFilter filter, Long userId) {
+        String query = filter.query == null ? "" : filter.query.trim();
         boolean filterFavorites = false;
         List<Long> favoriteAuthorIds = NO_IDS;
         if (userId != null && filter.favoriteLists != null && !filter.favoriteLists.isEmpty()) {
@@ -180,7 +190,7 @@ public class CatalogFilterService {
             mostRecentIds = resolved.isEmpty() ? NO_IDS : resolved;
         }
 
-        return authorRepository.findFilteredSummaries(
+        List<AuthorRepository.NamedAuthorSummaryProjection> rows = authorRepository.findFilteredSummaries(
                 filter.mostRecent, mostRecentIds,
                 filter.withoutDescription,
                 filter.withoutGrokipedia, filter.withGrokipedia,
@@ -190,10 +200,14 @@ public class CatalogFilterService {
                 filterFavorites, favoriteAuthorIds,
                 filter.ydlBook, filter.ydlEbook, filter.ydlAudio,
                 filter.emuBook, filter.emuEbook, filter.emuAudio,
-                filter.aclaBook, filter.aclaEbook, filter.aclaAudio)
-                .stream()
-                .map(this::toAuthorSummary)
-                .toList();
+                filter.aclaBook, filter.aclaEbook, filter.aclaAudio,
+                query);
+        if (filter.notCanonical) {
+            rows = rows.stream()
+                    .filter(row -> CanonicalAuthorName.needsWork(row.getName()))
+                    .toList();
+        }
+        return rows.stream().map(this::toAuthorSummary).toList();
     }
 
     private List<Long> mostRecentAuthorIds() {
@@ -216,6 +230,32 @@ public class CatalogFilterService {
                 String plot = row[1] == null ? null : row[1].toString();
                 String description = row[2] == null ? null : row[2].toString();
                 if (lacksProperPlotOrDescription(plot, description)) {
+                    keep.add(id);
+                }
+            }
+        }
+        return keep;
+    }
+
+    /**
+     * Keeps books whose title or author fails the naming rules. When both
+     * chips are on, a book must fail both (the chips AND together).
+     */
+    private Set<Long> namingIdsToKeep(List<Long> ids, boolean titleNotChicago, boolean authorNotCanonical) {
+        Set<Long> keep = new HashSet<>();
+        for (int offset = 0; offset < ids.size(); offset += ID_CHUNK) {
+            List<Long> chunk = ids.subList(offset, Math.min(offset + ID_CHUNK, ids.size()));
+            for (Object[] row : bookRepository.findTitleAndAuthorByIds(chunk)) {
+                Long id = ((Number) row[0]).longValue();
+                String title = row[1] == null ? null : row[1].toString();
+                String author = row[2] == null ? null : row[2].toString();
+                boolean titleBad = titleNotChicago && ChicagoTitleCase.needsWork(title);
+                boolean authorBad = authorNotCanonical && CanonicalAuthorName.needsWork(author);
+                if (titleNotChicago && authorNotCanonical) {
+                    if (titleBad && authorBad) {
+                        keep.add(id);
+                    }
+                } else if (titleBad || authorBad) {
                     keep.add(id);
                 }
             }
@@ -250,6 +290,8 @@ public class CatalogFilterService {
         public boolean withoutGenres;
         public boolean withoutFreeTextUrls;
         public boolean withoutProperPlotOrDescription;
+        public boolean titleNotChicago;
+        public boolean authorNotCanonical;
         public boolean ydlAudio;
         public boolean ydlBook;
         public boolean ydlEbook;
@@ -275,6 +317,8 @@ public class CatalogFilterService {
 
     /** Parsed Authors page filter. */
     public static final class AuthorCatalogFilter {
+        /** Case-insensitive partial match on the name or an alternate name. Blank matches every author. */
+        public String query = "";
         public boolean mostRecent;
         public boolean withoutDescription;
         public boolean withoutGrokipedia;
@@ -284,6 +328,8 @@ public class CatalogFilterService {
         public boolean withPhotos;
         public boolean withoutBirthDate;
         public boolean withoutDeathDate;
+        /** Author name is comma-inverted, has years, expandable initials, a catalog note, or uniform case. */
+        public boolean notCanonical;
         public boolean ydlBook;
         public boolean ydlEbook;
         public boolean ydlAudio;

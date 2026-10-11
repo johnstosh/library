@@ -29,6 +29,8 @@ export const CHIP_URL_KEYS: Record<keyof BookChipFilters, string> = {
   withoutGenres: 'withoutGenres',
   withoutFreeTextUrls: 'withoutFreeTextUrls',
   withoutProperPlotOrDescription: 'withoutProperPlotOrDescription',
+  titleNotChicago: 'titleNotChicago',
+  authorNotCanonical: 'authorNotCanonical',
   withPrices: 'withPrices',
   noPrices: 'noPrices',
   priceOlder: 'priceOlder',

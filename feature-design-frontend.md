@@ -827,6 +827,7 @@ Headless UI Dialog with consistent structure:
 - Status tracking (Available, Checked Out, Lost, Damaged)
 
 ### 2. Authors Management
+- Search by name or alternate name (same Search field and Enter behavior as Books; the field stays wide beside the button on a phone)
 - Filter by All, Without Description, Zero Books
 - CRUD operations
 - Bulk delete

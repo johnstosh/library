@@ -27,6 +27,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
 
   const [formData, setFormData] = useState({
     name: '',
+    alternateNames: '',
     birthDate: '',
     deathDate: '',
     religiousAffiliation: '',
@@ -53,6 +54,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
     if (author) {
       setFormData({
         name: author.name,
+        alternateNames: (author.alternateNames ?? []).join('\n'),
         birthDate: author.dateOfBirth || '',
         deathDate: author.dateOfDeath || '',
         religiousAffiliation: author.religiousAffiliation || '',
@@ -111,8 +113,13 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
     }
 
     try {
+      const alternateNames = formData.alternateNames
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
       const authorData = {
         name: formData.name,
+        alternateNames: alternateNames.length > 0 ? alternateNames : undefined,
         dateOfBirth: formData.birthDate || undefined,
         dateOfDeath: formData.deathDate || undefined,
         religiousAffiliation: formData.religiousAffiliation || undefined,
@@ -170,6 +177,16 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
           onChange={(e) => handleFieldChange('name', e.target.value)}
           required
           data-test="author-name"
+        />
+
+        <Textarea
+          label="Alternate names"
+          value={formData.alternateNames}
+          onChange={(e) => handleFieldChange('alternateNames', e.target.value)}
+          rows={3}
+          placeholder={'Saint Augustine\nAurelius Augustinus'}
+          helpText="Other catalog forms of this same person, one per line. Pen names, saints' names, Latin names, and spellings the catalogs use. Each line is given name then family name. Search and online-copy lookups try every line."
+          data-test="author-alternate-names"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

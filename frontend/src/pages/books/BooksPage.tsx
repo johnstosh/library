@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -58,15 +58,21 @@ export function BooksPage() {
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
   const urlQuery = searchParams.get('q') ?? ''
   const [inputValue, setInputValue] = useState(urlQuery)
+  // React Router updates the address bar before this component renders. Copy an
+  // outside query into the box. A query this page just wrote must not replace a
+  // title typed after that search.
+  const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  const ownQuery = useRef<string | null>(null)
+  if (urlQuery !== syncedQuery) {
+    const own = ownQuery.current === urlQuery
+    ownQuery.current = null
+    setSyncedQuery(urlQuery)
+    if (!own) setInputValue(urlQuery)
+  }
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
   const isLibrarian = useIsLibrarian()
   const queryClient = useQueryClient()
-  const [, startTransition] = useTransition()
-
-  useEffect(() => {
-    setInputValue(urlQuery)
-  }, [urlQuery])
 
   const writeUrl = (next: {
     chips?: BookChipFilters
@@ -78,23 +84,23 @@ export function BooksPage() {
     q?: string
     priceOlderDays?: number
   }) => {
-    startTransition(() => {
-      setSearchParams(
-        bookFilterParamsForUrl(
-          {
-            chips: next.chips ?? chips,
-            labels: next.labels ?? selectedLabels,
-            readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
-            bindings: next.bindings ?? selectedBindings,
-            statuses: next.statuses ?? selectedStatuses,
-            favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
-            q: next.q !== undefined ? next.q : urlQuery,
-            priceOlderDays: next.priceOlderDays ?? priceOlderDays,
-          },
-          'books',
-        ),
-      )
-    })
+    const q = next.q !== undefined ? next.q : urlQuery
+    if (next.q !== undefined) ownQuery.current = q
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? chips,
+          labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          bindings: next.bindings ?? selectedBindings,
+          statuses: next.statuses ?? selectedStatuses,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
+          q,
+          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+        },
+        'books',
+      ),
+    )
   }
 
   const listFilters = useMemo((): BookListFilters => ({
@@ -181,9 +187,18 @@ export function BooksPage() {
     writeUrl({ statuses: next })
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    writeUrl({ q: inputValue.trim() })
+    const field = e.currentTarget.elements.namedItem('q')
+    const typed = field instanceof HTMLInputElement ? field.value : inputValue
+    writeUrl({ q: typed.trim() })
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    // Read the box, not React state. A fast Enter can arrive before onChange commits.
+    e.preventDefault()
+    writeUrl({ q: e.currentTarget.value.trim() })
   }
 
   return (
@@ -225,11 +240,13 @@ export function BooksPage() {
             <div className="flex-1">
               <Input
                 type="search"
+                name="q"
                 label="Filter by title or author"
                 hideLabel
                 placeholder="Filter by title or author..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 data-test="books-title-filter"
               />
             </div>

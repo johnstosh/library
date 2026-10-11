@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -450,5 +451,33 @@ class EmuLookupServiceTest {
         assertTrue(Boolean.TRUE.equals(result.getAudioAvailable()));
         assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
         assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
+    }
+
+    @Test
+    void lookupAndUpdateBook_matchesAlternateAuthorLastName() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Confessions");
+        Author author = new Author();
+        author.setName("Aurelius Augustinus");
+        author.setAlternateNames(List.of("Saint Augustine"));
+        book.setAuthor(author);
+
+        String heldAsAugustine = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"display":{"type":["book"],"title":["Confessions"],"format":["300 pages"]},
+                   "addata":{"au":["Augustine, Saint"]}}}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn(heldAsAugustine);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getAudioAvailable());
+        assertFalse(result.getEbookAvailable());
     }
 }

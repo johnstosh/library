@@ -388,6 +388,7 @@ public class ImportService {
         auth.setNationality(aDto.getNationality());
         auth.setBiographicalEssay(aDto.getBriefBiography());
         auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
+        auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
         auth = authorRepository.save(auth);
         // Keep map LOB-free so post-clear refresh / heap do not retain essay text
         authorMap.put(aDto.getName(), authorStub(auth.getId(), auth.getName()));
@@ -749,16 +750,7 @@ public class ImportService {
         // Note: Empty strings are converted to null so they're excluded from JSON export
         List<ImportAuthorDto> authDtos = new ArrayList<>();
         for (Author author : authorRepository.findAll()) {
-            ImportAuthorDto aDto = new ImportAuthorDto();
-            aDto.setName(author.getName());
-            aDto.setDateOfBirth(author.getDateOfBirth());
-            aDto.setDateOfDeath(author.getDateOfDeath());
-            aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
-            aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
-            aDto.setNationality(emptyToNull(author.getNationality()));
-            aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
-            aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
-            authDtos.add(aDto);
+            authDtos.add(toImportAuthorDto(author));
         }
         dto.setAuthors(authDtos);
 
@@ -946,16 +938,7 @@ public class ImportService {
             // authors - small
             generator.writeArrayFieldStart("authors");
             for (Author author : authorRepository.findAll()) {
-                ImportAuthorDto aDto = new ImportAuthorDto();
-                aDto.setName(author.getName());
-                aDto.setDateOfBirth(author.getDateOfBirth());
-                aDto.setDateOfDeath(author.getDateOfDeath());
-                aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
-                aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
-                aDto.setNationality(emptyToNull(author.getNationality()));
-                aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
-                aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
-                mapper.writeValue(generator, aDto);
+                mapper.writeValue(generator, toImportAuthorDto(author));
             }
             generator.writeEndArray();
             generator.flush();
@@ -1195,6 +1178,23 @@ public class ImportService {
         return pDto;
     }
 
+    /** Author row for JSON export. Empty alternate-name lists are omitted. */
+    private ImportAuthorDto toImportAuthorDto(Author author) {
+        ImportAuthorDto aDto = new ImportAuthorDto();
+        aDto.setName(author.getName());
+        aDto.setAlternateNames(author.getAlternateNames() == null || author.getAlternateNames().isEmpty()
+                ? null
+                : new ArrayList<>(author.getAlternateNames()));
+        aDto.setDateOfBirth(author.getDateOfBirth());
+        aDto.setDateOfDeath(author.getDateOfDeath());
+        aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
+        aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
+        aDto.setNationality(emptyToNull(author.getNationality()));
+        aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
+        aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
+        return aDto;
+    }
+
     /**
      * Converts empty strings to null so they're excluded from JSON export.
      * This keeps the exported JSON cleaner and smaller.
@@ -1306,16 +1306,7 @@ public class ImportService {
             for (Long id : ids) {
                 Author author = byId.get(id);
                 if (author == null) continue;
-                ImportAuthorDto aDto = new ImportAuthorDto();
-                aDto.setName(author.getName());
-                aDto.setDateOfBirth(author.getDateOfBirth());
-                aDto.setDateOfDeath(author.getDateOfDeath());
-                aDto.setReligiousAffiliation(emptyToNull(author.getReligiousAffiliation()));
-                aDto.setBirthCountry(emptyToNull(author.getBirthCountry()));
-                aDto.setNationality(emptyToNull(author.getNationality()));
-                aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
-                aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
-                items.add(aDto);
+                items.add(toImportAuthorDto(author));
                 nextAfterId = id;
             }
         }

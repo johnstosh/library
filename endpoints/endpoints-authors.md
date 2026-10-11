@@ -5,13 +5,15 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 
 **Authentication:** Public (`permitAll()`)
 
-**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined.
+**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined. `q` is AND-combined with the chips.
+- `q` — case-insensitive partial match on the author name or an alternate name. Blank matches every author. The Authors page sends this when Search or Enter is used, and keeps it in the page URL.
 - `mostRecent` — authors of books added on the calendar day of the latest `dateAddedToLibrary`
 - `withoutDescription` — biographical essay is null
 - `withoutGrokipedia` / `withGrokipedia` — missing (`null`, blank, or `"-"`) or present
 - `zeroBooks` — no books
 - `withoutPhotos` / `withPhotos` — author photos (photos not attached to a book)
 - `withoutBirthDate` / `withoutDeathDate`
+- `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, an editor or translator credit, a `[from old catalog]` note, or a name in all capitals or all lowercase). A comma inside a phrase is not an inversion. Blank names are not flagged.
 - Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
 
@@ -56,6 +58,34 @@ Returns authors that are missing a Grokipedia URL.
 - Filter to find authors needing Grokipedia links
 - Systematic data enrichment workflow
 - Includes authors whose `grokipediaUrl` is `"-"` (N/A after a slow lookup found no working URL)
+
+---
+
+## POST /api/authors/normalize-names-bulk
+Rewrites selected authors into canonical given-name-then-family-name form.
+
+**Authentication:** Requires `LIBRARIAN` authority
+
+**Request Body:** JSON array of author IDs, e.g. `[1, 2, 3]`
+
+**Response:** Array of `AuthorNameNormalizationResultDto`
+- `authorId`, `name` (name after the operation), `before`, `after`
+- `changed` — true when the stored name changed or this author was merged away
+- `success` — false when the author is missing
+- `errorMessage` — `Author not found`
+- `mergedIntoAuthorId` — set when this author was merged into that row and deleted
+- `updatedAuthor` — set only when this same row was renamed
+
+**Behavior:**
+- Comma inversion (`Simpson, Richard` → `Richard Simpson`), birth and death years, and initials with a parenthetical expansion (`Johnson, B. J.-P. (Barney John-Paul)` → `Barney John Paul Johnson`) are cleaned. A two-letter abbreviation counts as an initial (`Fillion, L.-Cl. (Louis-Claude)` → `Louis Claude Fillion`, `Stang, Wm. (William)` → `William Stang`). A longer dotted abbreviation is expanded when it is a prefix of the parenthetical name (`Belser, Joh. Evang. (Johannes Evangelist)` → `Johannes Evangelist Belser`). A parenthetical that is only initials is removed (`Martindale, Cyril Charles (C. C.)` → `Cyril Charles Martindale`). A degree or order in parentheses (`D.D.`, `S.J.`) stays. Initials without an expansion stay initials. A year introduced by `approximately` or `approx.` is removed, including when that phrase was moved in front of the name (`Peter Riga, approximately 1140-1209` stays `Peter Riga`). `[from old catalog]` is removed, as is a stray `]`. UTF-8 letters that were imported as Latin-1 (`GareschÃ©` → `Garesché`) are repaired. When one comma-separated form is a shorter copy of the other (`Joseph Hergenröther, Joseph Adam Gustav Hergenröther`), the longer form is kept. `Thomas, à Kempis` and `à Kempis Thomas` both become `Thomas à Kempis`. A `tr.` relator is removed (`FULLERTON, GEORGIANA TR.` → `Georgiana Fullerton`). A second person introduced by a clerical title stays a second person (`John Baptist Scaramelli, Rev. Cardinal Archbishop Manning`). A name whose letters are all capitals or all lowercase is rewritten with initial capitals (`RT. REV. PAUL WILLIAM VON KEPPLER, D.D.` → `Rt. Rev. Paul William von Keppler D.D.`); particles such as `von` and `de la` stay lower, and dotted abbreviations keep their shape (`D.D.`, `B.V.M.`, `Rt.`). A mixed-case name keeps the capitals it already has. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered.
+- Editor and translator credits are removed (`Gasquet (ed.)`, `Bagshawe (tr.)`, `translated by …`, `, editor`). The credit is not saved. A fuller name in parentheses (`Almedingen, E. M. (Edith Martha)`) and an edition note (`(Benziger ed.)`, `(English edition)`) stay.
+- A suffix stays after the name and loses its comma. On a mixed-case name, the letters and periods stay as stored. On an all-capitals or all-lowercase name, dotted suffixes are normalized with the rest of the name (`d.d.` → `D.D.`). A no-space run of 2–6 capital letters is a suffix (`SJ`, `S.J.`, `OCD`, `O.S.B.`, `D.D.`), as are the mixed forms `CSSp` and `O.Praem.` Spaced initials in the given-name slot (`B. J.`, `C. L`, `T. E`) stay given names and are turned around. `Inc` and `LLC` stay at the end and lose the comma (`Japan Travel Bureau, Inc` becomes `Japan Travel Bureau Inc`, `Acme, LLC` becomes `Acme LLC`).
+- The managed author row is renamed in place, so portraits stay attached. The old form is not stored as an alternate name.
+- When the canonical name already belongs to another author, that author is kept. Every book, portrait, and favorite moves onto it, and the duplicate author is deleted. A blank field is filled from the other row. When both rows have different text, the longer text is kept. A missing birth or death date is filled in. A date that both rows already have stays with the kept author. The kept author's name is the canonical name, even when the other name is longer.
+- When two selected authors canonicalize to the same new name, the lowest id is kept, the other is merged into it, and the kept row is renamed.
+- Authors that already conform are left unchanged. The Books page tool still relinks only the selected books and does not delete an author.
+
+**Use Case:** Authors page filter "Not canonical" and bulk-action carousel "Canonical Author Names"
 
 ---
 
@@ -138,5 +168,15 @@ Fillable fields: `dateOfBirth`, `dateOfDeath`, `religiousAffiliation`, `birthCou
 - Pair with filters such as without-description or without-birth-date
 
 ---
+
+## Alternate names
+
+`AuthorDto.alternateNames` is a list of other catalog forms of the same person (a pen name, a saint's name, a Latin name, or a spelling catalogs use). It is stored as a PostgreSQL `text[]` column, `author.alternate_names`.
+
+The canonical `name` stays the display name. Blank lines, case-insensitive duplicates, and a repeat of the canonical name are dropped on create, update, and import.
+
+Search, checkout matching, free-text lookup, and ACLA, YDL, EMU, and LOC lookups try each name. Library catalogs match the last word of each name.
+
+JSON import and export use the same `alternateNames` array on each author. An empty list is omitted from export.
 
 **Related:** AuthorController.java, AuthorService.java, AuthorDto.java, AuthorEnrichmentResultDto.java

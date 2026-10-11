@@ -4,11 +4,13 @@
 package com.muczynski.library.ui;
 
 import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.BoundingBox;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.muczynski.library.LibraryApplication;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -138,8 +140,63 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='filter-not-canonical']")).isVisible();
+        assertThat(page.locator("[data-test='filter-not-canonical']")).containsText("Not canonical");
         // Recent Arrivals starts on (faster /authors/most-recent-day backend).
         assertThat(page.locator("[data-test='filter-most-recent']")).hasAttribute("aria-pressed", "true");
+        assertThat(page.locator("text=Initial Author")).isVisible();
+
+        page.setViewportSize(375, 667);
+        assertThat(page.locator("[data-test='filter-not-canonical']")).isVisible();
+        page.click("[data-test='filter-not-canonical']");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        assertThat(page.locator("text=Initial Author")).hasCount(0);
+    }
+
+    @Test
+    @DisplayName("Phone search field stays wide beside Search and filters by name")
+    void testAuthorSearchOnPhone() {
+        page.setViewportSize(375, 667);
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+
+        Locator searchInput = page.locator("[data-test='authors-name-filter']");
+        Locator searchButton = page.locator("[data-test='authors-search-button']");
+        searchInput.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        assertThat(searchInput).isVisible();
+        assertThat(searchButton).isVisible();
+        assertThat(searchInput).hasAttribute("type", "search");
+
+        BoundingBox inputBox = searchInput.boundingBox();
+        BoundingBox buttonBox = searchButton.boundingBox();
+        Assertions.assertNotNull(inputBox, "Author search input should have a bounding box");
+        Assertions.assertNotNull(buttonBox, "Author search button should have a bounding box");
+        Assertions.assertTrue(inputBox.width >= 180,
+                "Search input should be a large fraction of the 375px phone viewport, got width="
+                        + inputBox.width);
+        Assertions.assertTrue(buttonBox.x >= inputBox.x + inputBox.width - 1,
+                "Search button should sit to the right of the field, button.x=" + buttonBox.x
+                        + " input.right=" + (inputBox.x + inputBox.width));
+        Assertions.assertTrue(Math.abs(buttonBox.y - inputBox.y) < 24,
+                "Search button should stay on the same row as the field, button.y=" + buttonBox.y
+                        + " input.y=" + inputBox.y);
+        Assertions.assertTrue(inputBox.x >= 0 && inputBox.x + inputBox.width <= 376,
+                "Search input should stay inside the phone viewport, x=" + inputBox.x
+                        + " right=" + (inputBox.x + inputBox.width));
+        Assertions.assertTrue(buttonBox.x >= 0 && buttonBox.x + buttonBox.width <= 376,
+                "Search button should stay inside the phone viewport, x=" + buttonBox.x
+                        + " right=" + (buttonBox.x + buttonBox.width));
+        Assertions.assertTrue(buttonBox.width >= 44 && buttonBox.height >= 44,
+                "Search button should be a phone tap target, width=" + buttonBox.width
+                        + " height=" + buttonBox.height);
+
+        page.fill("[data-test='authors-name-filter']", "NoSuchAuthorZZZ");
+        page.click("[data-test='authors-search-button']");
+        page.waitForURL("**/authors?*q=NoSuchAuthorZZZ*");
+        assertThat(page.locator("text=Initial Author")).hasCount(0);
+
+        page.fill("[data-test='authors-name-filter']", "Initial");
+        page.press("[data-test='authors-name-filter']", "Enter");
+        page.waitForURL("**/authors?*q=Initial*");
         assertThat(page.locator("text=Initial Author")).isVisible();
     }
 
@@ -252,8 +309,31 @@ public class AuthorsUITest {
         page.waitForURL("**/edit");
 
         assertThat(page.locator("[data-test='author-grokipedia-url']")).isVisible();
+        assertThat(page.locator("[data-test='author-alternate-names']")).isVisible();
         assertThat(page.locator("[data-test='author-field-lookup-grokipedia-quick']")).isVisible();
         assertThat(page.locator("[data-test='author-field-lookup-grokipedia-slow']")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Should save alternate author names and show them on the view page")
+    void shouldSaveAlternateAuthorNames() {
+        page.click("tr[data-entity-id]");
+        page.waitForSelector("[data-test='author-view-edit']",
+            new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='author-view-edit']");
+        page.waitForURL("**/edit");
+        // The view heading also uses data-test=author-name. hasValue does not retry
+        // when that heading is still mounted, so wait for the edit field itself.
+        Locator name = page.locator("input[data-test='author-name']");
+        name.waitFor();
+        assertThat(name).hasValue("Initial Author");
+
+        page.fill("[data-test='author-alternate-names']", "Saint Augustine\nAurelius Augustinus");
+        page.click("[data-test='author-form-submit']");
+        page.waitForURL("**/authors/1");
+
+        assertThat(page.locator("[data-test='author-alternate-names']")).containsText("Saint Augustine");
+        assertThat(page.locator("[data-test='author-alternate-names']")).containsText("Aurelius Augustinus");
     }
 
     @Test
@@ -287,7 +367,15 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-quick']")).containsText("Quick Grokipedia lookup");
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-grokipedia-slow']")).containsText("Slow Grokipedia lookup");
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).containsText("Canonical Author Names");
         assertThat(page.locator("[data-test='bulk-delete']")).isVisible();
         assertThat(page.locator("[data-test='bulk-delete']")).containsText("Delete Selected");
+
+        page.setViewportSize(375, 667);
+        page.click("[data-test='bulk-canonical-author']");
+        assertThat(page.locator("[data-test='name-normalization-results']")).isVisible();
+        assertThat(page.locator("[data-test='name-normalization-results']")).containsText("Already conforms");
+        page.click("[data-test='name-normalization-results-close']");
     }
 }

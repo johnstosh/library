@@ -351,6 +351,27 @@ class FreeTextLookupServiceTest {
     }
 
     @Test
+    void lookupBook_triesAlternateAuthorWhenPrimaryMisses() {
+        String title = "Uncached Confessions " + java.util.UUID.randomUUID();
+        Book book = createBook(1L, title, "Aurelius Augustinus");
+        book.getAuthor().setAlternateNames(List.of("Saint Augustine"));
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(eq(title), eq("Aurelius Augustinus")))
+                .thenReturn(FreeTextLookupResult.error("Provider1", "Not found"));
+        when(mockProvider1.search(eq(title), eq("Saint Augustine")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/confessions"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://example.com/confessions", result.getFreeTextUrl());
+        assertEquals("Aurelius Augustinus", result.getAuthorName());
+        verify(mockProvider2, never()).search(anyString(), anyString());
+    }
+
+    @Test
     void lookupBook_noAlternateTitle_usesOnlyPrimaryUnchanged() {
         Book book = createBook(1L, "Uncached Title", "Jane Austen");
 

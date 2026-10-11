@@ -105,6 +105,23 @@ class CatalogFilterServiceIntegrationTest {
         CatalogFilterService.BookCatalogFilter errors = query(token);
         errors.lookupErrors = true;
         assertEquals(List.of(errored.getId()), ids(catalogFilterService.bookSummaries(errors, null, true)));
+
+        Book lowerTitle = bookRepository.save(book("the history of " + token, author, null, null));
+        Book chicagoTitle = bookRepository.save(book("Already " + token, author, null, null));
+        Author inverted = authorRepository.save(authorNamed("Simpson, " + token));
+        Book invertedBook = bookRepository.save(book("Canonical " + token, inverted, null, null));
+
+        CatalogFilterService.BookCatalogFilter titles = query(token);
+        titles.titleNotChicago = true;
+        List<Long> titleIds = ids(catalogFilterService.bookSummaries(titles, null, true));
+        assertTrue(titleIds.contains(lowerTitle.getId()));
+        assertFalse(titleIds.contains(chicagoTitle.getId()));
+
+        CatalogFilterService.BookCatalogFilter authors = query(token);
+        authors.authorNotCanonical = true;
+        List<Long> authorIds = ids(catalogFilterService.bookSummaries(authors, null, true));
+        assertTrue(authorIds.contains(invertedBook.getId()));
+        assertFalse(authorIds.contains(lowerTitle.getId()));
     }
 
     @Test
@@ -139,6 +156,49 @@ class CatalogFilterServiceIntegrationTest {
         List<Long> none = authorIds(catalogFilterService.authorSummaries(described, null));
         assertTrue(none.contains(noBooks.getId()));
         assertFalse(none.contains(recent.getId()));
+
+        Author inverted = authorRepository.save(authorNamed("Simpson, " + token));
+        Author ready = authorRepository.save(authorNamed(token + " Ready"));
+        CatalogFilterService.AuthorCatalogFilter names = new CatalogFilterService.AuthorCatalogFilter();
+        names.notCanonical = true;
+        List<Long> nameIds = authorIds(catalogFilterService.authorSummaries(names, null));
+        assertTrue(nameIds.contains(inverted.getId()));
+        assertFalse(nameIds.contains(ready.getId()));
+        assertFalse(nameIds.contains(recent.getId()));
+    }
+
+    @Test
+    void authorSummariesMatchNameOrAlternateName() {
+        String token = "NameSearch" + UUID.randomUUID().toString().replace("-", "");
+        Author byName = authorRepository.save(authorNamed(token + " Augustine"));
+        Author byAlternate = authorNamed("Plain Catalog " + token);
+        byAlternate.setAlternateNames(List.of("Saint " + token + " of Hippo"));
+        byAlternate = authorRepository.save(byAlternate);
+        Author other = authorRepository.save(authorNamed("Unrelated " + UUID.randomUUID()));
+
+        CatalogFilterService.AuthorCatalogFilter byPrimary = new CatalogFilterService.AuthorCatalogFilter();
+        byPrimary.query = "  " + token.toLowerCase() + " augustine  ";
+        List<Long> primaryIds = authorIds(catalogFilterService.authorSummaries(byPrimary, null));
+        assertTrue(primaryIds.contains(byName.getId()));
+        assertFalse(primaryIds.contains(byAlternate.getId()));
+        assertFalse(primaryIds.contains(other.getId()));
+
+        CatalogFilterService.AuthorCatalogFilter byAlt = new CatalogFilterService.AuthorCatalogFilter();
+        byAlt.query = "saint " + token;
+        List<Long> altIds = authorIds(catalogFilterService.authorSummaries(byAlt, null));
+        assertTrue(altIds.contains(byAlternate.getId()));
+        assertFalse(altIds.contains(byName.getId()));
+        assertFalse(altIds.contains(other.getId()));
+
+        byName.setGrokipediaUrl("https://grokipedia.com/page/Example");
+        authorRepository.save(byName);
+        CatalogFilterService.AuthorCatalogFilter narrowed = new CatalogFilterService.AuthorCatalogFilter();
+        narrowed.query = token;
+        narrowed.withoutGrokipedia = true;
+        List<Long> narrowedIds = authorIds(catalogFilterService.authorSummaries(narrowed, null));
+        assertTrue(narrowedIds.contains(byAlternate.getId()));
+        assertFalse(narrowedIds.contains(byName.getId()));
+        assertFalse(narrowedIds.contains(other.getId()));
     }
 
     private static CatalogFilterService.BookCatalogFilter query(String text) {

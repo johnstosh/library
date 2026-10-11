@@ -1,2 +1,4 @@
 # XsltView is not used by this app; revisit when Spring Boot 3.5.x ships a patched spring-webmvc.
 CVE-2026-47884
+# SSE view fragments are not used by this app. Spring rates this Low. The OSS fix is Framework 7.0.9 only.
+CVE-2026-47890

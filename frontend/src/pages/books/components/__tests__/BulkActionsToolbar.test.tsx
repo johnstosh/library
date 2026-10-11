@@ -24,6 +24,8 @@ vi.mock('@/api/books', () => ({
   useBulkBookFromTitleAuthor: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useLookupBulkGenresWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useLookupBulkReadingDifficultyWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useNormalizeTitlesBulk: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useNormalizeAuthorsBulk: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 vi.mock('@/api/loc-lookup', () => ({
@@ -98,6 +100,21 @@ describe('BulkActionsToolbar stats', () => {
 
     expect(screen.queryByTestId('search-results-count')).not.toBeInTheDocument()
     expect(screen.getByTestId('database-count')).toBeInTheDocument()
+  })
+
+  it('shows the naming tools when a book is selected', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <BulkActionsToolbar
+          selectedIds={new Set([1])}
+          onClearSelection={() => undefined}
+          tableCount={1}
+        />
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByTestId('bulk-chicago-title')).toHaveTextContent('Chicago Title Case')
+    expect(screen.getByTestId('bulk-canonical-author')).toHaveTextContent('Canonical Author Names')
   })
 
   it('falls back to Sacred Heart Library System when the first branch has no library system name', () => {

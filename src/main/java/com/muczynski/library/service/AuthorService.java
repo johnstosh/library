@@ -6,6 +6,7 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
@@ -62,6 +63,7 @@ public class AuthorService {
             throw new LibraryException("An author named \"" + name + "\" already exists");
         }
         Author author = authorMapper.toEntity(authorDto);
+        author.setAlternateNames(AuthorNames.normalize(author.getName(), author.getAlternateNames()));
         Author savedAuthor = authorRepository.save(author);
         return authorMapper.toDto(savedAuthor);
     }
@@ -97,6 +99,7 @@ public class AuthorService {
         Author author = authorRepository.findById(id).orElseThrow(() -> new LibraryException("Author not found: " + id));
         Author updatedAuthor = authorMapper.toEntity(authorDto);
         updatedAuthor.setId(id);
+        updatedAuthor.setAlternateNames(AuthorNames.normalize(updatedAuthor.getName(), updatedAuthor.getAlternateNames()));
         Author savedAuthor = authorRepository.save(updatedAuthor);
         return authorMapper.toDto(savedAuthor);
     }

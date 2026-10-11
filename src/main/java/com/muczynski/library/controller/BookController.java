@@ -13,6 +13,7 @@ import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GenreLookupResultDto;
+import com.muczynski.library.dto.NameNormalizationResultDto;
 import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
 import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
@@ -28,6 +29,7 @@ import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.GrokJobService;
 import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
+import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.CheckoutMatchService;
 import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
@@ -66,6 +68,9 @@ public class BookController {
 
     @Autowired
     private CatalogFilterService catalogFilterService;
+
+    @Autowired
+    private CatalogNameNormalizationService catalogNameNormalizationService;
 
     @Autowired
     private CheckoutMatchService checkoutMatchService;
@@ -652,6 +657,8 @@ public class BookController {
             @RequestParam(defaultValue = "false") boolean withoutGenres,
             @RequestParam(defaultValue = "false") boolean withoutFreeTextUrls,
             @RequestParam(defaultValue = "false") boolean withoutProperPlotOrDescription,
+            @RequestParam(defaultValue = "false") boolean titleNotChicago,
+            @RequestParam(defaultValue = "false") boolean authorNotCanonical,
             @RequestParam(defaultValue = "false") boolean hasYdlAudio,
             @RequestParam(defaultValue = "false") boolean hasYdlBook,
             @RequestParam(defaultValue = "false") boolean hasYdlEbook,
@@ -684,6 +691,8 @@ public class BookController {
             filter.withoutGenres = withoutGenres;
             filter.withoutFreeTextUrls = withoutFreeTextUrls;
             filter.withoutProperPlotOrDescription = withoutProperPlotOrDescription;
+            filter.titleNotChicago = titleNotChicago;
+            filter.authorNotCanonical = authorNotCanonical;
             filter.ydlAudio = hasYdlAudio;
             filter.ydlBook = hasYdlBook;
             filter.ydlEbook = hasYdlEbook;
@@ -789,5 +798,29 @@ public class BookController {
         logger.info("Filling reading difficulty for {} books", bookIds.size());
         List<ReadingDifficultyLookupResultDto> results = bookService.lookupReadingDifficultyForBooks(bookIds);
         return ResponseEntity.ok(results);
+    }
+
+    /**
+     * Rewrites selected books' titles into Chicago title case. A title that
+     * already conforms is left unchanged. A title that would collide with
+     * another book is reported and skipped.
+     */
+    @PostMapping("/normalize-titles-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<NameNormalizationResultDto>> normalizeTitlesBulk(@RequestBody List<Long> bookIds) {
+        logger.info("Normalizing titles for {} books", bookIds == null ? 0 : bookIds.size());
+        return ResponseEntity.ok(catalogNameNormalizationService.normalizeTitles(bookIds));
+    }
+
+    /**
+     * Rewrites selected books' authors into canonical form. Renames the author
+     * row when every one of that author's books is selected; otherwise relinks
+     * only the selected books. Photos on the author row are left in place.
+     */
+    @PostMapping("/normalize-authors-bulk")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<List<NameNormalizationResultDto>> normalizeAuthorsBulk(@RequestBody List<Long> bookIds) {
+        logger.info("Normalizing authors for {} books", bookIds == null ? 0 : bookIds.size());
+        return ResponseEntity.ok(catalogNameNormalizationService.normalizeAuthors(bookIds));
     }
 }

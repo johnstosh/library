@@ -17,6 +17,9 @@ public class AuthorDto {
     @NotBlank(message = "Author name is required")
     private String name;
 
+    /** Other catalog forms of this person. Empty or null when there are none. */
+    private List<String> alternateNames;
+
     private LocalDate dateOfBirth;
     private LocalDate dateOfDeath;
     private String religiousAffiliation;

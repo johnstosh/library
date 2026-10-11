@@ -97,6 +97,14 @@ export function AuthorDetailModal({ isOpen, onClose, authorId }: AuthorDetailMod
                 <p className="text-gray-900">{author.religiousAffiliation}</p>
               </div>
             )}
+            {author.alternateNames && author.alternateNames.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-500 mb-2">Alternate names</p>
+                <p className="text-gray-900" data-test="author-detail-alternate-names">
+                  {author.alternateNames.join(' · ')}
+                </p>
+              </div>
+            )}
             {author.briefBiography && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-gray-500 mb-2">Biography</p>

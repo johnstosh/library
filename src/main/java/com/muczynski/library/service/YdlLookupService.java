@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.YdlLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
@@ -94,13 +95,6 @@ public class YdlLookupService {
         }
 
         String primaryTitle = book.getTitle();
-        String authorLastName = null;
-        if (book.getAuthor() != null && book.getAuthor().getName() != null) {
-            String[] parts = book.getAuthor().getName().trim().split("\\s+");
-            if (parts.length > 0) {
-                authorLastName = parts[parts.length - 1];
-            }
-        }
 
         try {
             JsonNode matches = objectMapper.createArrayNode();
@@ -108,15 +102,19 @@ public class YdlLookupService {
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
-                    for (String queryAuthor : buildQueryAuthors(authorLastName)) {
-                        JsonNode entries = search(candidateTitle, queryAuthor);
-                        // Verification always checks the book's real author, regardless of whether
-                        // this particular query included it in the search text - the query variants
-                        // exist only to improve YDL's hit rate, not to relax what counts as a match.
-                        JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
-                        if (!filtered.isEmpty()) {
-                            matches = filtered;
-                            matchedTitle = matches.get(0).path("title").asText(cleaned);
+                    for (String authorLastName : AuthorNames.lookupLastNames(book.getAuthor())) {
+                        for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                            JsonNode entries = search(candidateTitle, queryAuthor);
+                            // Verification checks this form of the book's author. Query variants
+                            // only improve YDL's hit rate; they do not relax what counts as a match.
+                            JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
+                            if (!filtered.isEmpty()) {
+                                matches = filtered;
+                                matchedTitle = matches.get(0).path("title").asText(cleaned);
+                                break;
+                            }
+                        }
+                        if (!matches.isEmpty()) {
                             break;
                         }
                     }

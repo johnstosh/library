@@ -8,6 +8,7 @@ import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
+import com.muczynski.library.dto.NameNormalizationResultDto;
 import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
@@ -16,6 +17,7 @@ import com.muczynski.library.exception.BookHasNoPhotosException;
 import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import org.junit.jupiter.api.Test;
@@ -68,6 +70,9 @@ class BookControllerTest {
 
     @MockitoBean
     private GrokipediaLookupService grokipediaLookupService;
+
+    @MockitoBean
+    private CatalogNameNormalizationService catalogNameNormalizationService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -620,6 +625,68 @@ class BookControllerTest {
                 .andExpect(jsonPath("$[0].success").value(true))
                 .andExpect(jsonPath("$[0].suggestedDifficulty").value("children"))
                 .andExpect(jsonPath("$[1].success").value(false));
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void normalizeTitlesBulk() throws Exception {
+        List<Long> bookIds = Arrays.asList(1L, 2L);
+        NameNormalizationResultDto changed = NameNormalizationResultDto.builder()
+                .bookId(1L)
+                .title("The History of St. Dominic: Founder of the Friars Preachers")
+                .before("the history of st. dominic: founder of the friars preachers")
+                .after("The History of St. Dominic: Founder of the Friars Preachers")
+                .changed(true)
+                .success(true)
+                .build();
+        when(catalogNameNormalizationService.normalizeTitles(bookIds)).thenReturn(List.of(changed));
+
+        mockMvc.perform(post("/api/books/normalize-titles-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].changed").value(true))
+                .andExpect(jsonPath("$[0].after").value(
+                        "The History of St. Dominic: Founder of the Friars Preachers"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void normalizeTitlesBulk_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(post("/api/books/normalize-titles-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[1]"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void normalizeAuthorsBulk() throws Exception {
+        List<Long> bookIds = List.of(4L);
+        NameNormalizationResultDto changed = NameNormalizationResultDto.builder()
+                .bookId(4L)
+                .before("Johnson, B. J.-P. (Barney John-Paul)")
+                .after("Barney John Paul Johnson")
+                .changed(true)
+                .success(true)
+                .build();
+        when(catalogNameNormalizationService.normalizeAuthors(bookIds)).thenReturn(List.of(changed));
+
+        mockMvc.perform(post("/api/books/normalize-authors-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bookIds)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].before").value("Johnson, B. J.-P. (Barney John-Paul)"))
+                .andExpect(jsonPath("$[0].after").value("Barney John Paul Johnson"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void normalizeAuthorsBulk_requiresLibrarianAuthority() throws Exception {
+        mockMvc.perform(post("/api/books/normalize-authors-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[4]"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

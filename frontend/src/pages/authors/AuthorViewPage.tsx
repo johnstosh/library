@@ -77,10 +77,17 @@ export function AuthorViewPage() {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-start justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-test="author-name">
-              <span>{author.name}</span>
-              <FavoriteStar itemType="AUTHOR" itemId={author.id} />
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2" data-test="author-name">
+                <span>{author.name}</span>
+                <FavoriteStar itemType="AUTHOR" itemId={author.id} />
+              </h1>
+              {author.alternateNames && author.alternateNames.length > 0 && (
+                <p className="mt-1 text-sm text-gray-600" data-test="author-alternate-names">
+                  {author.alternateNames.join(' · ')}
+                </p>
+              )}
+            </div>
             {isLibrarian && (
               <div className="flex gap-3">
                 <Button

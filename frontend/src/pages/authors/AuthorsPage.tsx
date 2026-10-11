@@ -1,7 +1,9 @@
 // (c) Copyright 2025 by Muczynski
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
@@ -26,6 +28,19 @@ export function AuthorsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const urlQuery = searchParams.get('q') ?? ''
+  const [inputValue, setInputValue] = useState(urlQuery)
+  // React Router updates the address bar before this component renders. Copy an
+  // outside query into the box. A query this page just wrote must not replace a
+  // name typed after that search.
+  const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  const ownQuery = useRef<string | null>(null)
+  if (urlQuery !== syncedQuery) {
+    const own = ownQuery.current === urlQuery
+    ownQuery.current = null
+    setSyncedQuery(urlQuery)
+    if (!own) setInputValue(urlQuery)
+  }
   const { data: favoriteSummary } = useFavoriteSummary()
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'authors')
 
@@ -36,7 +51,17 @@ export function AuthorsPage() {
   const authorFilters = useMemo((): AuthorListFilters => ({
     chips,
     favoriteLists: selectedFavoriteLists,
-  }), [chips, selectedFavoriteLists])
+    q: urlQuery,
+  }), [chips, selectedFavoriteLists, urlQuery])
+
+  const writeQuery = (q: string) => {
+    const trimmed = q.trim()
+    ownQuery.current = trimmed
+    const nextParams = new URLSearchParams(searchParams)
+    if (trimmed) nextParams.set('q', trimmed)
+    else nextParams.delete('q')
+    setSearchParams(nextParams)
+  }
 
   const {
     data: authors = [],
@@ -72,6 +97,20 @@ export function AuthorsPage() {
     navigate('/authors/new')
   }
 
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const field = e.currentTarget.elements.namedItem('q')
+    const typed = field instanceof HTMLInputElement ? field.value : inputValue
+    writeQuery(typed)
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    // Read the box, not React state. A fast Enter can arrive before onChange commits.
+    e.preventDefault()
+    writeQuery(e.currentTarget.value)
+  }
+
   const handleViewAuthor = (author: AuthorDto) => {
     navigate(`/authors/${author.id}`)
   }
@@ -98,7 +137,35 @@ export function AuthorsPage() {
       )}
 
       <PageCard padding={false} className="relative">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <form onSubmit={handleSearch} className="flex max-w-full gap-2 items-start" data-test="authors-search-controls">
+            <div className="min-w-0 w-full flex-1">
+              <Input
+                type="search"
+                name="q"
+                label="Filter by name"
+                hideLabel
+                placeholder="Filter by name..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                enterKeyHint="search"
+                autoComplete="off"
+                aria-label="Filter by name"
+                className="text-base"
+                data-test="authors-name-filter"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              className="shrink-0 whitespace-nowrap"
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="authors-search-button"
+            >
+              Search
+            </Button>
+          </form>
           <AuthorFilters
             chips={chips}
             onToggle={toggleAuthorsChip}

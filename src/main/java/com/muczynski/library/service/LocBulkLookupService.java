@@ -1,6 +1,10 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.BookLocStatusDto;
 import com.muczynski.library.dto.LocLookupResultDto;
@@ -165,10 +169,16 @@ public class LocBulkLookupService {
         }
 
         String originalTitle = book.getTitle();
-        boolean hasAuthor = book.getAuthor() != null;
-        String authorName = hasAuthor ? book.getAuthor().getName() : null;
+        List<String> authorNames = new ArrayList<>();
+        for (String name : AuthorNames.lookupNames(book.getAuthor())) {
+            if (name != null && !name.isBlank()) {
+                authorNames.add(name);
+            }
+        }
+        boolean hasAuthor = !authorNames.isEmpty();
+        String authorName = hasAuthor ? authorNames.get(0) : null;
 
-        // Strategy 1: Try with original title + author (if author exists)
+        // Strategy 1: Try with original title + canonical author (if an author exists)
         LocSearchRequest request = new LocSearchRequest();
         request.setTitle(originalTitle);
         if (hasAuthor) {
@@ -193,6 +203,28 @@ public class LocBulkLookupService {
                     .build();
 
         } catch (ResponseStatusException e) {
+            for (int i = 1; i < authorNames.size(); i++) {
+                try {
+                    LocSearchRequest alternateRequest = new LocSearchRequest();
+                    alternateRequest.setTitle(originalTitle);
+                    alternateRequest.setAuthor(authorNames.get(i));
+                    LocCallNumberResponse alternateResponse = locCatalogService.getLocCallNumber(alternateRequest);
+                    book.setLocNumber(alternateResponse.getCallNumber());
+                    book.setLastModified(LocalDateTime.now());
+                    bookRepository.save(book);
+                    log.info("Successfully updated LOC number for book {} using alternate author '{}': {}",
+                            book.getId(), authorNames.get(i), alternateResponse.getCallNumber());
+                    return LocLookupResultDto.builder()
+                            .bookId(book.getId())
+                            .success(true)
+                            .locNumber(alternateResponse.getCallNumber())
+                            .matchCount(alternateResponse.getMatchCount())
+                            .build();
+                } catch (ResponseStatusException alternateFailure) {
+                    log.info("LOC lookup with alternate author '{}' failed for book {}: {}",
+                            authorNames.get(i), book.getId(), alternateFailure.getReason());
+                }
+            }
             // Strategy 2: If lookup with author failed and we have an author, try title-only
             if (hasAuthor) {
                 log.info("LOC lookup with title + author failed for book {}, trying title-only fallback", book.getId());
@@ -228,16 +260,15 @@ public class LocBulkLookupService {
                 String truncatedTitle = originalTitle.substring(0, originalTitle.indexOf(":")).trim();
                 log.info("Title contains colon, trying with truncated title: '{}' -> '{}'", originalTitle, truncatedTitle);
 
-                // Strategy 3: Try truncated title + author (if author exists)
-                if (hasAuthor) {
+                // Strategy 3: Try truncated title + each author name
+                for (String truncatedAuthorName : authorNames) {
                     try {
                         LocSearchRequest truncatedWithAuthorRequest = new LocSearchRequest();
                         truncatedWithAuthorRequest.setTitle(truncatedTitle);
-                        truncatedWithAuthorRequest.setAuthor(authorName);
+                        truncatedWithAuthorRequest.setAuthor(truncatedAuthorName);
 
                         LocCallNumberResponse response = locCatalogService.getLocCallNumber(truncatedWithAuthorRequest);
 
-                        // Update the book with the found LOC number
                         book.setLocNumber(response.getCallNumber());
                         book.setLastModified(LocalDateTime.now());
                         bookRepository.save(book);
@@ -253,7 +284,6 @@ public class LocBulkLookupService {
 
                     } catch (Exception truncatedAuthorException) {
                         log.warn("LOC truncated title + author fallback failed for book {}: {}", book.getId(), truncatedAuthorException.getMessage());
-                        // Continue to final fallback
                     }
                 }
 
@@ -326,7 +356,18 @@ public class LocBulkLookupService {
      */
     private LocLookupResultDto attemptAiSuggest(Book book) {
         try {
-            String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
+            String authorName = null;
+            if (book.getAuthor() != null) {
+                List<String> names = new ArrayList<>();
+                for (String name : AuthorNames.lookupNames(book.getAuthor())) {
+                    if (name != null && !name.isBlank()) {
+                        names.add(name);
+                    }
+                }
+                if (!names.isEmpty()) {
+                    authorName = String.join("; ", names);
+                }
+            }
             String suggestion = askGrok.suggestLocNumber(book.getTitle(), authorName);
 
             if (suggestion != null && !suggestion.trim().isEmpty()) {

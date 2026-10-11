@@ -135,6 +135,7 @@ export function useEntities(filter?: string) {
 
 ### Authors
 - **Summaries Endpoint**: `GET /api/authors/summaries`
+- **Authors page**: `GET /api/authors/filtered-summaries` (chips plus optional `q` for name or alternate name). The query string is part of the summaries cache key.
 - **Filter Endpoints**: All return `AuthorSummaryDto[]`:
   - `/api/authors/without-description`
   - `/api/authors/zero-books`

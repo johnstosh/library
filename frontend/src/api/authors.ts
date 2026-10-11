@@ -6,7 +6,7 @@ import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
-import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
+import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorNameNormalizationResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
 const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
   'hasYdlBook',
@@ -23,6 +23,7 @@ const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
   'withoutGrokipedia',
   'withGrokipedia',
   'zeroBooks',
+  'notCanonical',
   'withoutPhotos',
   'withPhotos',
   'withoutBirthDate',
@@ -33,11 +34,15 @@ const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
 export interface AuthorListFilters {
   chips: AuthorChipFilters
   favoriteLists?: readonly string[]
+  /** Name or alternate name. Blank returns every author that passes the chips. */
+  q?: string
 }
 
 /** Query string for GET /authors/filtered-summaries. Names match the controller. */
 export function authorListFilterQuery(filters: AuthorListFilters): string {
   const params = new URLSearchParams()
+  const q = (filters.q ?? '').trim()
+  if (q) params.set('q', q)
   for (const key of AUTHOR_FILTER_KEYS) {
     if (filters.chips[key]) params.set(key, 'true')
   }
@@ -304,6 +309,29 @@ export function useDeleteAuthor() {
       queryClient.removeQueries({ queryKey: queryKeys.authors.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.summaries() })
       queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+/** Rewrite selected authors into canonical given-name-then-family-name form. */
+export function useNormalizeAuthorNamesBulk() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) =>
+      api.post<AuthorNameNormalizationResultDto[]>('/authors/normalize-names-bulk', ids),
+    onSuccess: (results) => {
+      for (const result of results) {
+        if (result.mergedIntoAuthorId) {
+          queryClient.removeQueries({ queryKey: queryKeys.authors.detail(result.authorId) })
+          continue
+        }
+        if (result.updatedAuthor) {
+          queryClient.setQueryData(queryKeys.authors.detail(result.authorId), result.updatedAuthor)
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
