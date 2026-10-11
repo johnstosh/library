@@ -13,9 +13,18 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Cron only fires on the default branch (dev). On schedule, build and deploy
+    # both dev and main; push and workflow_dispatch still build only their own ref.
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ github.event_name == 'schedule' && fromJSON('["dev", "main"]') || fromJSON(format('[{0}]', toJSON(github.ref_name))) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Empty ref keeps the default (the triggering commit) for push and dispatch.
+          ref: ${{ github.event_name == 'schedule' && matrix.branch || '' }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -65,7 +74,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-test-report
+          name: gradle-test-report-${{ matrix.branch }}
           path: build/reports/tests
           if-no-files-found: warn
 
@@ -76,6 +85,6 @@ jobs:
           export GMAIL_TOKEN_FOR_SEND=${{ secrets.GMAIL_TOKEN_FOR_SEND }}
           export MAIL_FROM_ADDRESS=johnstosh@gmail.com
           export MAIL_SMTP_USERNAME=johnstosh@gmail.com
-          export BRANCH_NAME=${{ github.ref_name }}
+          export BRANCH_NAME=${{ matrix.branch }}
           chmod +x deploy.sh
           ./deploy.sh standard --scan
