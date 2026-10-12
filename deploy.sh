@@ -108,10 +108,11 @@ else
 fi
 
 # ── Mode-specific settings ────────────────────────────────────────
-# 512Mi (free tier). The heap stays -Xmx350m; the Dockerfile caps memory
+# 512Mi (free tier). The heap is -Xmx240m; the Dockerfile caps memory
 # outside the heap (CDS archive, C1-only JIT, metaspace, code cache, stacks,
-# direct buffers) so startup fits. Revision library-dev-00485-z8d hit 593Mi
-# without those caps. Fix memory pressure in the app or Dockerfile; do not
+# direct buffers) so startup fits. Java 25 at -Xmx350m was killed at 574Mi
+# (library-dev-00511-4rq). Revision library-dev-00485-z8d hit 593Mi without
+# the non-heap caps. Fix memory pressure in the app or Dockerfile; do not
 # raise this.
 MEMORY="512Mi"
 DOCKERFILE="Dockerfile"
