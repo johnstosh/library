@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -111,83 +110,6 @@ public class PhotoZipImportService {
             log.error("SHA-256 algorithm not available", e);
             return null;
         }
-    }
-
-    /**
-     * Import photos from a ZIP file.
-     *
-     * @param zipFile the uploaded ZIP file
-     * @return result containing import statistics and details
-     */
-    public PhotoZipImportResultDto importFromZip(MultipartFile zipFile) throws IOException {
-        return importFromZipStream(zipFile.getInputStream());
-    }
-
-    /**
-     * Import photos from a ZIP input stream.
-     * This method processes the ZIP as it streams in, without buffering the entire file.
-     * Supports files of any size.
-     *
-     * @param inputStream the ZIP input stream
-     * @return result containing import statistics and details
-     */
-    public PhotoZipImportResultDto importFromZipStream(InputStream inputStream) throws IOException {
-        List<PhotoZipImportItemDto> items = new ArrayList<>();
-        int successCount = 0;
-        int failureCount = 0;
-        int skippedCount = 0;
-
-        // Pre-load all books, authors, and loans to avoid repeated queries per file.
-        // Use lightweight projections to skip @Lob fields (plotEssay, biographicalEssay, etc.).
-        List<BookZipImportProjection> allBooks = bookRepository.findBy();
-        List<AuthorZipImportProjection> allAuthors = authorRepository.findBy();
-        List<LoanZipImportProjection> allLoans = loanRepository.findAllForZipImport();
-
-        try (ZipInputStream zis = new ZipInputStream(inputStream)) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) {
-                    continue;
-                }
-
-                String entryPath = entry.getName();
-                if (shouldSkipEntry(entryPath)) {
-                    log.debug("Skipping hidden/resource fork file: {}", entryPath);
-                    zis.closeEntry();
-                    continue;
-                }
-
-                String filename = getFilenameFromPath(entryPath);
-                PhotoZipImportItemDto item = processEntry(filename, zis, allBooks, allAuthors, allLoans);
-                items.add(item);
-
-                switch (item.getStatus()) {
-                    case "SUCCESS" -> successCount++;
-                    case "FAILURE" -> failureCount++;
-                    case "SKIPPED" -> skippedCount++;
-                }
-
-                // Periodically flush and clear the persistence context to release memory
-                // The pre-loaded allBooks and allAuthors lists become detached but are only
-                // used for in-memory matching, so no lazy loading issues
-                int processed = successCount + failureCount + skippedCount;
-                if (processed > 0 && processed % 20 == 0) {
-                    entityManager.flush();
-                    entityManager.clear();
-                    log.info("Cleared persistence context after {} entries to free memory", processed);
-                }
-
-                zis.closeEntry();
-            }
-        }
-
-        return PhotoZipImportResultDto.builder()
-                .totalFiles(items.size())
-                .successCount(successCount)
-                .failureCount(failureCount)
-                .skippedCount(skippedCount)
-                .items(items)
-                .build();
     }
 
     /**

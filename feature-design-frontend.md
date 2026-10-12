@@ -712,14 +712,13 @@ Note: Books and Authors menu items are only visible to authenticated users. Unau
 ### Example Flow
 ```
 User clicks "Create Book"
-  → BookForm modal opens (local state)
-  → User fills form
+  → Browser opens /books/new
+  → User fills BookFormPage
   → Submit triggers useCreateBook mutation
   → API request sent
   → On success:
     - Query cache invalidated
-    - Books list auto-refreshes
-    - Modal closes
+    - Browser returns to the books list
     - Success message shown
 ```
 

@@ -211,21 +211,6 @@ public class AuthorService {
         }
     }
 
-    public int deleteAuthorsWithNoBooks() {
-        List<Author> allAuthors = authorRepository.findAll();
-        int deletedCount = 0;
-
-        for (Author author : allAuthors) {
-            long bookCount = bookRepository.countByAuthorId(author.getId());
-            if (bookCount == 0) {
-                authorRepository.deleteById(author.getId());
-                deletedCount++;
-            }
-        }
-
-        return deletedCount;
-    }
-
     /**
      * Find or create an author by name
      * @param name Author name

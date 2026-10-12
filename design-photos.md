@@ -42,7 +42,6 @@ Each photo belongs to exactly one entity. Cascade delete is enabled - deleting a
 
 ### Upload
 - **Local file upload**: POST to `/api/books/{id}/photos` or `/api/authors/{id}/photos`
-- **Google Photos import**: POST to `/api/books/{id}/photos/from-google-photos`
 - Photos automatically assigned `photoOrder` based on max existing order + 1
 - Checksum computed on upload for change tracking
 
@@ -79,7 +78,6 @@ GET /api/authors/{authorId}/photos  - List author photos
 ### Librarian-Only Endpoints
 ```
 POST   /api/books/{id}/photos                     - Upload photo
-POST   /api/books/{id}/photos/from-google-photos  - Import from Google
 PUT    /api/books/{id}/photos/{photoId}/rotate-cw - Rotate clockwise
 PUT    /api/books/{id}/photos/{photoId}/rotate-ccw - Rotate counter-clockwise
 PUT    /api/books/{id}/photos/{photoId}/move-left - Reorder left
@@ -190,13 +188,13 @@ The system supports bulk importing photos from a ZIP file. Photos are automatica
 
 ### API Endpoint
 
+The Data Management page sends the archive in chunks:
+
 ```
-POST /api/photos/import-zip  (Librarian only)
+PUT /api/photos/import-zip-chunk  (Librarian only)
 ```
 
-Request: `multipart/form-data` with `file` parameter containing ZIP archive
-
-Response:
+Each request body is one raw slice of the ZIP. Headers are `X-Upload-Id`, `X-Chunk-Index`, and `X-Is-Last-Chunk`. The last chunk's `finalResult` uses this shape:
 ```json
 {
   "totalFiles": 10,

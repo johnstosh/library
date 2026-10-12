@@ -7,7 +7,6 @@ import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.BookStatusFilter;
 import com.muczynski.library.domain.ReadingDifficulty;
-import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.CountDto;
@@ -16,13 +15,10 @@ import com.muczynski.library.dto.GenreLookupResultDto;
 import com.muczynski.library.dto.NameNormalizationResultDto;
 import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.dto.SavedBookDto;
-import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.dto.GrokJobDto;
 import com.muczynski.library.exception.BookHasNoPhotosException;
 import com.muczynski.library.exception.GrokCreditsExhaustedException;
-import com.muczynski.library.exception.LibraryException;
-import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.dto.CheckoutMatchDto;
 import com.muczynski.library.service.AskGrok;
 import com.muczynski.library.service.BookService;
@@ -31,7 +27,6 @@ import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.CheckoutMatchService;
-import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import com.muczynski.library.util.SecurityUtils;
@@ -79,9 +74,6 @@ public class BookController {
     private PhotoService photoService;
 
     @Autowired
-    private GooglePhotosService googlePhotosService;
-
-    @Autowired
     private AskGrok askGrok;
 
     @Autowired
@@ -89,9 +81,6 @@ public class BookController {
 
     @Autowired
     private GrokipediaLookupService grokipediaLookupService;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -132,42 +121,6 @@ public class BookController {
             return ResponseEntity.ok(summaries);
         } catch (Exception e) {
             logger.warn("Failed to retrieve books from most recent 2 days: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
-    @GetMapping("/by-3letter-loc")
-    @PreAuthorize("permitAll()")
-    @Transactional(readOnly = true)
-    public ResponseEntity<?> getBooksWith3LetterLocStart() {
-        try {
-            List<BookSummaryDto> summaries = bookService.getSummariesWith3LetterLocStart(isLibrarian());
-            return ResponseEntity.ok(summaries);
-        } catch (Exception e) {
-            logger.warn("Failed to retrieve books with 3-letter LOC start: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
-    /**
-     * Get book summaries for books that have ALL of the specified labels.
-     * Labels should be passed as a comma-separated string, e.g. ?labels=fiction,history
-     */
-    @GetMapping("/by-labels")
-    @PreAuthorize("permitAll()")
-    @Transactional(readOnly = true)
-    public ResponseEntity<?> getBooksByLabels(@RequestParam(required = false) String labels) {
-        try {
-            List<String> labelList = (labels == null || labels.isBlank())
-                    ? List.of()
-                    : Arrays.stream(labels.split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .collect(Collectors.toList());
-            List<BookSummaryDto> summaries = bookService.getSummariesByAllLabels(labelList, isLibrarian());
-            return ResponseEntity.ok(summaries);
-        } catch (Exception e) {
-            logger.warn("Failed to retrieve books by labels '{}': {}", labels, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
@@ -346,78 +299,6 @@ public class BookController {
         } catch (Exception e) {
             logger.warn("Failed to add photo to book ID {} with file {}: {}", bookId, file.getOriginalFilename(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    @PostMapping("/{bookId}/photos/from-google-photos")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoAddFromGooglePhotosResponse> addPhotosFromGooglePhotos(@PathVariable Long bookId, @RequestBody Map<String, Object> request) {
-        try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
-
-            if (photos == null || photos.isEmpty()) {
-                PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-                response.setSavedCount(0);
-                response.setFailedCount(0);
-                response.setSavedPhotos(Collections.emptyList());
-                response.setFailedPhotos(Collections.singletonList(Map.of("error", "No photos provided")));
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            // Get valid access token for downloading photos
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // The principal name is the database user ID (not username)
-            Long userId = Long.parseLong(authentication.getName());
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new LibraryException("User not found"));
-            String accessToken = googlePhotosService.getValidAccessToken(user);
-
-            List<PhotoDto> savedPhotos = new ArrayList<>();
-            List<Map<String, Object>> failedPhotos = new ArrayList<>();
-
-            for (Map<String, Object> photo : photos) {
-                String permanentId = (String) photo.get("id");
-                String baseUrl = (String) photo.get("url");
-                String mimeType = (String) photo.get("mimeType");
-
-                if (mimeType == null || mimeType.trim().isEmpty()) {
-                    mimeType = "image/jpeg";
-                }
-
-                try {
-                    // Download photo bytes from Google Photos
-                    byte[] photoBytes = googlePhotosService.downloadPhotoFromUrl(baseUrl, accessToken);
-
-                    // Save to database with permanent ID
-                    PhotoDto savedPhoto = photoService.addPhotoFromGooglePhotos(bookId, photoBytes, mimeType, permanentId);
-                    savedPhotos.add(savedPhoto);
-                    logger.info("Added photo from Google Photos to book {}: permanentId={}", bookId, permanentId);
-
-                } catch (Exception e) {
-                    logger.error("Failed to add photo {} to book {}: {}", permanentId, bookId, e.getMessage());
-                    failedPhotos.add(Map.of(
-                            "id", permanentId,
-                            "error", e.getMessage()
-                    ));
-                }
-            }
-
-            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-            response.setSavedCount(savedPhotos.size());
-            response.setFailedCount(failedPhotos.size());
-            response.setSavedPhotos(savedPhotos);
-            response.setFailedPhotos(failedPhotos);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-        } catch (Exception e) {
-            logger.error("Failed to add photos from Google Photos to book {}: {}", bookId, e.getMessage(), e);
-            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-            response.setSavedCount(0);
-            response.setFailedCount(0);
-            response.setSavedPhotos(Collections.emptyList());
-            response.setFailedPhotos(Collections.singletonList(Map.of("error", e.getMessage())));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 

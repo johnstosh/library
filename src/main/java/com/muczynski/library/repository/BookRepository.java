@@ -137,9 +137,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE b.dateAddedToLibrary >= :startOfDay AND b.dateAddedToLibrary < :endOfDay ORDER BY b.dateAddedToLibrary DESC")
     List<Book> findByDateAddedToLibraryBetweenOrderByDateAddedDesc(LocalDateTime startOfDay, LocalDateTime endOfDay);
 
-    @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.locNumber IS NOT NULL AND b.locNumber != '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z' ORDER BY b.dateAddedToLibrary DESC")
-    List<Book> findBooksWith3LetterLocStart();
-
     @Query("SELECT DISTINCT b FROM Book b LEFT JOIN FETCH b.author LEFT JOIN FETCH b.library WHERE b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)")
     List<Book> findBooksWithoutLocNumber();
 
@@ -169,12 +166,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      */
     @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.status = com.muczynski.library.domain.BookStatus.ACTIVE AND (b.locNumber IS NULL OR b.locNumber = '') AND (b.electronicResource IS NULL OR b.electronicResource = false)")
     List<BookSummaryProjection> findSummariesWithoutLocNumber();
-
-    /**
-     * Get summaries (id + lastModified) for books with 3-letter LOC start.
-     */
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE b.locNumber IS NOT NULL AND b.locNumber != '' AND LENGTH(SUBSTRING(b.locNumber, 1, 3)) = 3 AND SUBSTRING(b.locNumber, 1, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 2, 1) BETWEEN 'A' AND 'Z' AND SUBSTRING(b.locNumber, 3, 1) BETWEEN 'A' AND 'Z'")
-    List<BookSummaryProjection> findSummariesWith3LetterLocStart();
 
     /**
      * Get summaries (id + lastModified) for books without Grokipedia URL.
@@ -263,13 +254,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
            OR b.title ~ '^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}'
         """, nativeQuery = true)
     List<BookSummaryProjection> findSummariesFromMostRecentDay();
-
-    /**
-     * Get summaries (id + lastModified) for books that have ALL of the given labels.
-     * Books are matched only if their tagsList contains every label in the provided list.
-     */
-    @Query("SELECT b.id as id, b.lastModified as lastModified FROM Book b WHERE (SELECT COUNT(t) FROM Book b2 JOIN b2.tagsList t WHERE b2 = b AND t IN :labels) = :labelCount")
-    List<BookSummaryProjection> findSummariesByAllLabels(@Param("labels") List<String> labels, @Param("labelCount") long labelCount);
 
     /**
      * Find books that have ALL of the given labels, filtered by title query.

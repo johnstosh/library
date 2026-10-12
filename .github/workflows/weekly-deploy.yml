@@ -37,11 +37,11 @@ jobs:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}  # JSON key as a secret
 
       # Tests must pass before deploy. deploy.sh still builds with -x test.
-      - name: Set up Java 17
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
 
       - name: Set up Node
         uses: actions/setup-node@v4

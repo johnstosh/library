@@ -60,15 +60,14 @@ sudo mvn exec:java -e -D exec.mainClass=com.microsoft.playwright.CLI -D exec.arg
 
 ### Java Requirements
 
-- Java 17 or later
-- Gradle 8.x
+- Java 25 (the Gradle build downloads a Temurin 25 toolchain)
+- Gradle 9.2 (wrapper)
 
 ## Running UI Tests
 
 ### Run All UI Tests
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ./gradlew test --tests "com.muczynski.library.ui.*"
 ```
 
@@ -77,14 +76,12 @@ UI tests run against the local app and are not gated on `OPEN_NETWORK`. Tests th
 ### Run Specific Test Class
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ./gradlew test --tests "com.muczynski.library.ui.SettingsUITest"
 ```
 
 ### Run Single Test Method
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ./gradlew test --tests "com.muczynski.library.ui.SettingsUITest.testUserCanViewAccountInformation"
 ```
 
@@ -135,10 +132,7 @@ sudo apt-get install -y libgbm1
 Dependency requires at least JVM runtime version 17
 ```
 
-**Solution**: Set JAVA_HOME to Java 17:
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
-```
+**Solution**: Use the Java 25 toolchain. `./gradlew` downloads Temurin 25. A JDK 21 or newer is enough to start Gradle.
 
 ### Tests Timing Out
 

@@ -26,7 +26,6 @@ import static org.mockito.Mockito.*;
  * Note: Tests for processPhotos endpoint have been removed as the controller
  * was refactored to use Google Photos Picker API. The new endpoints are:
  * - GET /api/books-from-feed/saved-books (delegates to BookService.getBooksFromMostRecentDay)
- * - POST /api/books-from-feed/process-saved-photos
  * - POST /api/books-from-feed/save-photos
  * - POST /api/books-from-feed/picker-session
  * - GET /api/books-from-feed/picker-session/{sessionId}
@@ -211,34 +210,4 @@ class BooksFromFeedControllerTest {
         assertEquals("error.jpg", response.getBody().get("photoName"));
     }
 
-    @Test
-    void processSavedPhotos_returnsResults() {
-        Map<String, Object> serviceResult = new HashMap<>();
-        serviceResult.put("processedCount", 3);
-        serviceResult.put("failedCount", 1);
-        serviceResult.put("totalBooks", 4);
-
-        when(booksFromFeedService.processSavedPhotos()).thenReturn(serviceResult);
-
-        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSavedPhotos();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(3, response.getBody().get("processedCount"));
-        assertEquals(1, response.getBody().get("failedCount"));
-        assertEquals(4, response.getBody().get("totalBooks"));
-    }
-
-    @Test
-    void processSavedPhotos_handlesException() {
-        when(booksFromFeedService.processSavedPhotos()).thenThrow(new RuntimeException("Processing failed"));
-
-        ResponseEntity<Map<String, Object>> response = booksFromFeedController.processSavedPhotos();
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(0, response.getBody().get("processedCount"));
-        assertEquals(0, response.getBody().get("failedCount"));
-        assertEquals(0, response.getBody().get("totalBooks"));
-    }
 }

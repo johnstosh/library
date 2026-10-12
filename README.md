@@ -5,7 +5,7 @@ A full-stack library management system with book cataloging, patron tracking, li
 ## Technology Stack
 
 ### Backend
-- **Java 17** with Spring Boot 3.5+
+- **Java 25** with Spring Boot 3.5+
 - **PostgreSQL** (production) / **H2** (development/testing)
 - **Spring Security** with OAuth2 (Google SSO)
 - **Spring Data JPA** with Hibernate ORM
@@ -25,7 +25,7 @@ A full-stack library management system with book cataloging, patron tracking, li
 ## Quick Start
 
 ### Prerequisites
-- Java 17+
+- Java 25 (the Gradle build downloads a Temurin 25 toolchain)
 - Node.js 18+ and npm
 - Docker (for deployment)
 - Google Cloud SDK (for deployment)

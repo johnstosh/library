@@ -312,15 +312,6 @@ class AuthorControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void deleteAuthorsWithNoBooks() throws Exception {
-        when(authorService.deleteAuthorsWithNoBooks()).thenReturn(5);
-
-        mockMvc.perform(post("/api/authors/delete-authors-with-no-books"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(authorities = "LIBRARIAN")
     void rotatePhotoCW() throws Exception {
         doNothing().when(photoService).rotateAuthorPhoto(1L, 1L, true);
 

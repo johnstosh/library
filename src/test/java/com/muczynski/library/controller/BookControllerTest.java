@@ -438,35 +438,6 @@ class BookControllerTest {
 
     @Test
     @WithMockUser
-    void getBooksWith3LetterLocStart() throws Exception {
-        BookSummaryDto summary1 = new BookSummaryDto();
-        summary1.setId(1L);
-        summary1.setLastModified(LocalDateTime.of(2025, 1, 1, 12, 0));
-
-        BookSummaryDto summary2 = new BookSummaryDto();
-        summary2.setId(2L);
-        summary2.setLastModified(LocalDateTime.of(2025, 1, 2, 12, 0));
-
-        when(bookService.getSummariesWith3LetterLocStart(false)).thenReturn(Arrays.asList(summary2, summary1));
-
-        mockMvc.perform(get("/api/books/by-3letter-loc"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(2))
-                .andExpect(jsonPath("$[1].id").value(1));
-    }
-
-    @Test
-    @WithMockUser
-    void getBooksWith3LetterLocStartEmpty() throws Exception {
-        when(bookService.getSummariesWith3LetterLocStart(false)).thenReturn(Collections.emptyList());
-
-        mockMvc.perform(get("/api/books/by-3letter-loc"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser
     void getBooksWithoutGrokipediaUrl() throws Exception {
         BookSummaryDto summary1 = new BookSummaryDto();
         summary1.setId(1L);
@@ -787,49 +758,6 @@ class BookControllerTest {
     void titleAuthorFromPhoto_requiresLibrarianAuthority() throws Exception {
         mockMvc.perform(put("/api/books/1/title-author-from-photo"))
                 .andExpect(status().isForbidden());
-    }
-
-    // ==================== GET /api/books/by-labels Tests ====================
-
-    @Test
-    @WithMockUser
-    void getBooksByLabels_returnsMatchingSummaries() throws Exception {
-        BookSummaryDto summary = new BookSummaryDto();
-        summary.setId(1L);
-
-        when(bookService.getSummariesByAllLabels(Arrays.asList("fiction", "fantasy"), false))
-                .thenReturn(Collections.singletonList(summary));
-
-        mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction,fantasy"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(1L));
-    }
-
-    @Test
-    @WithMockUser
-    void getBooksByLabels_withNoLabels_returnsAllSummaries() throws Exception {
-        BookSummaryDto summary1 = new BookSummaryDto();
-        summary1.setId(1L);
-        BookSummaryDto summary2 = new BookSummaryDto();
-        summary2.setId(2L);
-
-        when(bookService.getSummariesByAllLabels(List.of(), false))
-                .thenReturn(Arrays.asList(summary1, summary2));
-
-        mockMvc.perform(get("/api/books/by-labels"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
-    }
-
-    @Test
-    @WithMockUser
-    void getBooksByLabels_serviceThrowsException_returns500() throws Exception {
-        when(bookService.getSummariesByAllLabels(any(), anyBoolean()))
-                .thenThrow(new RuntimeException("DB error"));
-
-        mockMvc.perform(get("/api/books/by-labels").param("labels", "fiction"))
-                .andExpect(status().isInternalServerError());
     }
 
     // ==================== Grok out of credits ====================

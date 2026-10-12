@@ -251,45 +251,6 @@ public class PhotoService {
         }
     }
 
-    /**
-     * Add photo to book from Google Photos with permanent ID
-     * Used when importing photos directly from Google Photos Picker
-     * The photo is marked as already exported since it comes from Google Photos
-     */
-    @Transactional
-    public PhotoDto addPhotoFromGooglePhotos(Long bookId, byte[] imageBytes, String contentType, String permanentId) {
-        try {
-            imageBytes = correctImageOrientation(imageBytes, contentType);
-            Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new LibraryException("Book not found"));
-            List<Photo> existingPhotos = photoRepository.findByBookIdOrderByPhotoOrder(bookId);
-            int maxOrder = existingPhotos.stream()
-                    .mapToInt(Photo::getPhotoOrder)
-                    .max()
-                    .orElse(-1);
-
-            Photo photo = new Photo();
-            photo.setBook(book);
-            photo.setImage(imageBytes);
-            photo.setContentType(contentType != null ? contentType : "image/jpeg");
-            photo.setCaption("");
-            photo.setPhotoOrder(maxOrder + 1);
-            photo.setImageChecksum(computeChecksum(imageBytes));
-
-            // Set Google Photos permanent ID and mark as already exported
-            photo.setPermanentId(permanentId);
-            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
-            photo.setExportedAt(LocalDateTime.now());
-
-            Photo savedPhoto = photoRepository.save(photo);
-            logger.info("Added photo from Google Photos to book ID {} with permanent ID: {}", bookId, permanentId);
-            return photoMapper.toDto(savedPhoto);
-        } catch (Exception e) {
-            logger.error("Failed to add photo from Google Photos to book ID {}: {}", bookId, e.getMessage(), e);
-            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
-        }
-    }
-
     @Transactional
     public void deleteAuthorPhoto(Long authorId, Long photoId) {
         try {
@@ -512,45 +473,6 @@ public class PhotoService {
         }
     }
 
-    /**
-     * Add photo to author from Google Photos with permanent ID
-     * Used when importing photos directly from Google Photos Picker
-     * The photo is marked as already exported since it comes from Google Photos
-     */
-    @Transactional
-    public PhotoDto addAuthorPhotoFromGooglePhotos(Long authorId, byte[] imageBytes, String contentType, String permanentId) {
-        try {
-            imageBytes = correctImageOrientation(imageBytes, contentType);
-            Author author = authorRepository.findById(authorId)
-                    .orElseThrow(() -> new LibraryException("Author not found"));
-            List<Photo> existingPhotos = photoRepository.findByAuthorIdOrderByPhotoOrder(authorId);
-            int maxOrder = existingPhotos.stream()
-                    .mapToInt(Photo::getPhotoOrder)
-                    .max()
-                    .orElse(-1);
-
-            Photo photo = new Photo();
-            photo.setAuthor(author);
-            photo.setImage(imageBytes);
-            photo.setContentType(contentType != null ? contentType : "image/jpeg");
-            photo.setCaption("");
-            photo.setPhotoOrder(maxOrder + 1);
-            photo.setImageChecksum(computeChecksum(imageBytes));
-
-            // Set Google Photos permanent ID and mark as already exported
-            photo.setPermanentId(permanentId);
-            photo.setExportStatus(Photo.ExportStatus.COMPLETED);
-            photo.setExportedAt(LocalDateTime.now());
-
-            Photo savedPhoto = photoRepository.save(photo);
-            logger.info("Added author photo from Google Photos to author ID {} with permanent ID: {}", authorId, permanentId);
-            return photoMapper.toDto(savedPhoto);
-        } catch (Exception e) {
-            logger.error("Failed to add author photo from Google Photos to author ID {}: {}", authorId, e.getMessage(), e);
-            throw new LibraryException("Failed to store photo data: " + e.getMessage(), e);
-        }
-    }
-
     @Transactional(readOnly = true)
     public List<PhotoDto> getPhotosByBookId(Long bookId) {
         try {
@@ -752,29 +674,6 @@ public class PhotoService {
             logger.warn("Failed to retrieve image for photo ID {}: {}", photoId, e.getMessage(), e);
             throw e;
         }
-    }
-
-    /**
-     * Resize and correct EXIF orientation for a stored photo, then save the result.
-     * Call this once to backfill large photos that were uploaded before the resize-at-upload fix.
-     * Returns true if the photo was updated.
-     */
-    @Transactional
-    public boolean resizeStoredPhoto(Long photoId) {
-        Photo photo = photoRepository.findById(photoId).orElse(null);
-        if (photo == null || photo.getImage() == null) {
-            return false;
-        }
-        byte[] processed = resizeImageIfNeeded(photo.getImage(), photo.getContentType(), MAX_LOAN_PHOTO_DIMENSION);
-        if (processed == photo.getImage()) {
-            return false; // No change needed
-        }
-        int originalLen = photo.getImage().length;
-        photo.setImage(processed);
-        photo.setImageChecksum(computeChecksum(processed));
-        photoRepository.save(photo);
-        logger.info("Resized stored photo {} ({} → {} bytes)", photoId, originalLen, processed.length);
-        return true;
     }
 
     @Transactional(readOnly = true)

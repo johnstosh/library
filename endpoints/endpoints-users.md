@@ -78,22 +78,6 @@ Updates an existing user.
 
 ---
 
-## PUT /api/users/{id}/apikey
-Updates a user's xAI API key.
-
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Request Body:** UserDto with `xaiApiKey` field
-```json
-{
-  "xaiApiKey": "xai-api-key-at-least-32-characters"
-}
-```
-
-**Response:** Updated UserDto, or 500 if key is too short
-
----
-
 ## DELETE /api/users/{id}
 Deletes a user.
 
