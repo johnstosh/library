@@ -13,7 +13,7 @@ usage() {
 Usage: ./deploy.sh <mode>
 
 Modes:
-  standard    Build and deploy using standard JVM (Dockerfile, 1Gi memory)
+  standard    Build and deploy using standard JVM (Dockerfile, 512Mi memory)
   graalvm     Build and deploy using GraalVM native image (Dockerfile-graalvm, 512Mi memory)
   redeploy    Redeploy the existing image without rebuilding (skip build and push)
 
@@ -108,9 +108,12 @@ else
 fi
 
 # ── Mode-specific settings ────────────────────────────────────────
-# 1Gi: startup of the JVM image exceeds 512Mi (revision library-dev-00485-z8d
-# was killed at 593Mi before Tomcat opened port 8080).
-MEMORY="1Gi"
+# 512Mi (free tier). The heap stays -Xmx350m; the Dockerfile caps memory
+# outside the heap (CDS archive, C1-only JIT, metaspace, code cache, stacks,
+# direct buffers) so startup fits. Revision library-dev-00485-z8d hit 593Mi
+# without those caps. Fix memory pressure in the app or Dockerfile; do not
+# raise this.
+MEMORY="512Mi"
 DOCKERFILE="Dockerfile"
 
 if [ "$MODE" = "graalvm" ]; then
