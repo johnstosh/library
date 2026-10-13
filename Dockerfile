@@ -12,13 +12,14 @@ COPY build/libs/*.jar /tmp/application.jar
 RUN java -Djarmode=tools -jar /tmp/application.jar extract --destination /app/extracted \
     && rm /tmp/application.jar
 
-# Memory: Cloud Run gives this container 512Mi. Java 25 with a 350m heap and
-# normal 12-byte object headers was killed at 564-574Mi (library-dev-00511-4rq).
-# A 240m heap then died with Java heap space while Hibernate parsed queries.
-# Compact object headers shrink each header from 12 bytes to 8. The CDS archive
-# is trained with the same flag. Heap stays 350m. Without the non-heap caps the
-# JVM used about 170-240Mi outside the heap and Cloud Run killed it before
-# port 8080 opened.
+# Memory: Cloud Run gives this container 512Mi. A 350m heap was killed at
+# 564-575Mi (library-dev-00511-4rq, library-dev-00513-c5r). A 240m heap died
+# with Java heap space while Hibernate parsed queries. At 280m an empty
+# database started: the worst full collection was 264MB of a 270MB heap, and
+# the cgroup peak was 384Mi. Compact object headers shrink each header from
+# 12 bytes to 8. The CDS archive is trained with the same flags. Heap is 280m.
+# Without the non-heap caps the JVM used about 170-240Mi outside the heap and
+# Cloud Run killed it before port 8080 opened.
 #   -XX:SharedArchiveFile        class metadata comes from the CDS archive below
 #   -XX:ArchiveRelocationMode=0  map the archive at its own address so its read-only
 #                                pages stay clean file pages instead of patched copies
@@ -33,7 +34,7 @@ RUN java -Djarmode=tools -jar /tmp/application.jar extract --destination /app/ex
 
 # CDS training run: start the Spring context without a database, exit after
 # refresh, and write the loaded classes to /app/application.jsa.
-RUN java -Xmx350m -XX:+UseCompactObjectHeaders -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -XX:MaxMetaspaceSize=160m -Xss512k -XX:MaxDirectMemorySize=32m \
+RUN java -Xmx280m -XX:+UseCompactObjectHeaders -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -XX:MaxMetaspaceSize=160m -Xss512k -XX:MaxDirectMemorySize=32m \
       -XX:ArchiveClassesAtExit=/app/application.jsa \
       -Dspring.context.exit=onRefresh \
       -Dspring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect \
@@ -49,5 +50,5 @@ RUN java -Xmx350m -XX:+UseCompactObjectHeaders -XX:+UseSerialGC -XX:TieredStopAt
 # Expose the port (Cloud Run uses PORT env variable, default 8080)
 EXPOSE ${PORT:-8080}
 
-# Run the app. Heap is 350m. Compact headers are on, matching the CDS archive.
-CMD ["java", "-Xmx350m", "-XX:+UseCompactObjectHeaders", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1", "-XX:ReservedCodeCacheSize=48m", "-XX:MaxMetaspaceSize=160m", "-Xss512k", "-XX:MaxDirectMemorySize=32m", "-XX:SharedArchiveFile=/app/application.jsa", "-XX:+UnlockDiagnosticVMOptions", "-XX:ArchiveRelocationMode=0", "-jar", "/app/extracted/application.jar"]
+# Run the app. Heap is 280m. Compact headers are on, matching the CDS archive.
+CMD ["java", "-Xmx280m", "-XX:+UseCompactObjectHeaders", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1", "-XX:ReservedCodeCacheSize=48m", "-XX:MaxMetaspaceSize=160m", "-Xss512k", "-XX:MaxDirectMemorySize=32m", "-XX:SharedArchiveFile=/app/application.jsa", "-XX:+UnlockDiagnosticVMOptions", "-XX:ArchiveRelocationMode=0", "-jar", "/app/extracted/application.jar"]
