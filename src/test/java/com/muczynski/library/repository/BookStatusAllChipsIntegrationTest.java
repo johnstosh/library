@@ -5,7 +5,8 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
-import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.BookStatusFilter;
+import com.muczynski.library.service.CatalogFilterService.BookCatalogFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,14 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Transactional
 class BookStatusAllChipsIntegrationTest {
 
-    private static final List<Long> NO_IDS = List.of(-1L);
-    private static final List<ReadingDifficulty> UNUSED_DIFFICULTIES = List.of(ReadingDifficulty.UNSET);
-
     @Autowired
     private BookRepository bookRepository;
 
+    @Autowired
+    private CatalogCriteria catalogCriteria;
+
     @Test
-    void findWithFilters_allStatusChips_includesActiveBookWithoutLoc() {
+    void allStatusChips_includesActiveBookWithoutLoc() {
         Book book = new Book();
         String title = "All status chips " + UUID.randomUUID();
         book.setTitle(title);
@@ -60,17 +62,31 @@ class BookStatusAllChipsIntegrationTest {
 
     private Page<Book> search(String query, boolean inLibrary, boolean electronic, boolean withoutLoc,
                               boolean lost, boolean withdrawn, boolean onOrder, boolean requested) {
-        return bookRepository.findWithFilters(
-                query, inLibrary, electronic, false, false,
-                false, LocalDateTime.of(1970, 1, 1, 0, 0), NO_IDS,
-                withoutLoc, false, false, false,
-                lost, withdrawn, onOrder, requested,
-                false,
-                false, false, false, false, false, false,
-                false, false, false,
-                false,
-                false, UNUSED_DIFFICULTIES, false,
-                false, NO_IDS,
-                PageRequest.of(0, 20));
+        BookCatalogFilter filter = new BookCatalogFilter();
+        filter.query = query;
+        List<BookStatusFilter> statuses = new ArrayList<>();
+        if (inLibrary) {
+            statuses.add(BookStatusFilter.IN_LIBRARY);
+        }
+        if (electronic) {
+            statuses.add(BookStatusFilter.ELECTRONIC_RESOURCE);
+        }
+        if (withoutLoc) {
+            statuses.add(BookStatusFilter.WITHOUT_LOC);
+        }
+        if (lost) {
+            statuses.add(BookStatusFilter.LOST);
+        }
+        if (withdrawn) {
+            statuses.add(BookStatusFilter.WITHDRAWN);
+        }
+        if (onOrder) {
+            statuses.add(BookStatusFilter.ON_ORDER);
+        }
+        if (requested) {
+            statuses.add(BookStatusFilter.REQUESTED);
+        }
+        filter.statuses = statuses;
+        return catalogCriteria.searchBooks(filter, PageRequest.of(0, 20));
     }
 }

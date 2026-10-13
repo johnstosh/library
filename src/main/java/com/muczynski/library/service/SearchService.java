@@ -15,6 +15,7 @@ import com.muczynski.library.mapper.AuthorMapper;
 import com.muczynski.library.mapper.BookMapper;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.CatalogCriteria;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,23 +24,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class SearchService {
 
-    private static final LocalDateTime UNUSED_MOST_RECENT_CUTOFF = LocalDateTime.of(1970, 1, 1, 0, 0);
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
-    private static final List<Long> NO_TEMP_TITLE_IDS = List.of(-1L);
-    private static final List<Long> NO_FAVORITE_IDS = List.of(-1L);
-    private static final List<ReadingDifficulty> UNUSED_READING_DIFFICULTIES = List.of(ReadingDifficulty.UNSET);
 
     @Autowired
     private BookRepository bookRepository;
 
     @Autowired
     private AuthorRepository authorRepository;
+
+    @Autowired
+    private CatalogCriteria catalogCriteria;
 
     @Autowired
     private BookMapper bookMapper;
@@ -108,83 +109,57 @@ public class SearchService {
         Pageable bookPageable = PageRequest.of(bookPageNumber, size);
         Pageable authorPageable = PageRequest.of(authorPageNumber, size);
         boolean hasLabels = labels != null && !labels.isEmpty();
-        long labelCount = hasLabels ? labels.size() : 0;
         boolean hasReadingDifficulties = readingDifficulties != null && !readingDifficulties.isEmpty();
-        boolean includeUnsetReadingDifficulty = hasReadingDifficulties
-                && readingDifficulties.contains(ReadingDifficulty.UNSET);
-        List<ReadingDifficulty> readingDifficultyParam = hasReadingDifficulties
-                ? readingDifficulties
-                : UNUSED_READING_DIFFICULTIES;
-
-        LocalDateTime mostRecentCutoff = UNUSED_MOST_RECENT_CUTOFF;
-        List<Long> mostRecentTempTitleIds = NO_TEMP_TITLE_IDS;
-        if (filterMostRecent) {
-            LocalDateTime max = bookRepository.findMaxDateAddedToLibrary();
-            mostRecentCutoff = (max != null)
-                    ? max.toLocalDate().minusDays(1).atStartOfDay()
-                    : UNMATCHABLE_MOST_RECENT_CUTOFF;
-            List<Long> tempIds = bookRepository.findBookIdsWithTemporaryTitles();
-            mostRecentTempTitleIds = (tempIds == null || tempIds.isEmpty()) ? NO_TEMP_TITLE_IDS : tempIds;
-        }
 
         boolean hasFavoriteLists = userId != null && favoriteLists != null && !favoriteLists.isEmpty();
         FavoriteService.FavoriteIdSets favoriteIds = hasFavoriteLists
                 ? favoriteService.resolveIds(userId, favoriteLists)
                 : new FavoriteService.FavoriteIdSets(List.of(), List.of());
-        boolean filterFavoriteBooks = hasFavoriteLists;
-        boolean filterFavoriteAuthors = hasFavoriteLists;
-        List<Long> favoriteBookIds = favoriteIds.bookIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.bookIds();
-        List<Long> favoriteAuthorIds = favoriteIds.authorIds().isEmpty() ? NO_FAVORITE_IDS : favoriteIds.authorIds();
+        List<Long> favoriteBookIds = favoriteIds.bookIds() == null ? List.of() : favoriteIds.bookIds();
+        List<Long> favoriteAuthorIds = favoriteIds.authorIds() == null ? List.of() : favoriteIds.authorIds();
 
         boolean hasStatusFilters = statusFilters != null && !statusFilters.isEmpty();
-        boolean statusInLibrary = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.IN_LIBRARY) : filterInLibrary;
-        boolean statusElectronic = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.ELECTRONIC_RESOURCE) : filterElectronic;
-        boolean statusLost = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.LOST) : filterNotActiveStatus;
-        boolean statusWithdrawn = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.WITHDRAWN) : filterNotActiveStatus;
-        boolean statusOnOrder = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.ON_ORDER) : filterNotActiveStatus;
-        boolean statusRequested = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.REQUESTED) : filterNotActiveStatus;
-        boolean statusWithoutLoc = hasStatusFilters
-                ? statusFilters.contains(BookStatusFilter.WITHOUT_LOC) : filterWithoutLoc;
-        boolean hasStatusConstraint = statusInLibrary || statusElectronic || statusWithoutLoc
-                || statusLost || statusWithdrawn || statusOnOrder || statusRequested;
+        List<BookStatusFilter> statuses = hasStatusFilters
+                ? statusFilters
+                : legacyStatuses(filterInLibrary, filterElectronic, filterWithoutLoc, filterNotActiveStatus);
+        boolean hasStatusConstraint = !statuses.isEmpty();
 
-        Page<Book> bookPage;
-        if (hasLabels) {
-            bookPage = bookRepository.findWithFiltersAndLabels(
-                    trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
-                    filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                    statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                    filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
-                    filterWithoutFreeTextUrls,
-                    filterYdlAudio, filterYdlBook, filterYdlEbook,
-                    filterEmuAudio, filterEmuBook, filterEmuEbook,
-                    filterAclaAudio, filterAclaBook, filterAclaEbook,
-                    filterWithGrokipedia,
-                    labels, labelCount,
-                    hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
-                    filterFavoriteBooks, favoriteBookIds,
-                    bookPageable);
-        } else {
-            bookPage = bookRepository.findWithFilters(
-                    trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
-                    filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                    statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                    filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
-                    filterWithoutFreeTextUrls,
-                    filterYdlAudio, filterYdlBook, filterYdlEbook,
-                    filterEmuAudio, filterEmuBook, filterEmuEbook,
-                    filterAclaAudio, filterAclaBook, filterAclaEbook,
-                    filterWithGrokipedia,
-                    hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
-                    filterFavoriteBooks, favoriteBookIds,
-                    bookPageable);
+        CatalogFilterService.BookCatalogFilter filter = new CatalogFilterService.BookCatalogFilter();
+        filter.query = trimmedQuery;
+        filter.freeText = filterFreeText;
+        filter.audio = filterAudio;
+        filter.mostRecent = filterMostRecent;
+        filter.threeLetterLoc = filterThreeLetterLoc;
+        filter.withoutGrokipedia = filterWithoutGrokipedia;
+        filter.withGrokipedia = filterWithGrokipedia;
+        filter.withoutGenres = filterWithoutGenres;
+        filter.withoutFreeTextUrls = filterWithoutFreeTextUrls;
+        filter.ydlAudio = filterYdlAudio;
+        filter.ydlBook = filterYdlBook;
+        filter.ydlEbook = filterYdlEbook;
+        filter.emuAudio = filterEmuAudio;
+        filter.emuBook = filterEmuBook;
+        filter.emuEbook = filterEmuEbook;
+        filter.aclaAudio = filterAclaAudio;
+        filter.aclaBook = filterAclaBook;
+        filter.aclaEbook = filterAclaEbook;
+        filter.labels = hasLabels ? labels : List.of();
+        filter.statuses = statuses;
+        filter.readingDifficulties = hasReadingDifficulties ? readingDifficulties : List.of();
+        filter.favoriteBooks = hasFavoriteLists;
+        filter.favoriteBookIds = favoriteBookIds;
+        filter.favoriteAuthors = hasFavoriteLists;
+        filter.favoriteAuthorIds = favoriteAuthorIds;
+        if (filterMostRecent) {
+            LocalDateTime max = bookRepository.findMaxDateAddedToLibrary();
+            filter.mostRecentCutoff = (max != null)
+                    ? max.toLocalDate().minusDays(1).atStartOfDay()
+                    : UNMATCHABLE_MOST_RECENT_CUTOFF;
+            List<Long> tempIds = bookRepository.findBookIdsWithTemporaryTitles();
+            filter.mostRecentTempTitleIds = tempIds == null ? List.of() : tempIds;
         }
+
+        Page<Book> bookPage = catalogCriteria.searchBooks(filter, bookPageable);
 
         // Optional chips and labels switch authors to "authors of matching books".
         // Default withdrawn/requested hide always applies to the book WHERE, including
@@ -199,41 +174,11 @@ public class SearchService {
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {
-            if (hasLabels) {
-                authorPage = authorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(
-                        trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
-                        filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                        statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                        filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
-                        filterWithoutFreeTextUrls,
-                        filterYdlAudio, filterYdlBook, filterYdlEbook,
-                        filterEmuAudio, filterEmuBook, filterEmuEbook,
-                        filterAclaAudio, filterAclaBook, filterAclaEbook,
-                        filterWithGrokipedia,
-                        labels, labelCount,
-                        hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
-                        filterFavoriteBooks, favoriteBookIds, filterFavoriteAuthors, favoriteAuthorIds,
-                        authorPageable);
-            } else {
-                authorPage = authorRepository.findAuthorsOfBooksMatchingFilters(
-                        trimmedQuery, statusInLibrary, statusElectronic, filterFreeText, filterAudio,
-                        filterMostRecent, mostRecentCutoff, mostRecentTempTitleIds,
-                        statusWithoutLoc, filterThreeLetterLoc, filterWithoutGrokipedia,
-                        filterWithoutGenres, statusLost, statusWithdrawn, statusOnOrder, statusRequested,
-                        filterWithoutFreeTextUrls,
-                        filterYdlAudio, filterYdlBook, filterYdlEbook,
-                        filterEmuAudio, filterEmuBook, filterEmuEbook,
-                        filterAclaAudio, filterAclaBook, filterAclaEbook,
-                        filterWithGrokipedia,
-                        hasReadingDifficulties, readingDifficultyParam, includeUnsetReadingDifficulty,
-                        filterFavoriteBooks, favoriteBookIds, filterFavoriteAuthors, favoriteAuthorIds,
-                        authorPageable);
-            }
+            authorPage = catalogCriteria.searchAuthorsOfMatchingBooks(filter, authorPageable);
         } else if (hasFavoriteLists) {
-            authorPage = authorRepository.findByIdsAndNameContaining(
-                    favoriteAuthorIds, trimmedQuery, authorPageable);
+            authorPage = catalogCriteria.searchAuthorsByIdsAndName(favoriteAuthorIds, trimmedQuery, authorPageable);
         } else if (!trimmedQuery.isEmpty()) {
-            authorPage = authorRepository.findByNameContainingIgnoreCase(trimmedQuery, authorPageable);
+            authorPage = catalogCriteria.searchAuthorsByName(trimmedQuery, authorPageable);
         } else {
             authorPage = authorRepository.findAll(authorPageable);
         }
@@ -258,5 +203,26 @@ public class SearchService {
                 authorPage.getSize());
 
         return new SearchResponseDto(books, authors, bookPageInfo, authorPageInfo);
+    }
+
+    private static List<BookStatusFilter> legacyStatuses(boolean inLibrary, boolean electronic, boolean withoutLoc,
+            boolean notActive) {
+        List<BookStatusFilter> statuses = new ArrayList<>();
+        if (inLibrary) {
+            statuses.add(BookStatusFilter.IN_LIBRARY);
+        }
+        if (electronic) {
+            statuses.add(BookStatusFilter.ELECTRONIC_RESOURCE);
+        }
+        if (withoutLoc) {
+            statuses.add(BookStatusFilter.WITHOUT_LOC);
+        }
+        if (notActive) {
+            statuses.add(BookStatusFilter.LOST);
+            statuses.add(BookStatusFilter.WITHDRAWN);
+            statuses.add(BookStatusFilter.ON_ORDER);
+            statuses.add(BookStatusFilter.REQUESTED);
+        }
+        return statuses;
     }
 }
