@@ -108,12 +108,12 @@ else
 fi
 
 # ── Mode-specific settings ────────────────────────────────────────
-# 512Mi (free tier). The heap is -Xmx240m with compact object headers. The
+# 512Mi (free tier). The heap is -Xmx230m with compact object headers. The
 # Dockerfile also caps memory outside the heap (CDS archive, C1-only JIT,
-# metaspace, code cache, stacks, direct buffers). Java 25 at 280m was killed
-# at 541Mi (library-dev-00514-d8x). A 240m heap without compact headers ran
-# out of Java heap (library-dev-00512-vvp). A local 240m run with compact
-# headers peaked at 344Mi. Revision library-dev-00485-z8d hit 593Mi without
+# metaspace, code cache, stacks, direct buffers). Java 25 at 240m
+# (library-dev-00515-wxt) became healthy, then instances were killed at
+# 512-515Mi. A 240m heap without compact headers ran out of Java heap
+# (library-dev-00512-vvp). Revision library-dev-00485-z8d hit 593Mi without
 # the non-heap caps. Fix memory pressure in the app or Dockerfile; do not raise this.
 MEMORY="512Mi"
 DOCKERFILE="Dockerfile"
