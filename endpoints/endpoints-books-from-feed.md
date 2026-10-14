@@ -85,37 +85,6 @@ On error:
 
 ---
 
-## POST /api/books-from-feed/process-saved
-Processes all saved books with AI in batch (server-side).
-
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Response:** Processing results with success/failure counts:
-```json
-{
-  "processedCount": 3,
-  "failedCount": 1,
-  "totalBooks": 4,
-  "processedBooks": [...],
-  "failedBooks": [...]
-}
-```
-
-**Transaction behavior:** Runs outside any transaction (`NOT_SUPPORTED` propagation). Each book's AI processing runs in its own transaction, so one failure doesn't roll back other successfully processed books. Error messages include root cause details.
-
-**Note:** The frontend "Process All" button now iterates client-side using `process-single/{bookId}` for each book, providing real-time progress updates. This batch endpoint remains available for programmatic use.
-
-**Photo Analysis:**
-- **All photos** associated with each book are analyzed together by AI
-- This provides more comprehensive information from cover, spine, back cover, table of contents, etc.
-- AI receives all images in a single request for better context
-
-**Use Case:**
-- Server-side bulk processing of imported photos
-- Programmatic batch cataloging
-
----
-
 ## POST /api/books-from-feed/save-from-picker
 Saves photos selected from Google Photos Picker.
 

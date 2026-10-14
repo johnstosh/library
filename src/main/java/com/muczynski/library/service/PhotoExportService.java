@@ -1550,38 +1550,6 @@ public class PhotoExportService {
     }
 
     /**
-     * Backfill imageChecksum for photos that have local image bytes but no checksum.
-     * These arise when photos were uploaded to Google Photos before the checksum field existed,
-     * or when image bytes were stored without computing a checksum.
-     *
-     * @return number of photos whose checksum was successfully backfilled
-     */
-    public int backfillMissingChecksums() {
-        List<Long> ids = photoRepository.findIdsWithLocalImageButNoChecksum();
-        if (ids.isEmpty()) {
-            logger.info("No photos need checksum backfill");
-            return 0;
-        }
-        logger.info("Backfilling checksums for {} photos", ids.size());
-        int count = 0;
-        for (Long photoId : ids) {
-            try {
-                Photo photo = photoRepository.findById(photoId).orElse(null);
-                if (photo == null || photo.getImage() == null) continue;
-                String checksum = computeChecksum(photo.getImage());
-                if (checksum != null) {
-                    photoRepository.updateImageChecksum(photoId, checksum);
-                    count++;
-                }
-            } catch (Exception e) {
-                logger.warn("Failed to backfill checksum for photo {}: {}", photoId, e.getMessage());
-            }
-        }
-        logger.info("Checksum backfill complete: {} of {} photos updated", count, ids.size());
-        return count;
-    }
-
-    /**
      * Export all photos as a ZIP file (legacy method for tests).
      * Uses the same filename format as the ZIP import feature.
      * WARNING: This loads all photos into memory - use streamPhotosToZip for production.

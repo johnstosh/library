@@ -166,7 +166,6 @@ The application uses Google Photos API for storing and managing book and author 
 
 ### Book Photos
 - `POST /api/books/{bookId}/photos` - Upload photo (librarian only)
-- `POST /api/books/{bookId}/photos/from-google-photos` - Import from Google Photos (librarian only)
 - `GET /api/books/{bookId}/photos` - List photos (public)
 - `PUT /api/books/{bookId}/photos/{photoId}` - Update metadata (librarian only)
 - `DELETE /api/books/{bookId}/photos/{photoId}` - Delete photo (librarian only)
@@ -177,7 +176,6 @@ The application uses Google Photos API for storing and managing book and author 
 
 ### Author Photos
 - `POST /api/authors/{authorId}/photos` - Upload photo (librarian only)
-- `POST /api/authors/{authorId}/photos/from-google-photos` - Import from Google Photos (librarian only)
 - `GET /api/authors/{authorId}/photos` - List photos (public)
 - `DELETE /api/authors/{authorId}/photos/{photoId}` - Delete photo (librarian only)
 - `PUT /api/authors/{authorId}/photos/{photoId}/rotate-cw` - Rotate clockwise (librarian only)
@@ -201,8 +199,8 @@ See `endpoints.md` for complete API documentation including request/response for
 - **PhotoUploadModal** - Handles photo upload and Google Photos import
 - **PhotoSection** - Photo management section in book/author detail pages
 - Photo components integrated into:
-  - `frontend/src/pages/books/BookDetailModal.tsx`
-  - `frontend/src/pages/authors/AuthorDetailModal.tsx`
+  - `frontend/src/pages/books/BookViewPage.tsx`
+  - `frontend/src/pages/authors/AuthorViewPage.tsx`
 
 ### API Integration
 - **TanStack Query hooks** for photo operations:

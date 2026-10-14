@@ -171,19 +171,6 @@ public class UserController {
         }
     }
 
-    @PutMapping("/{id}/apikey")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> updateApiKey(@PathVariable Long id, @RequestBody UserDto userDto) {
-        try {
-            userService.updateApiKey(id, userDto.getXaiApiKey());
-            UserDto updatedUser = userService.getUserById(id);
-            return ResponseEntity.ok(updatedUser);
-        } catch (Exception e) {
-            logger.warn("Failed to update API key for user ID {} with key length {}: {}", id, userDto.getXaiApiKey() != null ? userDto.getXaiApiKey().length() : 0, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
-    }
-
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {

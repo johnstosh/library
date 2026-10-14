@@ -82,22 +82,28 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 ### Search Strategy
 
-1. **Case-Insensitive Matching**: Uses JPQL `LOWER(...) LIKE LOWER(CONCAT('%', :query, '%'))`
+1. **Case-Insensitive Matching**: `LOWER(...) LIKE LOWER(CONCAT('%', query, '%'))`, built with the JPA Criteria API
 2. **Partial Matching**: Searches for the query string anywhere within the field
 3. **Separate Queries**: Books and authors are searched independently with separate pagination
 4. **Blank Query Allowed**: An empty or missing `query` param returns all books (subject to filters)
 5. **Filter Logic (AND)**: When any filter is active, books must satisfy every active filter. When no filter is active, all books are eligible.
 6. **Author Query**: Depends on whether any filter/label is active:
-   - **Filters or labels active** → Authors are derived from the filtered book result set (only authors who wrote at least one book in the filtered results). The text query matches book titles, not author names.
-   - **No filters, non-empty query** → `findByNameContainingIgnoreCase` (name-based search)
+   - **Filters, labels, or reading difficulty active** → Authors who wrote at least one matching book. The text query matches book titles, not author names. Favorite-author ids also apply when a favorite list is selected.
+   - **Favorite lists only** → Authors whose id is in those lists. A non-blank query still matches the name or an alternate name.
+   - **No filters, non-empty query** → name or alternate-name search
    - **No filters, empty query** → `findAll` (all authors)
 
 ### Repository Methods
 
-- `BookRepository.findWithFilters(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, pageable)` — standard book search
-- `BookRepository.findWithFiltersAndLabels(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, labels, labelCount, pageable)` — additionally filters by label tags
-- `AuthorRepository.findAuthorsOfBooksMatchingFilters(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, pageable)` — authors with ≥1 book in the filtered result set (used when any filter chip is active, no labels)
-- `AuthorRepository.findAuthorsOfBooksMatchingFiltersAndLabels(query, filterInLibrary, filterElectronic, filterFreeText, filterAudio, labels, labelCount, pageable)` — same but with label filtering (used when labels active)
+`CatalogCriteria` builds these filters (no HQL `@Query` strings). `SearchService` calls:
+
+- `searchBooks` — title and alternate title, chip filters, and every selected label
+- `searchAuthorsOfMatchingBooks` — when any book chip, label, or reading difficulty is active
+- `searchAuthorsByIdsAndName` — favorite lists only
+- `searchAuthorsByName` — text query only
+- `AuthorRepository.findAll` — no text and no filters
+
+Books and Prices summaries use `bookSummaries` (the text query also matches the author name and alternate names). The Authors page uses `authorSummaries`.
 
 ### Filter Semantics
 

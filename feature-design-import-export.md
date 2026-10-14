@@ -376,7 +376,7 @@ The photo status displayed in the list is derived from actual data to ensure it 
 - `GET /api/photo-export/zip-parts` - Compute how the collection splits into ZIP parts (returns list of `PhotoZipPartDto`)
 - `GET /api/photo-export/zip/{partNumber}` - Stream one alphabetic ZIP part (1-based)
 - `GET /api/photo-export` - Legacy: stream all photos as a single ZIP (no size limit)
-- `POST /api/photos/import-zip` - Import photos from ZIP file
+- `PUT /api/photos/import-zip-chunk` - Import photos from a ZIP file, one chunk at a time
 - **Authentication**: Librarian only
 
 ### Multi-Part ZIP Splitting

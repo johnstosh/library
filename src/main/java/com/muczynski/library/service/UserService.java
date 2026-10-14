@@ -174,19 +174,6 @@ public class UserService {
         return dtoResponse;
     }
 
-    public void updateApiKey(Long id, String xaiApiKey) {
-        if (xaiApiKey == null || xaiApiKey.trim().isEmpty()) {
-            throw new IllegalArgumentException("XAI API key cannot be empty");
-        }
-        // Basic validation
-        if (xaiApiKey.length() < 32) {
-            throw new IllegalArgumentException("XAI API key must be at least 32 characters");
-        }
-        User user = userRepository.findById(id).orElseThrow(() -> new LibraryException("User not found: " + id));
-        user.setXaiApiKey(xaiApiKey);
-        userRepository.save(user);
-    }
-
     /**
      * Find or create an authority by name.
      * @param name Authority name (e.g. "USER", "LIBRARIAN")

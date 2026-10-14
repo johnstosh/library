@@ -5,9 +5,8 @@ package com.muczynski.library.repository;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
-import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
-import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.service.CatalogFilterService.BookCatalogFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
@@ -33,6 +32,9 @@ class AuthorAlternateNamesIntegrationTest {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private CatalogCriteria catalogCriteria;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -60,9 +62,9 @@ class AuthorAlternateNamesIntegrationTest {
         Author reloaded = authorRepository.findById(author.getId()).orElseThrow();
         assertEquals(List.of("Saint Augustine", "Augustine of Hippo"), reloaded.getAlternateNames());
 
-        assertEquals(1, authorRepository.findByNameContainingIgnoreCase(
+        assertEquals(1, catalogCriteria.searchAuthorsByName(
                 "Augustine of Hippo", PageRequest.of(0, 20)).getTotalElements());
-        assertEquals(1, authorRepository.findByNameContainingIgnoreCase(
+        assertEquals(1, catalogCriteria.searchAuthorsByName(
                 "Issue372 Plain", PageRequest.of(0, 20)).getTotalElements());
 
         List<BookRepository.CheckoutMatchProjection> checkout = bookRepository.findCheckoutMatches(
@@ -70,26 +72,9 @@ class AuthorAlternateNamesIntegrationTest {
         Long bookId = book.getId();
         assertTrue(checkout.stream().anyMatch(match -> bookId.equals(match.getId())));
 
-        LocalDateTime epoch = LocalDateTime.of(1970, 1, 1, 0, 0);
-        List<BookRepository.DatedBookSummaryProjection> summaries = bookRepository.findFilteredSummaries(
-                "augustine of hippo",
-                false, false, false, false,
-                false, epoch, List.of(-1L),
-                false, false, false, false,
-                false, false, false, false,
-                false,
-                false, false, false,
-                false, false, false,
-                false, false, false,
-                false,
-                false, List.of(ReadingDifficulty.UNSET), false,
-                false, List.of(-1L),
-                false, List.of(BookCoverType.UNKNOWN), false,
-                false, List.of(0), false,
-                false,
-                false, false, false,
-                epoch, epoch,
-                false);
+        BookCatalogFilter filter = new BookCatalogFilter();
+        filter.query = "augustine of hippo";
+        List<BookRepository.DatedBookSummaryProjection> summaries = catalogCriteria.bookSummaries(filter);
         assertTrue(summaries.stream().anyMatch(summary -> bookId.equals(summary.getId())));
     }
 }

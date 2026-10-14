@@ -52,27 +52,6 @@ Returns book summaries for **ACTIVE** books without a Library of Congress call n
 
 ---
 
-### GET /api/books/by-3letter-loc
-Returns book summaries for books with 3-letter LOC call number prefixes (e.g., "ABC 123.45").
-
-**Authentication:** Public (permitAll)
-
-**Response:** Array of BookSummaryDto
-```json
-[
-  {
-    "id": 123,
-    "lastModified": "2025-01-10T14:30:00"
-  }
-]
-```
-
-**Use Case:**
-- Books page "3-Letter LOC" filter
-- Identify books with potentially incorrect 3-letter LOC prefixes
-
----
-
 ### GET /api/books/without-grokipedia
 Returns book summaries for books without a Grokipedia URL.
 

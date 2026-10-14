@@ -10,6 +10,7 @@ import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.CatalogCriteria;
 import com.muczynski.library.util.CanonicalAuthorName;
 import com.muczynski.library.util.ChicagoTitleCase;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,19 +36,13 @@ public class CatalogFilterService {
 
     private static final int DEFAULT_PRICE_OLDER_DAYS = 90;
     private static final int ID_CHUNK = 500;
-    private static final LocalDateTime EPOCH = LocalDateTime.of(1970, 1, 1, 0, 0);
-    private static final LocalDateTime UNUSED_MOST_RECENT_CUTOFF = LocalDateTime.of(1970, 1, 1, 0, 0);
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
-    private static final List<Long> NO_IDS = List.of(-1L);
-    private static final List<Integer> NO_DESIRE = List.of(-1);
-    private static final List<ReadingDifficulty> UNUSED_READING_DIFFICULTIES = List.of(ReadingDifficulty.UNSET);
-    private static final List<BookCoverType> UNUSED_BINDINGS = List.of(BookCoverType.UNKNOWN);
 
     @Autowired
     private BookRepository bookRepository;
 
     @Autowired
-    private AuthorRepository authorRepository;
+    private CatalogCriteria catalogCriteria;
 
     @Autowired
     private FavoriteService favoriteService;
@@ -71,91 +66,27 @@ public class CatalogFilterService {
 
     @Transactional(readOnly = true)
     public List<BookSummaryDto> bookSummaries(BookCatalogFilter filter, Long userId, boolean includeRequested) {
-        String query = filter.query == null ? "" : filter.query.trim();
-        boolean hasLabels = filter.labels != null && !filter.labels.isEmpty();
-        long labelCount = hasLabels ? filter.labels.size() : 0;
-        List<String> labels = hasLabels ? filter.labels : List.of("");
-
-        boolean hasReading = filter.readingDifficulties != null && !filter.readingDifficulties.isEmpty();
-        boolean includeUnsetReading = hasReading && filter.readingDifficulties.contains(ReadingDifficulty.UNSET);
-        List<ReadingDifficulty> readingParam = hasReading ? filter.readingDifficulties : UNUSED_READING_DIFFICULTIES;
-
-        boolean hasBinding = filter.bindings != null && !filter.bindings.isEmpty();
-        boolean includeUnknownBinding = hasBinding && filter.bindings.contains(BookCoverType.UNKNOWN);
-        List<BookCoverType> bindingParam = hasBinding ? filter.bindings : UNUSED_BINDINGS;
-
-        boolean hasDesire = (filter.desireValues != null && !filter.desireValues.isEmpty()) || filter.desireUnset;
-        List<Integer> desireParam = filter.desireValues == null || filter.desireValues.isEmpty()
-                ? NO_DESIRE
-                : filter.desireValues;
-
-        LocalDateTime mostRecentCutoff = UNUSED_MOST_RECENT_CUTOFF;
-        List<Long> tempTitleIds = NO_IDS;
+        filter.query = filter.query == null ? "" : filter.query.trim();
         if (filter.mostRecent) {
             LocalDateTime max = bookRepository.findMaxDateAddedToLibrary();
-            mostRecentCutoff = max != null
+            filter.mostRecentCutoff = max != null
                     ? max.toLocalDate().minusDays(1).atStartOfDay()
                     : UNMATCHABLE_MOST_RECENT_CUTOFF;
             List<Long> tempIds = bookRepository.findBookIdsWithTemporaryTitles();
-            tempTitleIds = tempIds == null || tempIds.isEmpty() ? NO_IDS : tempIds;
+            filter.mostRecentTempTitleIds = tempIds == null ? List.of() : tempIds;
         }
-
-        boolean filterFavorites = false;
-        List<Long> favoriteBookIds = NO_IDS;
         if (userId != null && filter.favoriteLists != null && !filter.favoriteLists.isEmpty()) {
             List<Long> resolved = favoriteService.resolveIds(userId, filter.favoriteLists).bookIds();
             if (resolved != null && !resolved.isEmpty()) {
-                filterFavorites = true;
-                favoriteBookIds = resolved;
+                filter.favoriteBooks = true;
+                filter.favoriteBookIds = resolved;
             }
         }
-
-        List<BookStatusFilter> statuses = filter.statuses == null ? List.of() : filter.statuses;
-        boolean hasStatus = !statuses.isEmpty();
-        boolean inLibrary = hasStatus && statuses.contains(BookStatusFilter.IN_LIBRARY);
-        boolean electronic = hasStatus && statuses.contains(BookStatusFilter.ELECTRONIC_RESOURCE);
-        boolean withoutLoc = hasStatus && statuses.contains(BookStatusFilter.WITHOUT_LOC);
-        boolean lost = hasStatus && statuses.contains(BookStatusFilter.LOST);
-        boolean withdrawn = hasStatus && statuses.contains(BookStatusFilter.WITHDRAWN);
-        boolean onOrder = hasStatus && statuses.contains(BookStatusFilter.ON_ORDER);
-        boolean requested = hasStatus && statuses.contains(BookStatusFilter.REQUESTED);
-
         int days = filter.priceOlderDays > 0 ? filter.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS;
-        LocalDateTime priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+        filter.priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+        filter.hideRequested = !includeRequested;
 
-        List<BookRepository.DatedBookSummaryProjection> rows = hasLabels
-                ? bookRepository.findFilteredSummariesByAllLabels(
-                query, inLibrary, electronic, filter.freeText, filter.audio,
-                filter.mostRecent, mostRecentCutoff, tempTitleIds,
-                withoutLoc, false, filter.withoutGrokipedia, filter.withoutGenres,
-                lost, withdrawn, onOrder, requested, filter.withoutFreeTextUrls,
-                filter.ydlAudio, filter.ydlBook, filter.ydlEbook,
-                filter.emuAudio, filter.emuBook, filter.emuEbook,
-                filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
-                filter.withGrokipedia, labels, labelCount,
-                hasReading, readingParam, includeUnsetReading,
-                filterFavorites, favoriteBookIds,
-                hasBinding, bindingParam, includeUnknownBinding,
-                hasDesire, desireParam, filter.desireUnset,
-                !includeRequested,
-                filter.withPrices, filter.noPrices, filter.priceOlder, priceOlderCutoff, EPOCH,
-                filter.lookupErrors)
-                : bookRepository.findFilteredSummaries(
-                query, inLibrary, electronic, filter.freeText, filter.audio,
-                filter.mostRecent, mostRecentCutoff, tempTitleIds,
-                withoutLoc, false, filter.withoutGrokipedia, filter.withoutGenres,
-                lost, withdrawn, onOrder, requested, filter.withoutFreeTextUrls,
-                filter.ydlAudio, filter.ydlBook, filter.ydlEbook,
-                filter.emuAudio, filter.emuBook, filter.emuEbook,
-                filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
-                filter.withGrokipedia,
-                hasReading, readingParam, includeUnsetReading,
-                filterFavorites, favoriteBookIds,
-                hasBinding, bindingParam, includeUnknownBinding,
-                hasDesire, desireParam, filter.desireUnset,
-                !includeRequested,
-                filter.withPrices, filter.noPrices, filter.priceOlder, priceOlderCutoff, EPOCH,
-                filter.lookupErrors);
+        List<BookRepository.DatedBookSummaryProjection> rows = catalogCriteria.bookSummaries(filter);
 
         if (filter.withoutProperPlotOrDescription && !rows.isEmpty()) {
             Set<Long> keep = plotIdsToKeep(rows.stream().map(BookRepository.BookSummaryProjection::getId).toList());
@@ -173,35 +104,19 @@ public class CatalogFilterService {
 
     @Transactional(readOnly = true)
     public List<AuthorSummaryDto> authorSummaries(AuthorCatalogFilter filter, Long userId) {
-        String query = filter.query == null ? "" : filter.query.trim();
-        boolean filterFavorites = false;
-        List<Long> favoriteAuthorIds = NO_IDS;
+        filter.query = filter.query == null ? "" : filter.query.trim();
         if (userId != null && filter.favoriteLists != null && !filter.favoriteLists.isEmpty()) {
             List<Long> resolved = favoriteService.resolveIds(userId, filter.favoriteLists).authorIds();
             if (resolved != null && !resolved.isEmpty()) {
-                filterFavorites = true;
-                favoriteAuthorIds = resolved;
+                filter.favorites = true;
+                filter.favoriteAuthorIds = resolved;
             }
         }
-
-        List<Long> mostRecentIds = NO_IDS;
         if (filter.mostRecent) {
-            List<Long> resolved = mostRecentAuthorIds();
-            mostRecentIds = resolved.isEmpty() ? NO_IDS : resolved;
+            filter.mostRecentAuthorIds = mostRecentAuthorIds();
         }
 
-        List<AuthorRepository.NamedAuthorSummaryProjection> rows = authorRepository.findFilteredSummaries(
-                filter.mostRecent, mostRecentIds,
-                filter.withoutDescription,
-                filter.withoutGrokipedia, filter.withGrokipedia,
-                filter.zeroBooks,
-                filter.withoutPhotos, filter.withPhotos,
-                filter.withoutBirthDate, filter.withoutDeathDate,
-                filterFavorites, favoriteAuthorIds,
-                filter.ydlBook, filter.ydlEbook, filter.ydlAudio,
-                filter.emuBook, filter.emuEbook, filter.emuAudio,
-                filter.aclaBook, filter.aclaEbook, filter.aclaAudio,
-                query);
+        List<AuthorRepository.NamedAuthorSummaryProjection> rows = catalogCriteria.authorSummaries(filter);
         if (filter.notCanonical) {
             rows = rows.stream()
                     .filter(row -> CanonicalAuthorName.needsWork(row.getName()))
@@ -306,6 +221,8 @@ public class CatalogFilterService {
         public boolean priceOlder;
         public boolean lookupErrors;
         public int priceOlderDays = DEFAULT_PRICE_OLDER_DAYS;
+        /** Search-page chip. Catalog summaries leave this off. */
+        public boolean threeLetterLoc;
         public List<String> labels = List.of();
         public List<BookStatusFilter> statuses = List.of();
         public List<ReadingDifficulty> readingDifficulties = List.of();
@@ -313,6 +230,19 @@ public class CatalogFilterService {
         public List<Integer> desireValues = List.of();
         public boolean desireUnset;
         public List<String> favoriteLists = List.of();
+        /** Resolved when {@link #mostRecent} is on. */
+        public LocalDateTime mostRecentCutoff;
+        public List<Long> mostRecentTempTitleIds = List.of();
+        /** When true, the book id must be in {@link #favoriteBookIds}. Empty matches nothing. */
+        public boolean favoriteBooks;
+        public List<Long> favoriteBookIds = List.of();
+        /** Author-of-matching-books search. Empty matches nothing. */
+        public boolean favoriteAuthors;
+        public List<Long> favoriteAuthorIds = List.of();
+        /** Books and Prices lists hide REQUESTED for patrons. */
+        public boolean hideRequested;
+        /** UTC instant for the price-older chip. Set by the service. */
+        public LocalDateTime priceOlderCutoff;
     }
 
     /** Parsed Authors page filter. */
@@ -340,5 +270,10 @@ public class CatalogFilterService {
         public boolean aclaEbook;
         public boolean aclaAudio;
         public List<String> favoriteLists = List.of();
+        /** Resolved when {@link #mostRecent} is on. Empty matches nothing. */
+        public List<Long> mostRecentAuthorIds = List.of();
+        /** When true, the author id must be in {@link #favoriteAuthorIds}. Empty matches nothing. */
+        public boolean favorites;
+        public List<Long> favoriteAuthorIds = List.of();
     }
 }

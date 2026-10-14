@@ -19,42 +19,6 @@ Upload a photo to a book.
 
 ---
 
-### POST /api/books/{bookId}/photos/from-google-photos
-Add photos from Google Photos to a book.
-
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Path Parameter:** `bookId` - Book ID to add photos to
-
-**Request Body:**
-```json
-{
-  "photos": [
-    {
-      "id": "google-photos-permanent-id",
-      "url": "https://...",
-      "mimeType": "image/jpeg"
-    }
-  ]
-}
-```
-
-**Response:** 201 Created with:
-```json
-{
-  "savedCount": 2,
-  "failedCount": 0,
-  "savedPhotos": [PhotoDto, ...],
-  "failedPhotos": []
-}
-```
-
-**Use Case:**
-- Import photos from Google Photos library
-- Bulk photo import for books
-
----
-
 ### GET /api/books/{bookId}/photos
 List all photos for a book.
 
@@ -190,23 +154,6 @@ Upload a photo to an author.
 **Use Case:**
 - Upload author portrait or biography photos
 - Add photos from local files
-
----
-
-### POST /api/authors/{authorId}/photos/from-google-photos
-Add photos from Google Photos to an author.
-
-**Authentication:** Librarian only (`hasAuthority('LIBRARIAN')`)
-
-**Path Parameter:** `authorId` - Author ID to add photos to
-
-**Request Body:** Same format as book photos endpoint
-
-**Response:** 201 Created with saved/failed counts and photo arrays
-
-**Use Case:**
-- Import author photos from Google Photos library
-- Bulk photo import for authors
 
 ---
 

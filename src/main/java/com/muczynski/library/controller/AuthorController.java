@@ -3,7 +3,6 @@
  */
 package com.muczynski.library.controller;
 
-import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
@@ -12,10 +11,7 @@ import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
-import com.muczynski.library.dto.PhotoAddFromGooglePhotosResponse;
 import com.muczynski.library.dto.PhotoDto;
-import com.muczynski.library.exception.LibraryException;
-import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.GrokJobService;
 import com.muczynski.library.dto.GrokJobDto;
@@ -23,7 +19,6 @@ import com.muczynski.library.service.BookService;
 import com.muczynski.library.service.ByIds;
 import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.CatalogNameNormalizationService;
-import com.muczynski.library.service.GooglePhotosService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
 import com.muczynski.library.util.SecurityUtils;
@@ -44,7 +39,6 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/authors")
@@ -71,13 +65,7 @@ public class AuthorController {
     private BookService bookService;
 
     @Autowired
-    private GooglePhotosService googlePhotosService;
-
-    @Autowired
     private GrokipediaLookupService grokipediaLookupService;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("permitAll()")
@@ -332,78 +320,6 @@ public class AuthorController {
         }
     }
 
-    @PostMapping("/{authorId}/photos/from-google-photos")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<PhotoAddFromGooglePhotosResponse> addPhotosFromGooglePhotos(@PathVariable Long authorId, @RequestBody Map<String, Object> request) {
-        try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> photos = (List<Map<String, Object>>) request.get("photos");
-
-            if (photos == null || photos.isEmpty()) {
-                PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-                response.setSavedCount(0);
-                response.setFailedCount(0);
-                response.setSavedPhotos(Collections.emptyList());
-                response.setFailedPhotos(Collections.singletonList(Map.of("error", "No photos provided")));
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            // Get valid access token for downloading photos
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            // The principal name is the database user ID (not username)
-            Long userId = Long.parseLong(authentication.getName());
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new LibraryException("User not found"));
-            String accessToken = googlePhotosService.getValidAccessToken(user);
-
-            List<PhotoDto> savedPhotos = new ArrayList<>();
-            List<Map<String, Object>> failedPhotos = new ArrayList<>();
-
-            for (Map<String, Object> photo : photos) {
-                String permanentId = (String) photo.get("id");
-                String baseUrl = (String) photo.get("url");
-                String mimeType = (String) photo.get("mimeType");
-
-                if (mimeType == null || mimeType.trim().isEmpty()) {
-                    mimeType = "image/jpeg";
-                }
-
-                try {
-                    // Download photo bytes from Google Photos
-                    byte[] photoBytes = googlePhotosService.downloadPhotoFromUrl(baseUrl, accessToken);
-
-                    // Save to database with permanent ID
-                    PhotoDto savedPhoto = photoService.addAuthorPhotoFromGooglePhotos(authorId, photoBytes, mimeType, permanentId);
-                    savedPhotos.add(savedPhoto);
-                    logger.info("Added photo from Google Photos to author {}: permanentId={}", authorId, permanentId);
-
-                } catch (Exception e) {
-                    logger.error("Failed to add photo {} to author {}: {}", permanentId, authorId, e.getMessage());
-                    failedPhotos.add(Map.of(
-                            "id", permanentId,
-                            "error", e.getMessage()
-                    ));
-                }
-            }
-
-            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-            response.setSavedCount(savedPhotos.size());
-            response.setFailedCount(failedPhotos.size());
-            response.setSavedPhotos(savedPhotos);
-            response.setFailedPhotos(failedPhotos);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-        } catch (Exception e) {
-            logger.error("Failed to add photos from Google Photos to author {}: {}", authorId, e.getMessage(), e);
-            PhotoAddFromGooglePhotosResponse response = new PhotoAddFromGooglePhotosResponse();
-            response.setSavedCount(0);
-            response.setFailedCount(0);
-            response.setSavedPhotos(Collections.emptyList());
-            response.setFailedPhotos(Collections.singletonList(Map.of("error", e.getMessage())));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
     @PostMapping
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<AuthorDto> createAuthor(@Valid @RequestBody AuthorDto authorDto) {
@@ -500,24 +416,6 @@ public class AuthorController {
         logger.info("Looking up Grokipedia URLs for {} authors (slow={})", authorIds.size(), slow);
         List<GrokipediaLookupResultDto> results = grokipediaLookupService.lookupAuthors(authorIds, slow);
         return ResponseEntity.ok(results);
-    }
-
-    @PostMapping("/delete-authors-with-no-books")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<?> deleteAuthorsWithNoBooks() {
-        try {
-            int deletedCount = authorService.deleteAuthorsWithNoBooks();
-            logger.info("Deleted {} authors with no books", deletedCount);
-            return ResponseEntity.ok(Map.of(
-                    "message", "Deleted " + deletedCount + " author(s) with no books",
-                    "deletedCount", deletedCount
-            ));
-        } catch (Exception e) {
-            logger.error("Failed to delete authors with no books: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", e.getMessage()
-            ));
-        }
     }
 
     @DeleteMapping("/{authorId}/photos/{photoId}")

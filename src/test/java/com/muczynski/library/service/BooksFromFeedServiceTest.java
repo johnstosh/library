@@ -41,7 +41,7 @@ import static org.mockito.Mockito.lenient;
  * Note: Tests for processPhotosFromFeed method have been removed as the service
  * was refactored to use Google Photos Picker API. The new workflow is:
  * 1. savePhotosFromPicker - saves selected photos from picker to database
- * 2. processSavedPhotos - processes the saved photos with AI
+ * 2. processSingleBook - processes one saved photo with AI
  */
 @ExtendWith(MockitoExtension.class)
 class BooksFromFeedServiceTest {
@@ -324,34 +324,4 @@ class BooksFromFeedServiceTest {
         assertEquals(LocalDateTime.of(2026, 2, 5, 18, 8, 22), result);
     }
 
-    @Test
-    void processSavedPhotos_processesMultipleBooks() {
-        BookDto book1 = new BookDto();
-        book1.setId(1L);
-        book1.setTitle("2025-01-10_14:30:00");
-
-        BookDto book2 = new BookDto();
-        book2.setId(2L);
-        book2.setTitle("2025-01-10_14:31:00");
-
-        BookDto processed1 = new BookDto();
-        processed1.setId(1L);
-        processed1.setTitle("Book One");
-        processed1.setAuthorId(10L);
-
-        Author author = new Author();
-        author.setId(10L);
-        author.setName("Author One");
-
-        when(bookService.getBooksWithTemporaryTitles()).thenReturn(List.of(book1, book2));
-        when(bookService.generateTempBook(1L)).thenReturn(processed1);
-        when(bookService.generateTempBook(2L)).thenThrow(new RuntimeException("AI timeout"));
-        when(authorRepository.findById(10L)).thenReturn(Optional.of(author));
-
-        Map<String, Object> result = booksFromFeedService.processSavedPhotos();
-
-        assertEquals(1, result.get("processedCount"));
-        assertEquals(1, result.get("failedCount"));
-        assertEquals(2, result.get("totalBooks"));
-    }
 }

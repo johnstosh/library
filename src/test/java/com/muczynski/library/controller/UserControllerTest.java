@@ -172,38 +172,6 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
-    void updateApiKey_success() throws Exception {
-        UserDto userDto = new UserDto();
-        userDto.setXaiApiKey("xai-valid-api-key-that-is-at-least-32-characters-long");
-        UserDto updatedDto = new UserDto();
-        updatedDto.setId(1L);
-        updatedDto.setUsername("testuser");
-        updatedDto.setXaiApiKey("xai-valid-api-key-that-is-at-least-32-characters-long");
-        when(userService.getUserById(1L)).thenReturn(updatedDto);
-
-        mockMvc.perform(put("/api/users/1/apikey")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.xaiApiKey").value("xai-valid-api-key-that-is-at-least-32-characters-long"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "LIBRARIAN")
-    void updateApiKey_rejectsTooShort() throws Exception {
-        UserDto userDto = new UserDto();
-        userDto.setXaiApiKey("short");
-        doThrow(new IllegalArgumentException("XAI API key must be at least 32 characters"))
-                .when(userService).updateApiKey(eq(1L), eq("short"));
-
-        mockMvc.perform(put("/api/users/1/apikey")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userDto)))
-                .andExpect(status().isInternalServerError());
-    }
-
-    @Test
-    @WithMockUser(authorities = "LIBRARIAN")
     void getUserById_returnsNotFound_whenUserDoesNotExist() throws Exception {
         when(userService.getUserById(999L)).thenReturn(null);
 

@@ -161,13 +161,4 @@ Clears a photo's `permanentId` (marks it pending export again). Does **not** del
 
 ---
 
-## POST /api/photo-export/backfill-checksums
-Computes and saves `imageChecksum` for any photos that have local image bytes but no stored checksum. Safe to call multiple times (idempotent).
-
-**Authentication:** Librarian only
-
-**Response:** `{ "updated": 12 }`
-
----
-
 **Related:** `PhotoExportController.java`, `PhotoExportService.java`, `PhotoZipPartDto.java`, `feature-design-import-export.md`, `feature-design-photos.md`

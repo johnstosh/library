@@ -129,7 +129,6 @@ export function useEntities(filter?: string) {
 - **Filter Endpoints**: All return `BookSummaryDto[]`:
   - `/api/books/most-recent-day`
   - `/api/books/without-loc`
-  - `/api/books/by-3letter-loc`
   - `/api/books/without-grokipedia`
 - **Batch Fetch**: `POST /api/books/by-ids` (at most 100 ids). The Books page requests the first 100 matching rows, then another 100 when the user scrolls or clicks Load more.
 

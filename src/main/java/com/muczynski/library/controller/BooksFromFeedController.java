@@ -84,26 +84,6 @@ public class BooksFromFeedController {
     }
 
     /**
-     * Phase 2: Process saved photos using AI book-by-photo workflow
-     * This processes photos that were previously saved to the database (from save-from-picker)
-     * @return Processing results
-     */
-    @PostMapping("/process-saved")
-    public ResponseEntity<Map<String, Object>> processSavedPhotos() {
-        try {
-            Map<String, Object> result = booksFromFeedService.processSavedPhotos();
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "error", e.getMessage(),
-                    "processedCount", 0,
-                    "failedCount", 0,
-                    "totalBooks", 0
-            ));
-        }
-    }
-
-    /**
      * Save a single photo selected via Google Photos Picker API to database (Phase 1 - No AI).
      * Each request runs in its own transaction for per-photo isolation.
      * Frontend iterates photos one at a time, showing progress bar.

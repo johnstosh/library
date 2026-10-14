@@ -40,29 +40,6 @@ class BookIntegrationTest {
 
     @Test
     @WithMockUser
-    @Sql(scripts = "/data-integration.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void getBooksWith3LetterLocStart_returnsFilteredBooks() throws Exception {
-        // Filter endpoints now return BookSummaryDto (id + lastModified) for cache validation
-        mockMvc.perform(get("/api/books/by-3letter-loc"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(999L))
-                .andExpect(jsonPath("$[0].lastModified").exists());
-    }
-
-    @Test
-    @WithMockUser
-    @Sql(scripts = "/data-integration-nonmatching.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
-    @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    void getBooksWith3LetterLocStart_returnsEmpty_whenNoMatchingBooks() throws Exception {
-        mockMvc.perform(get("/api/books/by-3letter-loc"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
-    }
-
-    @Test
-    @WithMockUser
     @Sql(scripts = "/data-integration-without-loc.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     @Sql(scripts = "/cleanup-integration.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void getBooksWithoutLocNumber_excludesElectronicAndNonActive() throws Exception {

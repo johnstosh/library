@@ -271,38 +271,6 @@ public class BookService {
         return title.matches("^\\d{4}-\\d{1,2}-\\d{1,2}.*");
     }
 
-    /**
-     * Get books with temporary titles (date-pattern titles) for batch processing.
-     * Uses efficient query to find IDs first, then loads full DTOs only for matching books.
-     *
-     * @return List of BookDto for books with temporary titles
-     */
-    public List<BookDto> getBooksWithTemporaryTitles() {
-        List<Long> ids = bookRepository.findBookIdsWithTemporaryTitles();
-        if (ids.isEmpty()) {
-            return List.of();
-        }
-        return bookRepository.findAllById(ids).stream()
-                .map(bookMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<BookDto> getBooksWith3LetterLocStart(boolean includeRequested) {
-        return includeRequested ? getBooksWith3LetterLocStart() : getBooksWith3LetterLocStart().stream()
-                .filter(book -> !BookStatus.REQUESTED.equals(book.getStatus()))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<BookDto> getBooksWith3LetterLocStart() {
-        return bookRepository.findBooksWith3LetterLocStart().stream()
-                .map(bookMapper::toDto)
-                .sorted(Comparator.comparing(BookDto::getDateAddedToLibrary,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
-                .collect(Collectors.toList());
-    }
-
     @Transactional(readOnly = true)
     public List<BookDto> getBooksWithoutGrokipediaUrl(boolean includeRequested) {
         return includeRequested ? getBooksWithoutGrokipediaUrl() : getBooksWithoutGrokipediaUrl().stream()
@@ -1178,22 +1146,6 @@ public class BookService {
     }
 
     /**
-     * Get summaries (id + lastModified) for books with 3-letter LOC start.
-     * Used for cache validation in frontend.
-     */
-    @Transactional(readOnly = true)
-    public List<BookSummaryDto> getSummariesWith3LetterLocStart(boolean includeRequested) {
-        return includeRequested ? getSummariesWith3LetterLocStart() : hideRequestedSummaries(getSummariesWith3LetterLocStart());
-    }
-
-    @Transactional(readOnly = true)
-    public List<BookSummaryDto> getSummariesWith3LetterLocStart() {
-        return bookRepository.findSummariesWith3LetterLocStart().stream()
-                .map(this::projectionToSummaryDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Get summaries (id + lastModified) for books without Grokipedia URL.
      * Used for cache validation in frontend.
      */
@@ -1205,28 +1157,6 @@ public class BookService {
     @Transactional(readOnly = true)
     public List<BookSummaryDto> getSummariesWithoutGrokipediaUrl() {
         return bookRepository.findSummariesWithoutGrokipediaUrl().stream()
-                .map(this::projectionToSummaryDto)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Get summaries (id + lastModified) for books that have ANY of the given labels.
-     * Used for label-based filtering in the frontend.
-     *
-     * @param labels List of labels to filter by (book matches if it has at least one)
-     * @return List of BookSummaryDto for matching books
-     */
-    @Transactional(readOnly = true)
-    public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels, boolean includeRequested) {
-        return includeRequested ? getSummariesByAllLabels(labels) : hideRequestedSummaries(getSummariesByAllLabels(labels));
-    }
-
-    @Transactional(readOnly = true)
-    public List<BookSummaryDto> getSummariesByAllLabels(List<String> labels) {
-        if (labels == null || labels.isEmpty()) {
-            return getAllBookSummaries();
-        }
-        return bookRepository.findSummariesByAllLabels(labels, labels.size()).stream()
                 .map(this::projectionToSummaryDto)
                 .collect(Collectors.toList());
     }
