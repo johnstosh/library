@@ -20,7 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Connects to the production Cloud SQL database (via the postgres-socket-factory)
+ * Connects to the production Cloud SQL database through the Auth Proxy unix socket
  * and measures how long the zip-parts query and algorithm take.
  *
  * Requires the following environment variables (the test is skipped if GCP_PROJECT_ID
@@ -46,9 +46,9 @@ class PhotoZipPartsProdTimingTest {
         String password  = System.getenv("DB_PASSWORD");
 
         String instanceName = projectId + ":" + region + ":" + INSTANCE_SUFFIX;
-        String jdbcUrl = "jdbc:postgresql:///" + dbName
-                + "?cloudSqlInstance=" + instanceName
-                + "&socketFactory=com.google.cloud.sql.postgres.SocketFactory";
+        String jdbcUrl = "jdbc:postgresql://localhost/" + dbName
+                + "?socketFactory=org.newsclub.net.unix.AFUNIXSocketFactory$FactoryArg"
+                + "&socketFactoryArg=/cloudsql/" + instanceName + "/.s.PGSQL.5432";
 
         System.out.println("Connecting to: " + instanceName + "/" + dbName);
 

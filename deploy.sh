@@ -224,6 +224,7 @@ if [ -n "${GMAIL_TOKEN_FOR_SEND:-}" ]; then
   MAIL_ENV="${MAIL_ENV},GMAIL_TOKEN_FOR_SEND=${GMAIL_TOKEN_FOR_SEND}"
 fi
 
+# --cpu-boost lasts until the port opens. CPU stays allocated after that.
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$GCP_REGION" \
@@ -234,6 +235,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --max-instances 1 \
   --memory "$MEMORY" \
   --cpu 1 \
+  --cpu-boost \
   --timeout 600 \
   --no-cpu-throttling \
   --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com,${MAIL_ENV}" \
