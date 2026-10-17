@@ -59,7 +59,7 @@ class EssayColumnMigrationTest {
             EssayColumnMigration.convert(connection, TABLE, List.of("essay"));
             connection.commit();
 
-            assertEquals("text", udtName(connection));
+            assertEquals("text", udtName(connection, TABLE, "essay"));
             assertEquals("Hello essay", essayText(connection, 1));
             assertNull(essayText(connection, 2));
             assertNull(essayText(connection, 3));
@@ -68,7 +68,7 @@ class EssayColumnMigrationTest {
 
             EssayColumnMigration.convert(connection, TABLE, List.of("essay"));
             connection.commit();
-            assertEquals("text", udtName(connection));
+            assertEquals("text", udtName(connection, TABLE, "essay"));
             assertEquals("Hello essay", essayText(connection, 1));
             assertTrue(largeObjectExists(connection, keptOid));
         } finally {
@@ -95,10 +95,195 @@ class EssayColumnMigrationTest {
         }
     }
 
+    @Test
+    void restoresOidNumbersStoredAsVarchar() throws Exception {
+        dropFixture();
+        long keptOid = 0;
+        long shortOid = 0;
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("CREATE TABLE " + TABLE + " (id int primary key, essay varchar(32600))");
+            }
+            long essayOid = largeObject(connection, "Hello essay from the large object");
+            keptOid = largeObject(connection, "leave this object");
+            shortOid = largeObject(connection, "x");
+            long dangling = nextMissingOid(connection);
+            try (PreparedStatement insert = connection.prepareStatement(
+                    "INSERT INTO " + TABLE + " (id, essay) VALUES (1, ?), (2, ?), (3, ?), (4, ?)")) {
+                insert.setString(1, Long.toString(essayOid));
+                insert.setString(2, "A real sentence that is not an object id.");
+                insert.setString(3, Long.toString(dangling));
+                insert.setString(4, Long.toString(shortOid));
+                insert.executeUpdate();
+            }
+            connection.commit();
+
+            EssayColumnMigration.convert(connection, TABLE, List.of("essay"));
+            connection.commit();
+
+            assertEquals("text", udtName(connection, TABLE, "essay"));
+            assertEquals("Hello essay from the large object", essayText(connection, 1));
+            assertEquals("A real sentence that is not an object id.", essayText(connection, 2));
+            assertEquals(Long.toString(dangling), essayText(connection, 3));
+            assertEquals(Long.toString(shortOid), essayText(connection, 4));
+            assertFalse(largeObjectExists(connection, essayOid));
+            assertTrue(largeObjectExists(connection, keptOid));
+            assertTrue(largeObjectExists(connection, shortOid));
+
+            EssayColumnMigration.convert(connection, TABLE, List.of("essay"));
+            connection.commit();
+            assertEquals("text", udtName(connection, TABLE, "essay"));
+            assertEquals("Hello essay from the large object", essayText(connection, 1));
+            assertEquals("A real sentence that is not an object id.", essayText(connection, 2));
+            assertEquals(Long.toString(dangling), essayText(connection, 3));
+            assertTrue(largeObjectExists(connection, keptOid));
+            assertTrue(largeObjectExists(connection, shortOid));
+        } finally {
+            dropFixture();
+            unlinkQuietly(keptOid);
+            unlinkQuietly(shortOid);
+        }
+    }
+
+    @Test
+    void keepsASharedLargeObjectUntilBothOidColumnsAreCopied() throws Exception {
+        String table = "essay_lob_pair";
+        dropTable(table);
+        long shared = 0;
+        long plotOnly = 0;
+        long descriptionOnly = 0;
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("""
+                        CREATE TABLE essay_lob_pair (
+                            id int primary key,
+                            plot_summary oid,
+                            detailed_description oid
+                        )
+                        """);
+            }
+            shared = largeObject(connection, "shared essay");
+            plotOnly = largeObject(connection, "plot only essay");
+            descriptionOnly = largeObject(connection, "description only essay");
+            try (PreparedStatement insert = connection.prepareStatement("""
+                    INSERT INTO essay_lob_pair (id, plot_summary, detailed_description)
+                    VALUES (1, ?, ?), (2, ?, ?)
+                    """)) {
+                insert.setLong(1, shared);
+                insert.setLong(2, shared);
+                insert.setLong(3, plotOnly);
+                insert.setLong(4, descriptionOnly);
+                insert.executeUpdate();
+            }
+            connection.commit();
+
+            EssayColumnMigration.convert(connection, table, List.of("plot_summary", "detailed_description"));
+            connection.commit();
+
+            assertEquals("text", udtName(connection, table, "plot_summary"));
+            assertEquals("text", udtName(connection, table, "detailed_description"));
+            assertEquals("shared essay", cell(connection, table, "plot_summary", 1));
+            assertEquals("shared essay", cell(connection, table, "detailed_description", 1));
+            assertEquals("plot only essay", cell(connection, table, "plot_summary", 2));
+            assertEquals("description only essay", cell(connection, table, "detailed_description", 2));
+            assertFalse(largeObjectExists(connection, shared));
+            assertFalse(largeObjectExists(connection, plotOnly));
+            assertFalse(largeObjectExists(connection, descriptionOnly));
+        } finally {
+            dropTable(table);
+            unlinkQuietly(shared);
+            unlinkQuietly(plotOnly);
+            unlinkQuietly(descriptionOnly);
+        }
+    }
+
+    @Test
+    void restoresASharedOidStoredInBothVarcharColumns() throws Exception {
+        String table = "essay_lob_pair";
+        dropTable(table);
+        long shared = 0;
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("""
+                        CREATE TABLE essay_lob_pair (
+                            id int primary key,
+                            plot_summary varchar(32600),
+                            detailed_description varchar(32600)
+                        )
+                        """);
+            }
+            shared = largeObject(connection, "shared essay from the large object");
+            try (PreparedStatement insert = connection.prepareStatement("""
+                    INSERT INTO essay_lob_pair (id, plot_summary, detailed_description)
+                    VALUES (1, ?, ?)
+                    """)) {
+                insert.setString(1, Long.toString(shared));
+                insert.setString(2, Long.toString(shared));
+                insert.executeUpdate();
+            }
+            connection.commit();
+
+            EssayColumnMigration.convert(connection, table, List.of("plot_summary", "detailed_description"));
+            connection.commit();
+
+            assertEquals("text", udtName(connection, table, "plot_summary"));
+            assertEquals("text", udtName(connection, table, "detailed_description"));
+            assertEquals("shared essay from the large object", cell(connection, table, "plot_summary", 1));
+            assertEquals("shared essay from the large object", cell(connection, table, "detailed_description", 1));
+            assertFalse(largeObjectExists(connection, shared));
+
+            EssayColumnMigration.convert(connection, table, List.of("plot_summary", "detailed_description"));
+            connection.commit();
+            assertEquals("shared essay from the large object", cell(connection, table, "plot_summary", 1));
+            assertEquals("shared essay from the large object", cell(connection, table, "detailed_description", 1));
+        } finally {
+            dropTable(table);
+            unlinkQuietly(shared);
+        }
+    }
+
+    @Test
+    void skipsAMissingTable() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            EssayColumnMigration.convert(connection, "essay_lob_missing", List.of("essay"));
+            connection.commit();
+        }
+    }
+
+    @Test
+    void bookEssayColumnsAreText() throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT column_name, udt_name
+                     FROM information_schema.columns
+                     WHERE table_schema = current_schema()
+                       AND table_name = 'book'
+                       AND column_name IN ('plot_summary', 'detailed_description')
+                     ORDER BY column_name
+                     """);
+             ResultSet rows = statement.executeQuery()) {
+            assertTrue(rows.next());
+            assertEquals("detailed_description", rows.getString(1));
+            assertEquals("text", rows.getString(2));
+            assertTrue(rows.next());
+            assertEquals("plot_summary", rows.getString(1));
+            assertEquals("text", rows.getString(2));
+            assertFalse(rows.next());
+        }
+    }
+
     private void dropFixture() throws SQLException {
+        dropTable(TABLE);
+    }
+
+    private void dropTable(String table) throws SQLException {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
-            statement.execute("DROP TABLE IF EXISTS " + TABLE);
+            statement.execute("DROP TABLE IF EXISTS " + table);
         }
     }
 
@@ -122,15 +307,16 @@ class EssayColumnMigrationTest {
         }
     }
 
-    private static String udtName(Connection connection) throws SQLException {
+    private static String udtName(Connection connection, String table, String column) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT udt_name
                 FROM information_schema.columns
                 WHERE table_schema = current_schema()
                   AND table_name = ?
-                  AND column_name = 'essay'
+                  AND column_name = ?
                 """)) {
-            statement.setString(1, TABLE);
+            statement.setString(1, table);
+            statement.setString(2, column);
             try (ResultSet rows = statement.executeQuery()) {
                 rows.next();
                 return rows.getString(1);
@@ -139,8 +325,12 @@ class EssayColumnMigrationTest {
     }
 
     private static String essayText(Connection connection, int id) throws SQLException {
+        return cell(connection, TABLE, "essay", id);
+    }
+
+    private static String cell(Connection connection, String table, String column, int id) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT essay FROM " + TABLE + " WHERE id = ?")) {
+                "SELECT " + column + " FROM " + table + " WHERE id = ?")) {
             statement.setInt(1, id);
             try (ResultSet rows = statement.executeQuery()) {
                 rows.next();

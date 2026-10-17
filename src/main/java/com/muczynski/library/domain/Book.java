@@ -51,11 +51,12 @@ public class Book {
     private String publisher;
 
     /**
-     * LONGVARCHAR is PostgreSQL varchar/text, so the proper-plot filter can
-     * measure length in SQL. Without it, Hibernate 6 stores this as an oid.
+     * PostgreSQL {@code text}. LONGVARCHAR keeps JDBC {@code getString}.
+     * Without {@code columnDefinition}, Hibernate casts an existing {@code oid}
+     * to the object id before startup can copy the large object.
      */
     @Lob
-    @Column(name = "plot_summary")
+    @Column(name = "plot_summary", columnDefinition = "text")
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String plotEssay;
 
@@ -63,10 +64,10 @@ public class Book {
     private String relatedWorks;
 
     /**
-     * Same LONGVARCHAR mapping as {@link #plotEssay}. Existing oid values are
-     * copied to text once at startup.
+     * Same text mapping as {@link #plotEssay}.
      */
     @Lob
+    @Column(columnDefinition = "text")
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String detailedDescription;
 
