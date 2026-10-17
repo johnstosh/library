@@ -58,6 +58,16 @@ class CatalogFilterServiceIntegrationTest {
 
         Book shortPlot = bookRepository.save(book(token + " short", author, "short", proper()));
         Book bothProper = bookRepository.save(book(token + " proper", author, proper(), proper()));
+        Book leadingSpace = bookRepository.save(book(
+                token + " leading",
+                author,
+                " " + "x".repeat(CatalogFilterService.PROPER_TEXT_MIN_CHARS - 1),
+                proper()));
+        Book padded = bookRepository.save(book(
+                token + " padded",
+                author,
+                "  " + proper() + "  ",
+                "  " + proper() + "  "));
         Book priced = bookRepository.save(book(token + " priced", author, null, null));
         Book unmatched = bookRepository.save(book(token + " missing", author, null, null));
         Book errored = bookRepository.save(book(token + " errored", author, null, null));
@@ -77,7 +87,9 @@ class CatalogFilterServiceIntegrationTest {
         plot.withoutProperPlotOrDescription = true;
         List<Long> plotIds = ids(catalogFilterService.bookSummaries(plot, null, true));
         assertTrue(plotIds.contains(shortPlot.getId()));
+        assertTrue(plotIds.contains(leadingSpace.getId()));
         assertFalse(plotIds.contains(bothProper.getId()));
+        assertFalse(plotIds.contains(padded.getId()));
 
         CatalogFilterService.BookCatalogFilter traits = query(token + " short");
         traits.bindings = List.of(BookCoverType.UNKNOWN);

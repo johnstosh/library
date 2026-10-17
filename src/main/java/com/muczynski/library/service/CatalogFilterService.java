@@ -31,8 +31,11 @@ import java.util.Set;
 @Service
 public class CatalogFilterService {
 
-    /** Matches the Books page PROPER_TEXT_MIN_CHARS. */
-    static final int PROPER_TEXT_MIN_CHARS = 400;
+    /**
+     * A field is proper at this many characters after trim. The chip applies
+     * the same threshold in SQL ({@code length(trim(column))}).
+     */
+    public static final int PROPER_TEXT_MIN_CHARS = 400;
 
     private static final int DEFAULT_PRICE_OLDER_DAYS = 90;
     private static final int ID_CHUNK = 500;
@@ -88,10 +91,6 @@ public class CatalogFilterService {
 
         List<BookRepository.DatedBookSummaryProjection> rows = catalogCriteria.bookSummaries(filter);
 
-        if (filter.withoutProperPlotOrDescription && !rows.isEmpty()) {
-            Set<Long> keep = plotIdsToKeep(rows.stream().map(BookRepository.BookSummaryProjection::getId).toList());
-            rows = rows.stream().filter(row -> keep.contains(row.getId())).toList();
-        }
         if ((filter.titleNotChicago || filter.authorNotCanonical) && !rows.isEmpty()) {
             Set<Long> keep = namingIdsToKeep(
                     rows.stream().map(BookRepository.BookSummaryProjection::getId).toList(),
@@ -134,22 +133,6 @@ public class CatalogFilterService {
         LocalDateTime end = start.plusDays(1);
         List<Long> ids = bookRepository.findAuthorIdsAddedBetween(start, end);
         return ids == null ? List.of() : ids;
-    }
-
-    private Set<Long> plotIdsToKeep(List<Long> ids) {
-        Set<Long> keep = new HashSet<>();
-        for (int offset = 0; offset < ids.size(); offset += ID_CHUNK) {
-            List<Long> chunk = ids.subList(offset, Math.min(offset + ID_CHUNK, ids.size()));
-            for (Object[] row : bookRepository.findPlotFieldsByIds(chunk)) {
-                Long id = ((Number) row[0]).longValue();
-                String plot = row[1] == null ? null : row[1].toString();
-                String description = row[2] == null ? null : row[2].toString();
-                if (lacksProperPlotOrDescription(plot, description)) {
-                    keep.add(id);
-                }
-            }
-        }
-        return keep;
     }
 
     /**

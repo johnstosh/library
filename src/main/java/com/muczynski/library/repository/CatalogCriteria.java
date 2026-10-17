@@ -9,6 +9,7 @@ import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.BookStatusFilter;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.CatalogFilterService.AuthorCatalogFilter;
 import com.muczynski.library.service.CatalogFilterService.BookCatalogFilter;
 import jakarta.persistence.EntityManager;
@@ -243,6 +244,11 @@ public class CatalogCriteria {
         if (filter.withoutFreeTextUrls) {
             parts.add(cb.or(cb.isNull(freeText), cb.equal(freeText, "")));
         }
+        if (filter.withoutProperPlotOrDescription) {
+            parts.add(cb.or(
+                    improperText(cb, book.get("plotEssay")),
+                    improperText(cb, book.get("detailedDescription"))));
+        }
         trueFlag(cb, book, filter.ydlAudio, "ydlAudioAvailable", parts);
         trueFlag(cb, book, filter.ydlBook, "ydlPaperAvailable", parts);
         trueFlag(cb, book, filter.ydlEbook, "ydlEbookAvailable", parts);
@@ -257,6 +263,17 @@ public class CatalogCriteria {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
         }
         return and(cb, parts);
+    }
+
+    /**
+     * Null or shorter than {@link CatalogFilterService#PROPER_TEXT_MIN_CHARS}
+     * after trim. PostgreSQL {@code btrim} strips spaces, which is what the
+     * catalog essays and the unit test use.
+     */
+    private Predicate improperText(HibernateCriteriaBuilder cb, Path<String> field) {
+        return cb.or(
+                cb.isNull(field),
+                cb.lessThan(cb.length(cb.trim(field)), CatalogFilterService.PROPER_TEXT_MIN_CHARS));
     }
 
     private Predicate statusPredicate(HibernateCriteriaBuilder cb, Root<Book> book, BookCatalogFilter filter) {
