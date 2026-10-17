@@ -36,6 +36,10 @@ import java.util.regex.Pattern;
  * {@code book} table is skipped; Hibernate creates {@code text} columns on a
  * fresh database. A second instance waits on the table lock, sees {@code text},
  * and copies nothing.
+ *
+ * <p>Each column is committed before its large objects are unlinked.
+ * {@code lo_unlink} holds one lock per object until commit, and unlinking both
+ * columns in one transaction ran out of shared memory on Cloud SQL.
  */
 @Component
 @Slf4j
@@ -46,6 +50,9 @@ public class EssayColumnMigration implements InitializingBean {
     private static final Pattern IDENTIFIER = Pattern.compile("[a-z][a-z0-9_]*");
 
     private static final long MAX_OID = 4294967295L;
+
+    /** Small enough that one batch stays under Cloud SQL's lock-table limit. */
+    private static final int UNLINK_BATCH = 500;
 
     private final DataSource dataSource;
 
@@ -78,6 +85,7 @@ public class EssayColumnMigration implements InitializingBean {
      * Converts each column when it is still {@code oid}, and copies large
      * objects back into {@code varchar} or {@code text} values that are only
      * the object id. The connection must already be in a transaction.
+     * Each finished column is committed, including its unlinks.
      */
     static void convert(Connection connection, String table, List<String> columns) throws SQLException {
         if (connection.getAutoCommit()) {
@@ -88,14 +96,14 @@ public class EssayColumnMigration implements InitializingBean {
             log.info("Essay columns skipped; table {} is not present yet", lockedTable);
             return;
         }
-        try (Statement statement = connection.createStatement()) {
-            statement.execute("LOCK TABLE " + lockedTable + " IN ACCESS EXCLUSIVE MODE");
-        }
         List<String> names = new ArrayList<>();
         for (String column : columns) {
             names.add(identifier(column));
         }
         for (int index = 0; index < names.size(); index++) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("LOCK TABLE " + lockedTable + " IN ACCESS EXCLUSIVE MODE");
+            }
             List<String> siblings = new ArrayList<>(names);
             siblings.remove(index);
             convertColumn(connection, lockedTable, names.get(index), siblings);
@@ -108,6 +116,7 @@ public class EssayColumnMigration implements InitializingBean {
         String udt = readUdtName(connection, table, column);
         if (udt == null) {
             log.info("Essay column {}.{} is absent; left for schema creation", table, column);
+            connection.commit();
             return;
         }
         if ("varchar".equals(udt) || "text".equals(udt)) {
@@ -140,7 +149,7 @@ public class EssayColumnMigration implements InitializingBean {
                     END
                     """.formatted(table, column, column, column));
         }
-        int unlinked = unlink(connection, oids, oidsStillStored(connection, table, siblings));
+        int unlinked = commitAndUnlink(connection, oids, oidsStillStored(connection, table, siblings));
         long elapsedMs = (System.nanoTime() - started) / 1_000_000L;
         log.info(
                 "Essay column {}.{} converted from oid to text; copied {} values, unlinked {} large objects, {} ms",
@@ -168,7 +177,7 @@ public class EssayColumnMigration implements InitializingBean {
             widened = true;
         }
         Restored restored = restoreOidStrings(connection, table, column);
-        int unlinked = unlink(connection, restored.oids, oidsStillStored(connection, table, siblings));
+        int unlinked = commitAndUnlink(connection, restored.oids, oidsStillStored(connection, table, siblings));
         long elapsedMs = (System.nanoTime() - started) / 1_000_000L;
         if (widened) {
             log.info(
@@ -320,6 +329,27 @@ public class EssayColumnMigration implements InitializingBean {
         }
         stored.removeIf(oid -> oid < 0 || oid > MAX_OID);
         return stored;
+    }
+
+    /**
+     * Saves the column text before unlinking. The keep set is the ids still
+     * stored in a sibling column, captured before the commit.
+     */
+    private static int commitAndUnlink(Connection connection, List<Long> oids, Set<Long> keep) throws SQLException {
+        List<Long> toUnlink = new ArrayList<>();
+        for (Long oid : oids) {
+            if (!keep.contains(oid)) {
+                toUnlink.add(oid);
+            }
+        }
+        connection.commit();
+        int unlinked = 0;
+        for (int start = 0; start < toUnlink.size(); start += UNLINK_BATCH) {
+            int end = Math.min(start + UNLINK_BATCH, toUnlink.size());
+            unlinked += unlink(connection, toUnlink.subList(start, end), Set.of());
+            connection.commit();
+        }
+        return unlinked;
     }
 
     private static int unlink(Connection connection, List<Long> oids, Set<Long> keep) throws SQLException {
