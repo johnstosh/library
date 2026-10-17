@@ -159,7 +159,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `mostRecent` uses the catalog-wide recent window (the latest add date, the day before it, and temporary date titles), AND the other filters.
 - Patrons never receive REQUESTED books from this list.
 - `withoutProperPlotOrDescription` keeps a book unless both the plot and the detailed description are at least 400 characters after trim.
-- `titleNotChicago` keeps books whose title, including the subtitle after a colon and the sentence after a period, question mark, or exclamation point, is not Chicago title case. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, an editor or translator credit, a `[from old catalog]` note, or a name in all capitals or all lowercase). A comma inside a phrase is not an inversion. The two chips AND together. Blank titles and blank author names are not flagged.
+- `titleNotChicago` keeps books whose title, including the subtitle after a colon and the sentence after a period, question mark, or exclamation point, is not Chicago title case. A trailing catalog credit (`by Jack Stong`, `[by] Name`, `translated by Name`) counts as not Chicago and is removed by the bulk tool. A `by` that belongs to the title (`Day by Day`, `by the Holy See`, `written by herself`, `appointed by Christ`) stays. Major words such as `altar` are capitalized. `authorNotCanonical` keeps books whose author name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, an editor or translator credit, a `[from old catalog]` note, or a name in all capitals or all lowercase). A comma inside a phrase is not an inversion. The two chips AND together. Blank titles and blank author names are not flagged.
 - Each row includes `dateAddedToLibrary`. The list is most-recent first, with missing dates last.
 - The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
@@ -468,7 +468,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 ---
 
 ## POST /api/books/normalize-titles-bulk
-Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon, semicolon, or slash. Short function words stay lower unless they start or end the title, the subtitle, or a sentence. A sentence starts again after a period, question mark, or exclamation point. Periods in initials (`J.`) and abbreviations (`St.`, `U.S.`, `Mr.`) do not. An alternative title after `or,` stays capitalized. Name particles (`de`, `di`, `van`, `von`, and `de la`) stay lower. Ordinals (`21st`), possessives on roman numerals (`II's`), `Mc` names, French `d'` / `l'`, and short acronyms (`HTML`, `YOUCAT`, `SS.`) keep their shape. A trailing catalog copy suffix (`, c. N`) is preserved.
+Rewrites the selected books' titles into Chicago title case, including the subtitle after a colon, semicolon, or slash. Short function words stay lower unless they start or end the title, the subtitle, or a sentence. A sentence starts again after a period, question mark, or exclamation point. Periods in initials (`J.`) and abbreviations (`St.`, `U.S.`, `Mr.`) do not. An alternative title after `or,` stays capitalized. Name particles (`de`, `di`, `van`, `von`, and `de la`) stay lower. Ordinals (`21st`), possessives on roman numerals (`II's`), `Mc` names, French `d'` / `l'`, and short acronyms (`HTML`, `YOUCAT`, `SS.`) keep their shape. A trailing catalog copy suffix (`, c. N`) is preserved. A trailing statement of responsibility (`by Jack Stong`, `[by] Name`, `translated by Name`, and a chain of those credits) is removed before title case. A `by` that belongs to the title stays.
 
 **Authentication:** Librarian
 
@@ -483,24 +483,7 @@ Rewrites the selected books' titles into Chicago title case, including the subti
 
 **Use Case:** Books page bulk-action carousel "Chicago Title Case"
 
----
-
-## POST /api/books/normalize-authors-bulk
-Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, including a year introduced by `approximately` or `approx.`, and a year phrase that was moved in front of the name. Turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). A two-letter abbreviation counts (`Wm.`, `L.-Cl.`). A longer dotted abbreviation is expanded when it prefixes the parenthetical name (`Joh. Evang.`). A parenthetical that is only initials (`C. C.`) is removed. UTF-8 letters imported as Latin-1 are repaired. A shorter copy of the same name is dropped. `Thomas, à Kempis` stays `Thomas à Kempis`. A `tr.` relator is removed. Initials with no expansion are left as written, including their periods and hyphens. `[from old catalog]` is removed. A name whose letters are all capitals or all lowercase is rewritten with initial capitals; particles such as `von` and `de la` stay lower. A mixed-case name keeps its capitals. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered. Editor and translator credits (`(ed.)`, `(ed. Name)`, `(tr.)`, `translated by …`, `, editor`) are removed and are not saved. A fuller name in parentheses and an edition note (`(Benziger ed.)`) stay. A no-space run of 2–6 capital letters stays after the name and loses the comma. Spaced given-name initials such as `C. L` are still turned around.
-
-**Authentication:** Librarian
-
-**Request Body:** JSON array of book IDs
-
-**Response:** Array of `NameNormalizationResultDto`
-
-**Behavior:**
-- An author that already conforms is left unchanged
-- When every book by that author is selected and the canonical name is free, the author row is renamed in place. Its photos stay on that row
-- Otherwise only the selected books are relinked to the existing author of that canonical name, or to one new author created for it. Unselected books keep the old author
-- Does not write alternate names. Pen names and Latin forms stay on issue #372
-
-**Use Case:** Books page bulk-action carousel "Canonical Author Names"
+Canonical author names are rewritten from the Authors page (`POST /api/authors/normalize-names-bulk`). The Books page keeps the `authorNotCanonical` filter.
 
 ---
 

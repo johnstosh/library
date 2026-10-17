@@ -29,6 +29,10 @@ import java.util.regex.Pattern;
  * Finds near-duplicate catalog titles using keyword indexing + Jaro–Winkler
  * (Issue #351). Memory-safe: uses lightweight projections only.
  *
+ * <p>WITHDRAWN books are omitted before representative collapse and pairing.
+ * A withdrawn copy is never a representative and never appears in a pair.
+ * Other statuses, including a null status, are included.
+ *
  * <h2>Score formula</h2>
  * <p>Primary signal: Jaro–Winkler on folded/normalized titles (and on
  * {@code title | author} when both authors are present), with an author JW
@@ -79,7 +83,9 @@ public class DuplicateTitleService {
     @Transactional(readOnly = true)
     public DuplicateTitlesResultDto findDuplicates() {
         List<BookRepository.DuplicateTitleProjection> projections =
-                bookRepository.findAllForDuplicateTitleScan();
+                bookRepository.findAllForDuplicateTitleScan().stream()
+                        .filter(p -> p.getStatus() != BookStatus.WITHDRAWN)
+                        .toList();
         int booksScanned = projections.size();
 
         List<BookEntry> representatives = buildRepresentatives(projections);

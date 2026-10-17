@@ -181,6 +181,7 @@ Form Submit → handleSubmit() → Validation → Create/Update Mutation
 ### Data Management
 - JSON Import/Export functionality is on separate **Data Management** page
 - Photo Export functionality is on separate **Data Management** page
+- Duplicate catalog entries (`POST /api/maintenance/duplicate-titles/find`) compares titles and alternate titles. WITHDRAWN books are excluded from the scan and from pair results. Other statuses, including a null status, are included.
 - See `frontend/src/pages/branches/DataManagementPage.tsx`
 
 ### Test Data Generation

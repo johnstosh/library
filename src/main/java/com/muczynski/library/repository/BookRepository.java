@@ -381,8 +381,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     }
 
     /**
-     * All books for duplicate-title matching. Avoids LOBs and full entities.
+     * Books for duplicate-title matching, excluding WITHDRAWN.
+     * A null status is included. Avoids LOBs and full entities.
      */
-    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status FROM Book b LEFT JOIN b.author a")
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status "
+            + "FROM Book b LEFT JOIN b.author a "
+            + "WHERE b.status IS NULL OR b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN")
     List<DuplicateTitleProjection> findAllForDuplicateTitleScan();
 }

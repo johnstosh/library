@@ -801,8 +801,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='bulk-fill-reading-difficulty']")).containsText("Fill Reading Difficulty");
         assertThat(page.locator("[data-test='bulk-chicago-title']")).isVisible();
         assertThat(page.locator("[data-test='bulk-chicago-title']")).containsText("Chicago Title Case");
-        assertThat(page.locator("[data-test='bulk-canonical-author']")).isVisible();
-        assertThat(page.locator("[data-test='bulk-canonical-author']")).containsText("Canonical Author Names");
+        assertThat(page.locator("[data-test='bulk-canonical-author']")).hasCount(0);
     }
 
     @Test

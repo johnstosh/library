@@ -648,7 +648,7 @@ export function useCleanupIllegalGenres() {
   })
 }
 
-// Duplicate catalog titles (Issue #351) — find-only
+// Duplicate catalog titles (Issue #351) — find-only. WITHDRAWN books are excluded.
 export interface DuplicateTitlePairDto {
   score: number
   bookAId: number

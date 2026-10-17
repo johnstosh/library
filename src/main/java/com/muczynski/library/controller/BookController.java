@@ -692,16 +692,4 @@ public class BookController {
         logger.info("Normalizing titles for {} books", bookIds == null ? 0 : bookIds.size());
         return ResponseEntity.ok(catalogNameNormalizationService.normalizeTitles(bookIds));
     }
-
-    /**
-     * Rewrites selected books' authors into canonical form. Renames the author
-     * row when every one of that author's books is selected; otherwise relinks
-     * only the selected books. Photos on the author row are left in place.
-     */
-    @PostMapping("/normalize-authors-bulk")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<List<NameNormalizationResultDto>> normalizeAuthorsBulk(@RequestBody List<Long> bookIds) {
-        logger.info("Normalizing authors for {} books", bookIds == null ? 0 : bookIds.size());
-        return ResponseEntity.ok(catalogNameNormalizationService.normalizeAuthors(bookIds));
-    }
 }

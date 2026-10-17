@@ -63,6 +63,7 @@ public class MaintenanceController {
     /**
      * Find near-duplicate catalog titles (read-only). Uses titles + alternate
      * titles, keyword indexing, and Jaro–Winkler; returns top 100 pairs.
+     * WITHDRAWN books are excluded from the scan.
      */
     @PostMapping("/duplicate-titles/find")
     @PreAuthorize("hasAuthority('LIBRARIAN')")

@@ -750,7 +750,8 @@ export function DataManagementPage() {
               <p className="text-sm text-amber-100">
                 Find near-duplicate titles and alternate titles using keyword overlap and
                 Jaro–Winkler closeness. Copy suffixes like &quot;, c. 2&quot; are collapsed so
-                only one copy is considered. Shows the top 100 closest pairs. Does not change data.
+                only one copy is considered. Withdrawn books are left out. Shows the top 100
+                closest pairs. Does not change data.
               </p>
             </div>
           </div>

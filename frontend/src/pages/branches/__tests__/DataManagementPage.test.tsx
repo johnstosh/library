@@ -90,7 +90,7 @@ vi.mock('@/api/data-management', () => ({
           bookBTitle: 'Confession',
           bookBAlternateTitle: null,
           bookBAuthorName: 'Augustine',
-          bookBStatus: 'WITHDRAWN',
+          bookBStatus: 'LOST',
         },
       ],
       booksScanned: 10,
@@ -240,6 +240,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     renderPage()
 
     expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate catalog entries')
+    expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Withdrawn books are left out')
     expect(screen.getByTestId('find-duplicate-titles')).toHaveTextContent('Find')
     expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
   })
@@ -253,7 +254,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
       expect(screen.getByTestId('duplicate-titles-results')).toBeInTheDocument()
     })
     expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
-    expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: WITHDRAWN')
+    expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: LOST')
     expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
     // No Score column or numeric score display
     expect(screen.queryByText('Score')).not.toBeInTheDocument()

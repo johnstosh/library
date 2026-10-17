@@ -594,7 +594,6 @@ export function useLookupGenresBulk() {
 function cacheNormalizationResults(
   queryClient: ReturnType<typeof useQueryClient>,
   results: NameNormalizationResultDto[],
-  refreshAuthors: boolean,
 ) {
   for (const result of results) {
     if (result.updatedBook) {
@@ -602,9 +601,6 @@ function cacheNormalizationResults(
     }
   }
   queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
-  if (refreshAuthors) {
-    queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
-  }
 }
 
 /** Rewrite selected books' titles into Chicago title case. */
@@ -613,17 +609,7 @@ export function useNormalizeTitlesBulk() {
   return useMutation({
     mutationFn: (ids: number[]) =>
       api.post<NameNormalizationResultDto[]>('/books/normalize-titles-bulk', ids),
-    onSuccess: (results) => cacheNormalizationResults(queryClient, results, false),
-  })
-}
-
-/** Rewrite selected books' authors into canonical given-name-then-family-name form. */
-export function useNormalizeAuthorsBulk() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (ids: number[]) =>
-      api.post<NameNormalizationResultDto[]>('/books/normalize-authors-bulk', ids),
-    onSuccess: (results) => cacheNormalizationResults(queryClient, results, true),
+    onSuccess: (results) => cacheNormalizationResults(queryClient, results),
   })
 }
 

@@ -55,6 +55,7 @@ class DuplicateTitleServiceTest {
 
         DuplicateTitlesResultDto result = service.findDuplicates();
 
+        assertEquals(1, result.getBooksScanned());
         assertEquals(1, result.getRepresentativesCompared());
         assertTrue(result.getPairs().isEmpty());
     }
@@ -70,8 +71,31 @@ class DuplicateTitleServiceTest {
 
         DuplicateTitlesResultDto result = service.findDuplicates();
 
+        assertEquals(2, result.getBooksScanned());
         assertEquals(1, result.getRepresentativesCompared());
         assertTrue(result.getPairs().isEmpty());
+    }
+
+    @Test
+    void withdrawnBooksAreExcludedFromScanAndPairs() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(1L, "Gather Comprehensive", null, "Author A", BookStatus.WITHDRAWN),
+                proj(2L, "Gather Comprehensive, c. 2", null, "Author A", BookStatus.ACTIVE),
+                proj(3L, "The Confessions of Augustine", null, "Augustine", BookStatus.ACTIVE),
+                proj(4L, "Confession of Augustine", null, "Augustine", BookStatus.WITHDRAWN),
+                proj(5L, "City of God", null, "Augustine", BookStatus.WITHDRAWN),
+                proj(6L, "The City of God", null, "Augustine", BookStatus.WITHDRAWN)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(2, result.getBooksScanned());
+        assertEquals(2, result.getRepresentativesCompared());
+        assertTrue(result.getPairs().isEmpty(),
+                "a withdrawn near-duplicate must not pair with an active book");
+        assertTrue(result.getPairs().stream().noneMatch(p ->
+                p.getBookAStatus().equals("WITHDRAWN") || p.getBookBStatus().equals("WITHDRAWN")));
     }
 
     @Test

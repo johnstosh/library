@@ -631,36 +631,6 @@ class BookControllerTest {
     }
 
     @Test
-    @WithMockUser(authorities = "LIBRARIAN")
-    void normalizeAuthorsBulk() throws Exception {
-        List<Long> bookIds = List.of(4L);
-        NameNormalizationResultDto changed = NameNormalizationResultDto.builder()
-                .bookId(4L)
-                .before("Johnson, B. J.-P. (Barney John-Paul)")
-                .after("Barney John Paul Johnson")
-                .changed(true)
-                .success(true)
-                .build();
-        when(catalogNameNormalizationService.normalizeAuthors(bookIds)).thenReturn(List.of(changed));
-
-        mockMvc.perform(post("/api/books/normalize-authors-bulk")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(bookIds)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].before").value("Johnson, B. J.-P. (Barney John-Paul)"))
-                .andExpect(jsonPath("$[0].after").value("Barney John Paul Johnson"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "USER")
-    void normalizeAuthorsBulk_requiresLibrarianAuthority() throws Exception {
-        mockMvc.perform(post("/api/books/normalize-authors-bulk")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("[4]"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
     @WithMockUser(authorities = "USER")
     void lookupReadingDifficultyBulk_requiresLibrarianAuthority() throws Exception {
         List<Long> bookIds = Arrays.asList(1L, 2L);
