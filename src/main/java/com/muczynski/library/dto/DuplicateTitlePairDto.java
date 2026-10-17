@@ -24,14 +24,14 @@ public class DuplicateTitlePairDto {
     private String bookATitle;
     private String bookAAlternateTitle;
     private String bookAAuthorName;
-    /** BookStatus name: ACTIVE, WITHDRAWN, etc. */
+    /** BookStatus name of a book included in the scan. WITHDRAWN is omitted. */
     private String bookAStatus;
 
     private Long bookBId;
     private String bookBTitle;
     private String bookBAlternateTitle;
     private String bookBAuthorName;
-    /** BookStatus name: ACTIVE, WITHDRAWN, etc. */
+    /** BookStatus name of a book included in the scan. WITHDRAWN is omitted. */
     private String bookBStatus;
 
     /** The specific title strings (primary or alternate) that produced the max score. */

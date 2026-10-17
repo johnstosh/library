@@ -24,10 +24,10 @@ public class DuplicateTitlesResultDto {
     @Builder.Default
     private List<DuplicateTitlePairDto> pairs = new ArrayList<>();
 
-    /** Total book rows loaded from the projection. */
+    /** Books considered by the scan. WITHDRAWN rows are omitted. */
     private long booksScanned;
 
-    /** Books kept after collapsing exact copy-suffix duplicates to one representative. */
+    /** Books kept after dropping WITHDRAWN and collapsing exact copy-suffix duplicates to one representative. */
     private long representativesCompared;
 
     private String message;
