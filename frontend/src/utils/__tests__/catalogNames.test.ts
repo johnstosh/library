@@ -115,6 +115,50 @@ describe('Chicago title case', () => {
     expect(toChicagoTitleCase('Spy × Family, v. 3')).toBe('Spy × Family, v. 3')
     expect(toChicagoTitleCase('The GIFTionary')).toBe('The GIFTionary')
   })
+
+  it('capitalizes major words and strips a trailing by-credit', () => {
+    expect(toChicagoTitleCase('Flowers for the altar of Mary')).toBe('Flowers for the Altar of Mary')
+    expect(titleNeedsChicagoCase('Flowers for the altar of Mary')).toBe(true)
+    expect(titleNeedsChicagoCase('Flowers for the Altar of Mary')).toBe(false)
+    expect(toChicagoTitleCase('The Imitation of Christ by Jack Stong')).toBe('The Imitation of Christ')
+    expect(titleNeedsChicagoCase('The Imitation of Christ by Jack Stong')).toBe(true)
+    expect(toChicagoTitleCase('Flowers for the altar of Mary by Jack Stong')).toBe('Flowers for the Altar of Mary')
+    expect(toChicagoTitleCase('The life of Father Hecker. by Rev. Walter Elliott')).toBe('The Life of Father Hecker')
+    expect(toChicagoTitleCase('Jesus Christ is God / by Walter Elliott')).toBe('Jesus Christ Is God')
+    expect(toChicagoTitleCase('This rosary [by] Rev. Anthony N. Fuerst')).toBe('This Rosary')
+    expect(toChicagoTitleCase('The imitation of Christ : in four books/ by Thomas à Kempis translated from the Latin')).toBe(
+      'The Imitation of Christ: In Four Books',
+    )
+    expect(toChicagoTitleCase('Meditations on the litany of the Blessed Virgin by Edouard Barthe ; translated by Mrs. J. Sadlier')).toBe(
+      'Meditations on the Litany of the Blessed Virgin',
+    )
+    expect(toChicagoTitleCase('A short history of the Protestant religion, by way of question and answer. By Right Rev. Dr. Challoner')).toBe(
+      'A Short History of the Protestant Religion, by Way of Question and Answer',
+    )
+    expect(toChicagoTitleCase('Church or Bible : which was appointed by Christ to teach mankind the true religion? : two lectures / by Rev. Arnold Damen, S.J.')).toBe(
+      'Church or Bible: Which Was Appointed by Christ to Teach Mankind the True Religion?: Two Lectures',
+    )
+    expect(toChicagoTitleCase('An alphabet of saints, rhymed by Father Robert Hugh Benson, Reginald Balfour, Charles Ritchie, drawn by L.D. Symington')).toBe(
+      'An Alphabet of Saints',
+    )
+    expect(toChicagoTitleCase('The Lord of the Rings by J.R.R. Tolkien, c. 2')).toBe('The Lord of the Rings, c. 2')
+    expect(toChicagoTitleCase('Day by Day')).toBe('Day by Day')
+    expect(toChicagoTitleCase('Mary Day by Day')).toBe('Mary Day by Day')
+    expect(toChicagoTitleCase('A Queen by Right Divine')).toBe('A Queen by Right Divine')
+    expect(toChicagoTitleCase('Purgatory Explained by the Lives and Legends of the Saints')).toBe(
+      'Purgatory Explained by the Lives and Legends of the Saints',
+    )
+    expect(toChicagoTitleCase('They Speak by Silences')).toBe('They Speak by Silences')
+    expect(toChicagoTitleCase('The Way of Trust and Love: A Retreat Guided by St. Thérèse of Lisieux')).toBe(
+      'The Way of Trust and Love: A Retreat Guided by St. Thérèse of Lisieux',
+    )
+    expect(toChicagoTitleCase('Life of Saint Teresa, written by herself')).toBe('Life of Saint Teresa, Written by Herself')
+    expect(toChicagoTitleCase('The Catholic Church and salvation, in the light of recent pronouncements by the Holy See')).toBe(
+      'The Catholic Church and Salvation, in the Light of Recent Pronouncements by the Holy See',
+    )
+    expect(titleNeedsChicagoCase('Day by Day')).toBe(false)
+    expect(titleNeedsChicagoCase('The Lord of the Rings, c. 2')).toBe(false)
+  })
 })
 
 describe('canonical author names', () => {

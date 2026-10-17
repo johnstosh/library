@@ -153,6 +153,59 @@ class ChicagoTitleCaseTest {
     }
 
     @Test
+    void capitalizesMajorWordsAndStripsTrailingByCredits() {
+        assertEquals("Flowers for the Altar of Mary",
+                ChicagoTitleCase.toChicago("Flowers for the altar of Mary"));
+        assertTrue(ChicagoTitleCase.needsWork("Flowers for the altar of Mary"));
+        assertFalse(ChicagoTitleCase.needsWork("Flowers for the Altar of Mary"));
+
+        assertEquals("The Imitation of Christ",
+                ChicagoTitleCase.toChicago("The Imitation of Christ by Jack Stong"));
+        assertTrue(ChicagoTitleCase.needsWork("The Imitation of Christ by Jack Stong"));
+        assertEquals("Flowers for the Altar of Mary",
+                ChicagoTitleCase.toChicago("Flowers for the altar of Mary by Jack Stong"));
+        assertEquals("The Life of Father Hecker",
+                ChicagoTitleCase.toChicago("The life of Father Hecker. by Rev. Walter Elliott"));
+        assertEquals("Jesus Christ Is God",
+                ChicagoTitleCase.toChicago("Jesus Christ is God / by Walter Elliott"));
+        assertEquals("This Rosary",
+                ChicagoTitleCase.toChicago("This rosary [by] Rev. Anthony N. Fuerst"));
+        assertEquals("The Imitation of Christ: In Four Books",
+                ChicagoTitleCase.toChicago(
+                        "The imitation of Christ : in four books/ by Thomas à Kempis translated from the Latin"));
+        assertEquals("Meditations on the Litany of the Blessed Virgin",
+                ChicagoTitleCase.toChicago(
+                        "Meditations on the litany of the Blessed Virgin by Edouard Barthe ; translated by Mrs. J. Sadlier"));
+        assertEquals("A Short History of the Protestant Religion, by Way of Question and Answer",
+                ChicagoTitleCase.toChicago(
+                        "A short history of the Protestant religion, by way of question and answer. By Right Rev. Dr. Challoner"));
+        assertEquals("Church or Bible: Which Was Appointed by Christ to Teach Mankind the True Religion?: Two Lectures",
+                ChicagoTitleCase.toChicago(
+                        "Church or Bible : which was appointed by Christ to teach mankind the true religion? : two lectures / by Rev. Arnold Damen, S.J."));
+        assertEquals("An Alphabet of Saints",
+                ChicagoTitleCase.toChicago(
+                        "An alphabet of saints, rhymed by Father Robert Hugh Benson, Reginald Balfour, Charles Ritchie, drawn by L.D. Symington"));
+        assertEquals("The Lord of the Rings, c. 2",
+                ChicagoTitleCase.toChicago("The Lord of the Rings by J.R.R. Tolkien, c. 2"));
+
+        assertEquals("Day by Day", ChicagoTitleCase.toChicago("Day by Day"));
+        assertEquals("Mary Day by Day", ChicagoTitleCase.toChicago("Mary Day by Day"));
+        assertEquals("A Queen by Right Divine", ChicagoTitleCase.toChicago("A Queen by Right Divine"));
+        assertEquals("Purgatory Explained by the Lives and Legends of the Saints",
+                ChicagoTitleCase.toChicago("Purgatory Explained by the Lives and Legends of the Saints"));
+        assertEquals("They Speak by Silences", ChicagoTitleCase.toChicago("They Speak by Silences"));
+        assertEquals("The Way of Trust and Love: A Retreat Guided by St. Thérèse of Lisieux",
+                ChicagoTitleCase.toChicago("The Way of Trust and Love: A Retreat Guided by St. Thérèse of Lisieux"));
+        assertEquals("Life of Saint Teresa, Written by Herself",
+                ChicagoTitleCase.toChicago("Life of Saint Teresa, written by herself"));
+        assertEquals("The Catholic Church and Salvation, in the Light of Recent Pronouncements by the Holy See",
+                ChicagoTitleCase.toChicago(
+                        "The Catholic Church and salvation, in the light of recent pronouncements by the Holy See"));
+        assertFalse(ChicagoTitleCase.needsWork("Day by Day"));
+        assertFalse(ChicagoTitleCase.needsWork("The Lord of the Rings, c. 2"));
+    }
+
+    @Test
     void leavesBlankTitlesAlone() {
         assertFalse(ChicagoTitleCase.needsWork(null));
         assertFalse(ChicagoTitleCase.needsWork("  "));

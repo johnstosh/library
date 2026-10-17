@@ -20,7 +20,9 @@ import java.util.regex.Pattern;
  * of the title, of each subtitle, and of each sentence are capitalized, and
  * short function words stay lower elsewhere. A period after an initial
  * ({@code J.}) or an abbreviation ({@code St.}, {@code U.S.}) does not start
- * a new sentence.
+ * a new sentence. A trailing catalog credit ({@code by Jack Stong},
+ * {@code [by] Name}, {@code translated by Name}) is removed. A {@code by}
+ * that belongs to the title stays.
  */
 public final class ChicagoTitleCase {
 
@@ -98,7 +100,8 @@ public final class ChicagoTitleCase {
      * Rewrites the whole title, including a subtitle after a colon, semicolon,
      * or slash, and each sentence after a period, question mark, or exclamation
      * point. A trailing catalog copy suffix ({@code ", c. N"}) is kept and
-     * normalized to that spelling. Returns the original string when it is null
+     * normalized to that spelling. A trailing statement of responsibility is
+     * removed before title case. Returns the original string when it is null
      * or blank, or when rewriting would leave nothing.
      */
     public static String toChicago(String title) {
@@ -116,6 +119,7 @@ public final class ChicagoTitleCase {
                 return title;
             }
         }
+        main = stripByCredits(main);
 
         List<String> parts = new ArrayList<>();
         List<String> marks = new ArrayList<>();
@@ -145,6 +149,350 @@ public final class ChicagoTitleCase {
         }
         String result = out.toString().trim();
         return result.isEmpty() ? title : result;
+    }
+
+    private static final Set<String> CREDIT_HONORIFIC = Set.of(
+            "rt", "rev", "reverend", "dr", "doctor", "fr", "father", "st", "saint",
+            "mr", "mrs", "ms", "miss", "sir", "lady", "dom", "cardinal", "bishop",
+            "archbishop", "abbe", "abbé", "mother", "sister", "brother", "ven",
+            "venerable", "bl", "blessed", "mgr", "monsignor", "canon", "prof",
+            "professor", "hon", "dame", "pope", "abp", "bp", "card", "revd"
+    );
+
+    /** Words that make a trailing phrase a title, not a person's name. */
+    private static final Set<String> CREDIT_STOP = Set.of(
+            "right", "divine", "holy", "sacred", "good", "true", "great", "new", "old",
+            "last", "first", "day", "week", "god", "christ", "jesus", "faith", "love",
+            "grace", "charity", "blood", "cross", "fire", "way", "means", "virtue",
+            "command", "lives", "life", "legend", "legends", "ladder", "church", "see",
+            "cat", "book", "books", "silence", "silences", "herself", "himself",
+            "themselves", "author", "translator", "word", "words", "power", "name",
+            "heaven", "earth", "soul", "souls", "mystic", "mystics", "exercise",
+            "exercises", "creation", "wind", "men", "man", "anglican", "anglicans",
+            "mohawk", "iroquois", "spiritual", "question", "answer", "former", "pupil",
+            "and", "the", "a", "an", "or", "for", "with", "from", "into", "signs",
+            "ceremonies", "passages", "scripture", "scriptures", "prayer", "bible",
+            "council", "synod", "conversation", "method", "others"
+    );
+
+    private static final Set<String> CREDIT_PARTICLE = Set.of(
+            "de", "di", "da", "du", "van", "von", "del", "della", "le", "la", "bin", "ibn", "of",
+            "à", "á", "a"
+    );
+
+    private static final Set<String> CREDIT_ABBREV = Set.of(
+            "st", "mr", "mrs", "ms", "dr", "rev", "fr", "sr", "jr", "prof", "gen", "vol", "no", "ed",
+            "vs", "etc", "mt", "bp", "abp", "bro", "capt", "col", "lt", "sgt"
+    );
+
+    /**
+     * A verb immediately before a bare "by" means the phrase is part of the title
+     * ("written by herself", "appointed by Christ"). A punctuated boundary still
+     * allows a later credit to be removed.
+     */
+    private static final Set<String> CREDIT_KEEP_BEFORE = Set.of(
+            "guided", "told", "seen", "inspired", "explained", "written", "slain", "felt",
+            "touched", "appointed", "declared", "related", "helped", "assisted", "saved",
+            "led", "taught", "made", "known", "called", "gathered", "accompanied",
+            "preceded", "followed", "founded", "approved", "received", "accepted",
+            "presented", "selected", "taken", "given", "offered", "revealed", "confirmed",
+            "attested", "defined", "published", "recommended", "addressed", "delivered",
+            "held", "performed", "shot", "converted", "consumed", "decreed", "ordered",
+            "sanctified", "mean", "means"
+    );
+
+    private static final Set<String> CREDIT_ROLE = Set.of(
+            "s", "j", "o", "p", "d", "c", "ss", "r", "sj", "osa", "op", "osb", "ofm",
+            "cardinal", "archbishop", "bishop", "priest", "sister", "sisters", "father"
+    );
+
+    private static final Pattern CREDIT_DANGLING = Pattern.compile(
+            "(?iu)(?:[.;,]\\s*)?(?:and\\s+|with\\s+)?(?:a\\s+|an\\s+)?"
+                    + "(?:preface|pref\\.?|prefatory\\s+letter(?:\\s+from\\s+[\\s\\S]+)?|introduction|introd\\.?"
+                    + "|notes(?:\\s+and\\s+comments)?)\\s*$");
+    private static final Pattern CREDIT_DANGLING_VERB = Pattern.compile(
+            "(?iu)(?:(?:^|\\s)[.;]\\s*)?(?:translated(?:\\s+and\\s+annotated)?"
+                    + "(?:\\s+(?:into|from)\\s+(?:the\\s+)?(?:original\\s+)?[\\p{L}.'’\\-]+)*"
+                    + "|edited(?:\\s+with\\s+an\\s+introd\\.?)?|compiled|illustrated|adapted|annotated"
+                    + "|englished(?:\\s+and\\s+adapted)?|pictures|drawn|rhymed|selected\\s+and\\s+edited"
+                    + "|authorised\\s+translation|authorized\\s+translation"
+                    + "|tr\\.?\\s+from\\s+the\\s+[\\p{L}.'’\\-]+|new\\s+revised\\s+translation)\\s*$");
+    private static final Pattern CREDIT_BY = Pattern.compile(
+            "(?i)^(.*)(\\s*(?:[.;,/]|/)\\s*|\\s+)(?:\\[by\\]|by)"
+                    + "(?:\\s*\\.{2,}\\s*|\\s*\\u2026\\s*|\\s+)(\\S[\\s\\S]*)$");
+    private static final Pattern CREDIT_SENTENCE = Pattern.compile("[.;]\\s+");
+    private static final Pattern CREDIT_LAST_TOKEN = Pattern.compile("(\\S+)$");
+    private static final Pattern CREDIT_LAST_WORD = Pattern.compile("(\\p{L}+)['’.]?$");
+    private static final Pattern CREDIT_CONTINUATION = Pattern.compile(
+            "(?i)^(?:with\\s+(?:a\\s+|an\\s+)?(?:preface|pref\\.?|prefatory|introduction|introd)"
+                    + "|with\\s+\\d+\\s+illustrations|and\\s+(?:a\\s+|an\\s+)?(?:preface|introduction|introd)"
+                    + "|translated\\b|edited\\b|compiled\\b|illustrated\\b|adapted\\b|annotated\\b|englished\\b"
+                    + "|authorised\\b|authorized\\b|tr\\.?\\s+from\\b|pictures\\b|drawn\\b|selected\\b"
+                    + "|preface\\b|introduction\\b)");
+    private static final Pattern CREDIT_AUTHOR = Pattern.compile(
+            "(?i)^(the author|the translator|the editor|the compiler|the illustrator)(?:\\s+of\\b.*)?$");
+    private static final Pattern CREDIT_RELIGIOUS = Pattern.compile(
+            "(?i)^(?:a|an)\\s+(?:sister|brother|nun|religious|member|father|priest)\\b");
+    private static final Pattern CREDIT_ROLE_PREFIX = Pattern.compile("(?i)^(author of\\b|etc|and others|others)");
+    private static final Pattern PEEL_OTHERS = Pattern.compile("(?iu)\\s*(?:&|and)\\s+others\\s*$");
+    private static final Pattern PEEL_BRACKET = Pattern.compile("\\s*\\[[^\\]]*\\]\\s*$");
+    private static final Pattern PEEL_TRANSLATED = Pattern.compile(
+            "(?iu)\\s*translated(?:\\s+from\\s+the\\s+[\\p{L}.'’\\-]+)?\\s*$");
+    private static final Pattern PEEL_LEADING_DOTS = Pattern.compile("^[.\\s\\u2026]+");
+    private static final Pattern PEEL_TRAILING_DOTS = Pattern.compile("[.\\s]+$");
+
+    /** Removes trailing catalog credits. The last "by" wins, up to six times. */
+    private static String stripByCredits(String title) {
+        String cur = title;
+        for (int n = 0; n < 6; n++) {
+            String next = stripOneCredit(cur);
+            if (next == null || next.equals(cur)) {
+                return cur;
+            }
+            cur = next;
+        }
+        return cur;
+    }
+
+    private static String stripOneCredit(String title) {
+        Matcher match = CREDIT_BY.matcher(title);
+        if (!match.matches()) {
+            return null;
+        }
+        String before = match.group(1);
+        String sep = match.group(2);
+        String rest = match.group(3);
+        boolean boundary = sep.matches(".*[.;/,\\[].*");
+        if (!boundary) {
+            Matcher prev = CREDIT_LAST_WORD.matcher(before);
+            String word = prev.find() ? prev.group(1).toLowerCase(Locale.ROOT) : "";
+            if (CREDIT_KEEP_BEFORE.contains(word)) {
+                return null;
+            }
+        }
+        CreditDecision decision = decideCredit(rest);
+        if (decision == null) {
+            return null;
+        }
+        String left = cleanCreditIntroducers(before).replaceFirst("[\\s,;:/.\\-]+$", "").trim();
+        if (left.isEmpty()) {
+            return null;
+        }
+        if (decision.keep.isEmpty()) {
+            return left;
+        }
+        String joiner = decision.sep.indexOf(';') >= 0 ? "; " : ". ";
+        return left + joiner + decision.keep;
+    }
+
+    private static String cleanCreditIntroducers(String left) {
+        String cur = left;
+        for (int guard = 0; guard < 4; guard++) {
+            String next = CREDIT_DANGLING_VERB.matcher(cur).replaceFirst("");
+            next = CREDIT_DANGLING.matcher(next).replaceFirst("");
+            if (next.equals(cur)) {
+                return cur;
+            }
+            cur = next;
+        }
+        return cur;
+    }
+
+    /** A credit through the end of the title, or a credit sentence plus a real subtitle. */
+    private static CreditDecision decideCredit(String rest) {
+        String cleaned = peelCreditTail(rest);
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        if (isCreditObject(cleaned)) {
+            return new CreditDecision("", "");
+        }
+        Matcher matcher = CREDIT_SENTENCE.matcher(cleaned);
+        while (matcher.find()) {
+            String head = cleaned.substring(0, matcher.start()).trim();
+            Matcher last = CREDIT_LAST_TOKEN.matcher(head);
+            String token = last.find() ? last.group(1) : "";
+            if (isCreditInitialOrAbbrev(token)) {
+                continue;
+            }
+            if (!isCreditObject(head)) {
+                continue;
+            }
+            String tail = cleaned.substring(matcher.end()).trim();
+            if (isCreditContinuation(tail)) {
+                return new CreditDecision("", "");
+            }
+            return new CreditDecision(tail, matcher.group());
+        }
+        return null;
+    }
+
+    private static boolean isCreditContinuation(String tail) {
+        return CREDIT_CONTINUATION.matcher(tail).lookingAt();
+    }
+
+    private static String peelCreditTail(String rest) {
+        String s = rest.trim();
+        s = PEEL_OTHERS.matcher(s).replaceFirst("").trim();
+        s = PEEL_BRACKET.matcher(s).replaceFirst("").trim();
+        s = PEEL_TRANSLATED.matcher(s).replaceFirst("").trim();
+        s = PEEL_LEADING_DOTS.matcher(s).replaceFirst("").trim();
+        s = PEEL_TRAILING_DOTS.matcher(s).replaceFirst("").trim();
+        return s;
+    }
+
+    private static boolean isCreditObject(String rest) {
+        String s = peelCreditTail(rest);
+        if (CREDIT_AUTHOR.matcher(s).matches()) {
+            return true;
+        }
+        if (CREDIT_RELIGIOUS.matcher(s).lookingAt()) {
+            return true;
+        }
+        return isPersonPhrase(s);
+    }
+
+    private static boolean isPersonPhrase(String raw) {
+        String s = raw.trim().replaceAll("[.\\s]+$", "");
+        s = s.replaceAll("\\s*\\[[^\\]]*\\]\\s*$", "").trim().replaceAll("[.\\s]+$", "");
+        if (s.isEmpty() || s.indexOf(';') >= 0 || s.indexOf(':') >= 0 || s.indexOf('/') >= 0) {
+            return false;
+        }
+        int comma = s.indexOf(',');
+        if (comma >= 0) {
+            String role = s.substring(comma + 1).trim();
+            s = s.substring(0, comma).trim();
+            if (!isCreditRole(role)) {
+                if (role.matches("(?i)of\\b.*") && role.length() <= 40 && isSimpleCreditName(s)) {
+                    return true;
+                }
+                String[] parts = raw.split(",", -1);
+                if (parts.length >= 2) {
+                    boolean all = true;
+                    for (String part : parts) {
+                        if (!isSimpleCreditName(part.trim().replaceAll("[.\\s]+$", ""))) {
+                            all = false;
+                            break;
+                        }
+                    }
+                    if (all) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return isSimpleCreditName(s);
+    }
+
+    private static boolean isCreditRole(String role) {
+        String text = role.replace(".", " ").replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
+        if (text.isEmpty() || text.length() > 48) {
+            return false;
+        }
+        if (CREDIT_ROLE_PREFIX.matcher(text).lookingAt()) {
+            return true;
+        }
+        String[] words = text.split(" ");
+        if (words.length > 4) {
+            return false;
+        }
+        for (String word : words) {
+            if (word.length() != 1 && !CREDIT_ROLE.contains(word)) {
+                return false;
+            }
+        }
+        return words.length > 0;
+    }
+
+    private static boolean isSimpleCreditName(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String[] tokens = value.trim().split("\\s+");
+        if (tokens.length == 0 || tokens.length > 8) {
+            return false;
+        }
+        int i = 0;
+        String first = creditNorm(tokens[0]);
+        if ("the".equals(first) || "a".equals(first) || "an".equals(first)) {
+            i = 1;
+        }
+        if (i < tokens.length && "his".equals(creditNorm(tokens[i]))
+                && i + 1 < tokens.length
+                && creditNorm(tokens[i + 1]).matches("eminence|holiness|grace")) {
+            i += 2;
+        }
+        while (i < tokens.length && i + 1 < tokens.length
+                && ("right".equals(creditNorm(tokens[i]))
+                || "very".equals(creditNorm(tokens[i]))
+                || "most".equals(creditNorm(tokens[i])))
+                && isCreditHonorific(tokens[i + 1])) {
+            i++;
+        }
+        while (i < tokens.length && isCreditHonorific(tokens[i])) {
+            i++;
+        }
+        if (i >= tokens.length) {
+            return false;
+        }
+        int real = 0;
+        for (int k = i; k < tokens.length; k++) {
+            String name = tokens[k];
+            String norm = creditNorm(name);
+            if ("and".equals(norm) || "&".equals(norm)) {
+                continue;
+            }
+            if (CREDIT_PARTICLE.contains(norm)) {
+                continue;
+            }
+            if (isCreditInitial(name) || name.matches("\\*+") || name.matches("[*\\u2026]+")) {
+                real++;
+                continue;
+            }
+            if (CREDIT_STOP.contains(norm) || !isCreditNameWord(name)) {
+                return false;
+            }
+            real++;
+        }
+        return real >= 1;
+    }
+
+    private static boolean isCreditNameWord(String token) {
+        if (isCreditInitial(token)) {
+            return true;
+        }
+        String norm = creditNorm(token);
+        if (norm.isEmpty() || CREDIT_STOP.contains(norm) || CREDIT_PARTICLE.contains(norm) || norm.length() < 2) {
+            return false;
+        }
+        return token.codePoints().anyMatch(Character::isLetter);
+    }
+
+    private static boolean isCreditHonorific(String token) {
+        return CREDIT_HONORIFIC.contains(creditNorm(token));
+    }
+
+    private static boolean isCreditInitialOrAbbrev(String token) {
+        return isCreditInitial(token) || CREDIT_ABBREV.contains(creditNorm(token));
+    }
+
+    private static boolean isCreditInitial(String token) {
+        String core = token.replaceAll("^[^\\p{L}]+", "").replaceAll("[^\\p{L}.]+$", "");
+        return core.matches("[A-Za-z](?:\\.[A-Za-z])*\\.?");
+    }
+
+    private static String creditNorm(String token) {
+        if (token == null) {
+            return "";
+        }
+        return token.replaceAll("^[^\\p{L}\\p{N}]+", "")
+                .replaceAll("[^\\p{L}\\p{N}.]+$", "")
+                .replace(".", "")
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private record CreditDecision(String keep, String sep) {
     }
 
     private static String titleCaseSegment(String segment) {
