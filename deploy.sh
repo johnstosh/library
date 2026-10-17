@@ -225,6 +225,8 @@ if [ -n "${GMAIL_TOKEN_FOR_SEND:-}" ]; then
 fi
 
 # --cpu-boost lasts until the port opens. CPU stays allocated after that.
+# The default startup probe is one 240s attempt. Essay conversion held the
+# book table for about four minutes on dev, so allow three attempts.
 gcloud run deploy "$SERVICE_NAME" \
   --image "$IMAGE_TAG" \
   --region "$GCP_REGION" \
@@ -237,6 +239,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --cpu 1 \
   --cpu-boost \
   --timeout 600 \
+  --startup-probe=initialDelaySeconds=0,timeoutSeconds=240,periodSeconds=240,failureThreshold=3,tcpSocket.port=8080 \
   --no-cpu-throttling \
   --set-env-vars="GCP_PROJECT_ID=$GCP_PROJECT_ID,GCP_REGION=$GCP_REGION,DB_NAME=$DB_NAME,DB_PASSWORD=$DB_PASSWORD,SPRING_PROFILES_ACTIVE=prod,APP_ENV=production,APP_EXTERNAL_BASE_URL=https://$SERVICE_NAME.muczynskifamily.com,${MAIL_ENV}" \
   --add-cloudsql-instances="$GCP_PROJECT_ID:$GCP_REGION:$CLOUD_SQL_INSTANCE_NAME" \

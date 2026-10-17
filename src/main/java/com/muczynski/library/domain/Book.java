@@ -50,14 +50,25 @@ public class Book {
 
     private String publisher;
 
+    /**
+     * PostgreSQL {@code text}. LONGVARCHAR keeps JDBC {@code getString}.
+     * Without {@code columnDefinition}, Hibernate casts an existing {@code oid}
+     * to the object id before startup can copy the large object.
+     */
     @Lob
-    @Column(name = "plot_summary")
+    @Column(name = "plot_summary", columnDefinition = "text")
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String plotEssay;
 
     @Lob
     private String relatedWorks;
 
+    /**
+     * Same text mapping as {@link #plotEssay}.
+     */
     @Lob
+    @Column(columnDefinition = "text")
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String detailedDescription;
 
     private String grokipediaUrl;
