@@ -483,24 +483,7 @@ Rewrites the selected books' titles into Chicago title case, including the subti
 
 **Use Case:** Books page bulk-action carousel "Chicago Title Case"
 
----
-
-## POST /api/books/normalize-authors-bulk
-Rewrites the selected books' authors into canonical form: given name(s), then family name(s). Strips appended birth and death years, including a year introduced by `approximately` or `approx.`, and a year phrase that was moved in front of the name. Turns `Family, Given` around, and expands initials when a parenthetical spells them out (`Johnson, B. J.-P. (Barney John-Paul)` becomes `Barney John Paul Johnson`). A two-letter abbreviation counts (`Wm.`, `L.-Cl.`). A longer dotted abbreviation is expanded when it prefixes the parenthetical name (`Joh. Evang.`). A parenthetical that is only initials (`C. C.`) is removed. UTF-8 letters imported as Latin-1 are repaired. A shorter copy of the same name is dropped. `Thomas, à Kempis` stays `Thomas à Kempis`. A `tr.` relator is removed. Initials with no expansion are left as written, including their periods and hyphens. `[from old catalog]` is removed. A name whose letters are all capitals or all lowercase is rewritten with initial capitals; particles such as `von` and `de la` stay lower. A mixed-case name keeps its capitals. A comma inside a phrase (`Sisters of Charity of Our Lady, Mother of the Church`, `Ignatius, of Loyola`) stays, and those words are not reordered. Editor and translator credits (`(ed.)`, `(ed. Name)`, `(tr.)`, `translated by …`, `, editor`) are removed and are not saved. A fuller name in parentheses and an edition note (`(Benziger ed.)`) stay. A no-space run of 2–6 capital letters stays after the name and loses the comma. Spaced given-name initials such as `C. L` are still turned around.
-
-**Authentication:** Librarian
-
-**Request Body:** JSON array of book IDs
-
-**Response:** Array of `NameNormalizationResultDto`
-
-**Behavior:**
-- An author that already conforms is left unchanged
-- When every book by that author is selected and the canonical name is free, the author row is renamed in place. Its photos stay on that row
-- Otherwise only the selected books are relinked to the existing author of that canonical name, or to one new author created for it. Unselected books keep the old author
-- Does not write alternate names. Pen names and Latin forms stay on issue #372
-
-**Use Case:** Books page bulk-action carousel "Canonical Author Names"
+Canonical author names are rewritten from the Authors page (`POST /api/authors/normalize-names-bulk`). The Books page keeps the `authorNotCanonical` filter.
 
 ---
 

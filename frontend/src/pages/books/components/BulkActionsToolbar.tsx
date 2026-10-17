@@ -10,7 +10,6 @@ import {
   useBulkBookFromTitleAuthor,
   useLookupBulkGenresWithProgress,
   useLookupBulkReadingDifficultyWithProgress,
-  useNormalizeAuthorsBulk,
   useNormalizeTitlesBulk,
 } from '@/api/books'
 import { useLookupBulkBooksWithProgress, type LocLookupResultDto } from '@/api/loc-lookup'
@@ -38,7 +37,6 @@ import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { PiCurrencyDollar } from 'react-icons/pi'
 import { PiTextAa } from 'react-icons/pi'
-import { PiUser } from 'react-icons/pi'
 import { AclaIcon, AiIcon, EmuIcon, GrokipediaIcon, LocIcon, YdlIcon } from '@/components/ui/Icons'
 import type {
   BookDto,
@@ -116,8 +114,6 @@ export function BulkActionsToolbar({
   const [priceProgress, setPriceProgress] = useState(0)
   const [showTitleNormalization, setShowTitleNormalization] = useState(false)
   const [titleNormalizationResults, setTitleNormalizationResults] = useState<NameNormalizationResultDto[]>([])
-  const [showAuthorNormalization, setShowAuthorNormalization] = useState(false)
-  const [authorNormalizationResults, setAuthorNormalizationResults] = useState<NameNormalizationResultDto[]>([])
 
   const deleteBooks = useDeleteBooks()
   const lookupBulk = useLookupBulkBooksWithProgress((completed) => {
@@ -157,7 +153,6 @@ export function BulkActionsToolbar({
     setPriceProgress(completed)
   })
   const normalizeTitles = useNormalizeTitlesBulk()
-  const normalizeAuthors = useNormalizeAuthorsBulk()
 
   const selectedCount = selectedIds.size
 
@@ -169,17 +164,6 @@ export function BulkActionsToolbar({
     } catch (error) {
       console.error('Failed to rewrite titles:', error)
       toast.error('Failed to rewrite titles')
-    }
-  }
-
-  const handleNormalizeAuthors = async () => {
-    try {
-      const results = await normalizeAuthors.mutateAsync(Array.from(selectedIds))
-      setAuthorNormalizationResults(results)
-      setShowAuthorNormalization(true)
-    } catch (error) {
-      console.error('Failed to rewrite authors:', error)
-      toast.error('Failed to rewrite authors')
     }
   }
 
@@ -597,22 +581,11 @@ export function BulkActionsToolbar({
               size="sm"
               onClick={handleNormalizeTitles}
               isLoading={normalizeTitles.isPending}
-              disabled={normalizeTitles.isPending || normalizeAuthors.isPending}
+              disabled={normalizeTitles.isPending}
               leftIcon={<PiTextAa />}
               data-test="bulk-chicago-title"
             >
               Chicago Title Case
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNormalizeAuthors}
-              isLoading={normalizeAuthors.isPending}
-              disabled={normalizeTitles.isPending || normalizeAuthors.isPending}
-              leftIcon={<PiUser />}
-              data-test="bulk-canonical-author"
-            >
-              Canonical Author Names
             </Button>
             <Button
               variant="danger"
@@ -631,13 +604,6 @@ export function BulkActionsToolbar({
         onClose={() => setShowTitleNormalization(false)}
         title="Chicago Title Case"
         results={titleNormalizationResults}
-      />
-
-      <NameNormalizationResultsModal
-        isOpen={showAuthorNormalization}
-        onClose={() => setShowAuthorNormalization(false)}
-        title="Canonical Author Names"
-        results={authorNormalizationResults}
       />
 
       <ConfirmDialog

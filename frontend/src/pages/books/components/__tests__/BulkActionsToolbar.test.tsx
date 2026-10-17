@@ -25,7 +25,6 @@ vi.mock('@/api/books', () => ({
   useLookupBulkGenresWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useLookupBulkReadingDifficultyWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useNormalizeTitlesBulk: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useNormalizeAuthorsBulk: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
 vi.mock('@/api/loc-lookup', () => ({
@@ -114,7 +113,8 @@ describe('BulkActionsToolbar stats', () => {
     )
 
     expect(screen.getByTestId('bulk-chicago-title')).toHaveTextContent('Chicago Title Case')
-    expect(screen.getByTestId('bulk-canonical-author')).toHaveTextContent('Canonical Author Names')
+    expect(screen.queryByTestId('bulk-canonical-author')).not.toBeInTheDocument()
+    expect(screen.queryByText('Canonical Author Names')).not.toBeInTheDocument()
   })
 
   it('falls back to Sacred Heart Library System when the first branch has no library system name', () => {

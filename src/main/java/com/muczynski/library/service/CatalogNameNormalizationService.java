@@ -28,18 +28,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Rewrites selected books' titles into Chicago title case, and their authors
- * into canonical given-name-then-family-name form.
+ * Rewrites selected books' titles into Chicago title case.
  * <p>
- * Author rows are updated in place when every book by that author is selected
- * and the canonical name is free. Otherwise the selected books are relinked to
- * the existing canonical author, or to one new author created for that name.
- * The managed author is edited directly so its photos stay put.
- * <p>
- * The Authors page renames selected author rows in place. When the canonical
- * name already belongs to another author, that author is kept and the selected
- * author is merged into it and deleted. The old form is not stored as an
- * alternate name.
+ * Canonical author names are rewritten from the Authors page, which renames
+ * selected author rows in place. When the canonical name already belongs to
+ * another author, that author is kept and the selected author is merged into
+ * it and deleted. The old form is not stored as an alternate name.
  */
 @Service
 public class CatalogNameNormalizationService {
@@ -91,103 +85,6 @@ public class CatalogNameNormalizationService {
             }
             book.setTitle(after);
             bookRepository.save(book);
-            results.add(changed(book, before, after));
-        }
-        return results;
-    }
-
-    @Transactional
-    public List<NameNormalizationResultDto> normalizeAuthors(List<Long> bookIds) {
-        List<Long> ids = distinctIds(bookIds);
-        Map<Long, Book> books = loadBooks(ids);
-
-        Map<Long, List<Book>> selectedByAuthor = new LinkedHashMap<>();
-        Map<Long, String> originalNames = new HashMap<>();
-        Map<Long, String> desiredByAuthor = new HashMap<>();
-        for (Long id : ids) {
-            Book book = books.get(id);
-            if (book == null || book.getAuthor() == null) {
-                continue;
-            }
-            Author author = book.getAuthor();
-            originalNames.putIfAbsent(author.getId(), author.getName());
-            selectedByAuthor.computeIfAbsent(author.getId(), ignored -> new ArrayList<>()).add(book);
-        }
-
-        Map<String, Author> targets = new HashMap<>();
-        for (Map.Entry<Long, List<Book>> entry : selectedByAuthor.entrySet()) {
-            Author author = entry.getValue().get(0).getAuthor();
-            String original = originalNames.get(author.getId());
-            String desired = CanonicalAuthorName.canonical(original);
-            if (desired == null || desired.isBlank()) {
-                desired = original;
-            }
-            desiredByAuthor.put(author.getId(), desired);
-            if (desired == null || desired.equals(original)) {
-                continue;
-            }
-            List<Author> existing = authorRepository.findAllByNameOrderByIdAsc(desired);
-            if (!existing.isEmpty()) {
-                targets.put(desired, existing.get(0));
-            }
-        }
-
-        List<Author> renameCandidates = new ArrayList<>();
-        for (Map.Entry<Long, List<Book>> entry : selectedByAuthor.entrySet()) {
-            Author author = entry.getValue().get(0).getAuthor();
-            String desired = desiredByAuthor.get(author.getId());
-            String original = originalNames.get(author.getId());
-            if (desired == null || desired.equals(original) || desired.isBlank()) {
-                continue;
-            }
-            if (targets.containsKey(desired)) {
-                continue;
-            }
-            long total = bookRepository.countByAuthorId(author.getId());
-            if (total == entry.getValue().size()) {
-                renameCandidates.add(author);
-            }
-        }
-        renameCandidates.sort(Comparator.comparing(Author::getId));
-        for (Author author : renameCandidates) {
-            String desired = desiredByAuthor.get(author.getId());
-            if (targets.containsKey(desired)) {
-                continue;
-            }
-            author.setName(desired);
-            authorRepository.saveAndFlush(author);
-            targets.put(desired, author);
-        }
-
-        List<NameNormalizationResultDto> results = new ArrayList<>();
-        for (Long id : ids) {
-            Book book = books.get(id);
-            if (book == null) {
-                results.add(missing(id));
-                continue;
-            }
-            if (book.getAuthor() == null) {
-                results.add(unchanged(book, "", ""));
-                continue;
-            }
-            Author current = book.getAuthor();
-            String before = originalNames.getOrDefault(current.getId(), current.getName());
-            String after = desiredByAuthor.getOrDefault(current.getId(), before);
-            if (after == null || after.isBlank() || after.equals(before)) {
-                results.add(unchanged(book, before, before == null ? "" : before));
-                continue;
-            }
-            Author target = targets.get(after);
-            if (target == null) {
-                Author created = new Author();
-                created.setName(after);
-                target = authorRepository.saveAndFlush(created);
-                targets.put(after, target);
-            }
-            if (!target.getId().equals(current.getId())) {
-                book.setAuthor(target);
-                bookRepository.save(book);
-            }
             results.add(changed(book, before, after));
         }
         return results;
