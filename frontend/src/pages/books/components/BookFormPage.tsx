@@ -18,7 +18,7 @@ import { GenreLookupResultsModal } from './GenreLookupResultsModal'
 import { PhotoSection } from '@/components/photos/PhotoSection'
 import { AuthorCombobox } from './AuthorCombobox'
 import { GenreChips, standardGenresFrom } from './BookLabelFilters'
-import { useAuthors } from '@/api/authors'
+import { useAuthor } from '@/api/authors'
 import { useBranches } from '@/api/branches'
 import { useCreateBook, useUpdateBook, useSuggestLocNumber, useDeleteBook, useCloneBook, useBookFromImage, useBookFromFirstPhoto, useTitleAuthorFromPhoto, useBookFromTitleAuthor, useLookupGenres } from '@/api/books'
 import { useLookupSingleBook } from '@/api/loc-lookup'
@@ -118,7 +118,10 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const [genreResults, setGenreResults] = useState<GenreLookupResultDto[]>([])
 
   const queryClient = useQueryClient()
-  const { data: authors } = useAuthors()
+  const selectedAuthorId = Number(formData.authorId)
+  const { data: selectedAuthor } = useAuthor(
+    Number.isInteger(selectedAuthorId) && selectedAuthorId > 0 ? selectedAuthorId : 0,
+  )
   const { data: branches, isLoading: branchesLoading } = useBranches()
   const createBook = useCreateBook()
   const updateBook = useUpdateBook()
@@ -376,9 +379,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       // Get author name for better suggestions
-      const authorName = formData.authorId
-        ? authors?.find((a) => a.id === parseInt(formData.authorId))?.name
-        : undefined
+      const authorName = selectedAuthor?.name
 
       const result = await suggestLoc.mutateAsync({
         title: formData.title,
@@ -615,9 +616,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       return
     }
 
-    const authorName = formData.authorId
-      ? authors?.find((a) => a.id === parseInt(formData.authorId))?.name || ''
-      : ''
+    const authorName = selectedAuthor?.name || ''
 
     try {
       const updated = await bookFromTitleAuthor.mutateAsync({

@@ -6,6 +6,8 @@ package com.muczynski.library.repository;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.dto.AuthorNameMatchDto;
+import com.muczynski.library.service.AuthorNameMatchService;
 import com.muczynski.library.service.CatalogFilterService.BookCatalogFilter;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -35,6 +37,9 @@ class AuthorAlternateNamesIntegrationTest {
 
     @Autowired
     private CatalogCriteria catalogCriteria;
+
+    @Autowired
+    private AuthorNameMatchService authorNameMatchService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -76,5 +81,43 @@ class AuthorAlternateNamesIntegrationTest {
         filter.query = "augustine of hippo";
         List<BookRepository.DatedBookSummaryProjection> summaries = catalogCriteria.bookSummaries(filter);
         assertTrue(summaries.stream().anyMatch(summary -> bookId.equals(summary.getId())));
+    }
+
+    @Test
+    void nameMatchesUseTheCheckoutGateAndRankExactNamesFirst() {
+        assertTrue(authorNameMatchService.matches("au").isEmpty());
+
+        Author exact = author("AuthorMatch Augustine", List.of());
+        Author alternate = author(
+                "AuthorMatch Augustinus Hippo",
+                List.of("AuthorMatch Augustine of Hippo", "AuthorMatch Unique Hippo"));
+        author("AuthorMatch Other", List.of());
+        for (int i = 1; i <= 11; i++) {
+            author(String.format("AuthorMatch Limit %02d", i), List.of());
+        }
+        authorRepository.flush();
+
+        List<AuthorNameMatchDto> augustine = authorNameMatchService.matches("AuthorMatch Augustine");
+        assertEquals(exact.getId(), augustine.get(0).getId());
+        assertTrue(augustine.stream().anyMatch(match -> alternate.getId().equals(match.getId())));
+        assertTrue(augustine.stream().noneMatch(match -> "AuthorMatch Other".equals(match.getName())));
+
+        List<AuthorNameMatchDto> byAlternate = authorNameMatchService.matches("unique hippo");
+        assertEquals(1, byAlternate.size());
+        assertEquals(alternate.getId(), byAlternate.get(0).getId());
+
+        List<AuthorNameMatchDto> limited = authorNameMatchService.matches("AuthorMatch Limit");
+        assertEquals(AuthorNameMatchService.MATCH_LIMIT, limited.size());
+        assertEquals("AuthorMatch Limit 01", limited.get(0).getName());
+        assertEquals("AuthorMatch Limit 10", limited.get(limited.size() - 1).getName());
+    }
+
+    private Author author(String name, List<String> alternateNames) {
+        Author author = new Author();
+        author.setName(name);
+        if (!alternateNames.isEmpty()) {
+            author.setAlternateNames(alternateNames);
+        }
+        return authorRepository.save(author);
     }
 }

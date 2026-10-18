@@ -6,12 +6,14 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
+import com.muczynski.library.dto.AuthorNameMatchDto;
 import com.muczynski.library.dto.AuthorNameNormalizationResultDto;
 import com.muczynski.library.dto.AuthorSummaryDto;
 import com.muczynski.library.dto.CountDto;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
 import com.muczynski.library.dto.PhotoDto;
+import com.muczynski.library.service.AuthorNameMatchService;
 import com.muczynski.library.service.AuthorService;
 import com.muczynski.library.service.GrokJobService;
 import com.muczynski.library.dto.GrokJobDto;
@@ -48,6 +50,9 @@ public class AuthorController {
 
     @Autowired
     private AuthorService authorService;
+
+    @Autowired
+    private AuthorNameMatchService authorNameMatchService;
 
     @Autowired
     private GrokJobService grokJobService;
@@ -88,6 +93,17 @@ public class AuthorController {
             logger.warn("Failed to count authors: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Authors for the book form. At most ten matches. A name shorter than
+     * three characters returns an empty list. Canonical and alternate names match.
+     */
+    @GetMapping("/name-matches")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<List<AuthorNameMatchDto>> nameMatches(
+            @RequestParam(required = false) String name) {
+        return ResponseEntity.ok(authorNameMatchService.matches(name));
     }
 
     @GetMapping("/summaries")

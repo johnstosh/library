@@ -17,7 +17,7 @@ const { mocks } = vi.hoisted(() => ({
 const idleMutation = () => ({ isPending: false, mutateAsync: vi.fn() })
 
 vi.mock('@/api/authors', () => ({
-  useAuthors: () => ({ data: [], isLoading: false }),
+  useAuthor: () => ({ data: undefined, isLoading: false }),
   useCreateAuthor: () => idleMutation(),
 }))
 
