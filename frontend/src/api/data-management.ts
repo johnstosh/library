@@ -648,7 +648,8 @@ export function useCleanupIllegalGenres() {
   })
 }
 
-// Duplicate catalog titles (Issue #351) — find-only. WITHDRAWN books are excluded.
+// Duplicate catalog titles (Issue #351). WITHDRAWN books are excluded.
+// A not-duplicate mark is stored by folded title and author, not by book id.
 export interface DuplicateTitlePairDto {
   score: number
   bookAId: number
@@ -677,5 +678,26 @@ export function useFindDuplicateTitles() {
   return useMutation({
     mutationFn: () =>
       api.post<DuplicateTitlesResultDto>('/maintenance/duplicate-titles/find'),
+  })
+}
+
+export interface DuplicateTitleDismissalRequest {
+  titleA: string
+  authorA: string
+  titleB: string
+  authorB: string
+}
+
+export function useDismissDuplicateTitlePair() {
+  return useMutation({
+    mutationFn: (body: DuplicateTitleDismissalRequest) =>
+      api.post<void>('/maintenance/duplicate-titles/dismissals', body),
+  })
+}
+
+export function useRestoreDuplicateTitlePair() {
+  return useMutation({
+    mutationFn: (body: DuplicateTitleDismissalRequest) =>
+      api.post<void>('/maintenance/duplicate-titles/dismissals/undo', body),
   })
 }

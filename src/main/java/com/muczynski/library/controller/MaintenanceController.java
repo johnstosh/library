@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.DuplicateTitleDismissalRequestDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
 import com.muczynski.library.dto.IllegalGenresMaintenanceDto;
 import com.muczynski.library.service.MaintenanceService;
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Maintenance API for librarian Data Management page (Issues #347, #351).
- * Provides illegal-genre cleanup and duplicate-title find (read-only).
+ * Provides illegal-genre cleanup, duplicate-title find, and not-duplicate marks.
  */
 @Slf4j
 @RestController
@@ -80,5 +81,30 @@ public class MaintenanceController {
                     .message("Internal error during duplicate title scan. Check logs for details.")
                     .build());
         }
+    }
+
+    /**
+     * Remember that the two works on a result row are not duplicates.
+     * Stored by folded title and author, so every extra copy stays hidden.
+     * The current result table is left unchanged until the next find.
+     */
+    @PostMapping("/duplicate-titles/dismissals")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> dismissDuplicateTitle(@RequestBody DuplicateTitleDismissalRequestDto request) {
+        duplicateTitleService.dismiss(
+                request.getTitleA(), request.getAuthorA(), request.getTitleB(), request.getAuthorB());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Remove a not-duplicate mark. Used by Undo while the row is still on screen.
+     */
+    @PostMapping("/duplicate-titles/dismissals/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<Void> undoDuplicateTitleDismissal(
+            @RequestBody DuplicateTitleDismissalRequestDto request) {
+        duplicateTitleService.restore(
+                request.getTitleA(), request.getAuthorA(), request.getTitleB(), request.getAuthorB());
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
 
+const { dismissDuplicatePair, restoreDuplicatePair } = vi.hoisted(() => ({
+  dismissDuplicatePair: vi.fn().mockResolvedValue(undefined),
+  restoreDuplicatePair: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('@/api/data-management', () => ({
   exportJsonData: vi.fn(),
   useImportJsonData: () => ({
@@ -97,6 +102,14 @@ vi.mock('@/api/data-management', () => ({
       representativesCompared: 9,
       message: '1 pairs found.',
     }),
+    isPending: false,
+  }),
+  useDismissDuplicateTitlePair: () => ({
+    mutateAsync: dismissDuplicatePair,
+    isPending: false,
+  }),
+  useRestoreDuplicateTitlePair: () => ({
+    mutateAsync: restoreDuplicatePair,
     isPending: false,
   }),
 }))
@@ -268,5 +281,58 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     const linkB = screen.getByTestId('dup-book-b-link-2')
     expect(linkA).toHaveAttribute('href', '/books/1')
     expect(linkB).toHaveAttribute('href', '/books/2')
+    expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+  })
+
+  it('marks a pair as not a duplicate and keeps the row until Find', async () => {
+    dismissDuplicatePair.mockReset()
+    dismissDuplicatePair.mockResolvedValue(undefined)
+    restoreDuplicatePair.mockReset()
+    restoreDuplicatePair.mockResolvedValue(undefined)
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+    const mark = await screen.findByTestId('dup-not-duplicate-1-2')
+    fireEvent.click(mark)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Undo')
+    })
+    expect(dismissDuplicatePair).toHaveBeenCalledWith({
+      titleA: 'Confessions',
+      authorA: 'Augustine',
+      titleB: 'Confession',
+      authorB: 'Augustine',
+    })
+    expect(screen.getByTestId('dup-book-a-link-1')).toBeInTheDocument()
+    expect(screen.getByTestId('dup-book-b-link-2')).toBeInTheDocument()
+    expect(screen.getByTestId('dup-pair-1-2')).toHaveClass('bg-gray-100')
+    expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByTestId('dup-not-duplicate-1-2'))
+    await waitFor(() => {
+      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+    })
+    expect(restoreDuplicatePair).toHaveBeenCalledWith({
+      titleA: 'Confessions',
+      authorA: 'Augustine',
+      titleB: 'Confession',
+      authorB: 'Augustine',
+    })
+    expect(screen.getByTestId('dup-book-a-link-1')).toBeInTheDocument()
+    expect(screen.getByTestId('dup-pair-1-2')).not.toHaveClass('bg-gray-100')
+  })
+
+  it('leaves the button unchanged when the mark fails', async () => {
+    dismissDuplicatePair.mockReset()
+    dismissDuplicatePair.mockRejectedValueOnce(new Error('Could not save'))
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+    fireEvent.click(await screen.findByTestId('dup-not-duplicate-1-2'))
+
+    expect(await screen.findByTestId('duplicate-titles-mark-error')).toHaveTextContent('Could not save')
+    expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+    expect(screen.getByTestId('dup-book-a-link-1')).toBeInTheDocument()
   })
 })
