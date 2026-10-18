@@ -22,6 +22,7 @@ FreeTextLookupService (orchestrator)
 │   ├── MyCatholicLifeProvider
 │   ├── TraditionalCatholicProvider
 │   ├── CatholicSatProvider
+│   ├── HathiTrustProvider (HathiTrust full-view volumes)
 │   ├── LocOpenAccessProvider (LOC Open Access Books Collection)
 │   ├── LocCatalogOnlineProvider (Library of Congress Online Catalog)
 │   └── LocOnlineBooksPageProvider (Online Books Page - LOC index)
@@ -1064,6 +1065,34 @@ const handleFreeTextLookup = async () => {
 
 ---
 
+### HathiTrustProvider
+
+**Website:** https://www.hathitrust.org
+
+HathiTrust's catalog search page is behind a browser challenge, so the provider does not
+scrape it. It asks Open Library (`https://openlibrary.org/search.json?title=&author=`) for
+editions whose title and author match, collects their OCLC and LCCN numbers, and sends
+them to the HathiTrust Bib API (`https://catalog.hathitrust.org/api/volumes/brief/json/oclc:N|lccn:M`).
+It returns `https://hdl.handle.net/2027/{htid}` for the first volume whose catalog title
+matches and whose `usRightsString` is `Full view`. Public domain (`pd`) is preferred; US-only
+public domain (`pdus`) is accepted because the library is in the US. Search-only volumes
+are never returned. The catalog title is checked again because an Open Library OCLC number
+occasionally belongs to an unrelated record.
+
+### Internet Archive query form
+
+Archive.org stores creators as "Last, First, dates" ("Sheen, Fulton J. (Fulton John),
+1895-1979"). The provider therefore searches with words, not exact phrases:
+`title:(main title words) AND creator:(last name)`, and verifies each result with
+`TitleMatcher` against every creator of the item. Only items with an explicit
+`is_readable` lending status are returned; borrow-only items are skipped.
+
+### Cached "not found" entries
+
+`FreeTextLookupCache` holds compiled-in results from earlier runs. Cached URLs are still
+returned without a provider search, but a cached "not found" entry no longer stops the
+providers from being searched when the tool is run.
+
 ## Provider Priority Summary
 
 | Priority | Provider | API Type |
@@ -1072,6 +1101,7 @@ const handleFreeTextLookup = async () => {
 | 10 | Project Gutenberg | Gutendex API (JSON) |
 | 12 | Online Books Page | HTML Search |
 | 15 | LOC Open Access Books | LOC API (JSON) |
+| 18 | HathiTrust | Open Library search + HathiTrust Bib API (JSON) |
 | 20 | LOC Online Catalog | SRU API (MARC XML) |
 | 30 | LibriVox | REST API (JSON) |
 | 35 | CCEL | HTML Search |
@@ -1086,6 +1116,19 @@ const handleFreeTextLookup = async () => {
 ---
 
 ## Title Matching Algorithm
+
+Current rules (see `TitleMatcher`):
+- The main title and subtitle are split on the first colon of the original text, before
+  normalization removes the colon. A " / by ..." statement of responsibility is dropped.
+- A main-title match is accepted when at most one side has a subtitle, or both subtitles
+  agree. Two different subtitles on the same main title do not match
+  ("Jesus of Nazareth: The Infancy Narratives" is not "Jesus of Nazareth: Holy Week").
+- Accents are stripped and "&" equals "and".
+- Author names in catalog form ("Sheen, Fulton J. (Fulton John), 1895-1979") are put into
+  "first last" order, with fuller-name parentheses and dates removed, before last names
+  are compared.
+
+The sketch below is the original design.
 
 ```java
 public class TitleMatcher {

@@ -52,24 +52,33 @@ public class InternetArchiveProvider implements FreeTextProvider {
 
     @Override
     public FreeTextLookupResult search(String title, String authorName) {
-        try {
-            // Build advanced search query
-            StringBuilder query = new StringBuilder();
-            query.append("mediatype:texts");
-            query.append(" AND title:\"").append(escapeQuery(title)).append("\"");
+        return search(title, authorName, false);
+    }
 
-            if (authorName != null && !authorName.isBlank()) {
-                query.append(" AND creator:\"").append(escapeQuery(authorName)).append("\"");
+    /**
+     * Diagnostics only: the same search but also accepting borrow-only (lending library)
+     * items. The carousel tool never calls this; it exists so a harness can report how
+     * many more books a looser policy would find.
+     */
+    FreeTextLookupResult searchAllowingBorrowable(String title, String authorName) {
+        return search(title, authorName, true);
+    }
+
+    private FreeTextLookupResult search(String title, String authorName, boolean allowBorrowable) {
+        try {
+            String query = buildQuery(title, authorName);
+            if (query == null) {
+                return FreeTextLookupResult.error(getProviderName(), "No searchable title words");
             }
 
             String url = UriComponentsBuilder.fromHttpUrl(API_BASE)
-                    .queryParam("q", query.toString())
+                    .queryParam("q", query)
                     .queryParam("fl[]", "identifier")
                     .queryParam("fl[]", "title")
                     .queryParam("fl[]", "creator")
                     .queryParam("fl[]", "lending___status") // Check if it's a lending item
                     .queryParam("output", "json")
-                    .queryParam("rows", 20)
+                    .queryParam("rows", 50)
                     .build()
                     .toUriString();
 
@@ -87,16 +96,17 @@ public class InternetArchiveProvider implements FreeTextProvider {
                 String docTitle = doc.getTitle();
                 if (docTitle != null && TitleMatcher.titleMatches(docTitle, title)) {
                     // Check if this is a freely readable item (not lending-only)
-                    if (!doc.isFreelyReadable()) {
+                    if (!doc.isFreelyReadable() && !(allowBorrowable && doc.isBorrowable())) {
                         log.debug("Skipping lending-only item: {}", doc.getIdentifier());
                         continue;
                     }
 
-                    // If author was provided, verify it matches
+                    // If author was provided, verify it matches one of the item's creators
                     if (authorName != null && !authorName.isBlank()) {
-                        String docCreator = doc.getCreatorString();
-                        if (docCreator == null || !TitleMatcher.authorMatches(docCreator, authorName)) {
-                            log.debug("Skipping item with non-matching author: {} vs {}", docCreator, authorName);
+                        boolean creatorMatches = doc.getCreators().stream()
+                                .anyMatch(c -> TitleMatcher.authorMatches(c, authorName));
+                        if (!creatorMatches) {
+                            log.debug("Skipping item with non-matching author: {} vs {}", doc.getCreators(), authorName);
                             continue;
                         }
                     }
@@ -120,10 +130,42 @@ public class InternetArchiveProvider implements FreeTextProvider {
         }
     }
 
-    private String escapeQuery(String input) {
-        // Escape special characters for Internet Archive query
-        return input.replace("\"", "\\\"")
-                .replace(":", "\\:");
+    /**
+     * Build the advanced-search query. Archive.org stores creators as "Last, First"
+     * ("Sheen, Fulton J."), so an exact creator phrase in "First Last" order finds
+     * nothing. The query therefore uses words, not phrases: the significant words of
+     * the main title (before any colon) and the author's last name. Results are then
+     * verified with {@link TitleMatcher}.
+     */
+    static String buildQuery(String title, String authorName) {
+        String titleWords = TitleMatcher.normalizeForSearch(
+                TitleMatcher.mainTitle(title));
+        if (titleWords.isBlank()) {
+            titleWords = TitleMatcher.normalizeForSearch(title);
+        }
+        if (titleWords.isBlank()) {
+            return null;
+        }
+        StringBuilder query = new StringBuilder("mediatype:texts AND title:(").append(titleWords).append(")");
+        String lastName = lastNameWord(authorName);
+        if (lastName != null) {
+            query.append(" AND creator:(").append(lastName).append(")");
+        }
+        return query.toString();
+    }
+
+    private static String lastNameWord(String authorName) {
+        if (authorName == null || authorName.isBlank()) {
+            return null;
+        }
+        String first = authorName.split("(?i)\\s+and\\s+|&")[0];
+        String cleaned = TitleMatcher.stripAccents(first).toLowerCase()
+                .replaceAll("[^a-z\\s]", " ").trim();
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        String[] parts = cleaned.split("\\s+");
+        return parts[parts.length - 1];
     }
 
     @Data
@@ -168,6 +210,32 @@ public class InternetArchiveProvider implements FreeTextProvider {
                 return creatorList.isEmpty() ? null : creatorList.get(0);
             }
             return creator.toString();
+        }
+
+        /**
+         * Every creator of the item (the API returns a String or a List).
+         */
+        public List<String> getCreators() {
+            if (creator == null) {
+                return List.of();
+            }
+            if (creator instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> creatorList = (List<Object>) creator;
+                return creatorList.stream().filter(java.util.Objects::nonNull).map(Object::toString).toList();
+            }
+            return List.of(creator.toString());
+        }
+
+        /**
+         * True for lending-library items (borrow / print-disabled only).
+         */
+        public boolean isBorrowable() {
+            if (lendingStatus == null) {
+                return false;
+            }
+            String status = lendingStatus.toString().toLowerCase();
+            return status.contains("lendable") || status.contains("borrowable") || status.contains("printdisabled");
         }
 
         /**

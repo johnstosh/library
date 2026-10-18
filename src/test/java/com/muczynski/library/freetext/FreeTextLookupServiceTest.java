@@ -336,6 +336,44 @@ class FreeTextLookupServiceTest {
         }
     }
 
+    @Test
+    void lookupBook_cachedNotFoundDoesNotBlockProviderSearch() {
+        // "Rediscover Catholicism" by Matthew Kelly is a compiled-in "not found" entry.
+        // A librarian running the tool must still reach the providers.
+        Book book = createBook(1L, "Rediscover Catholicism", "Matthew Kelly");
+        assertEquals("", FreeTextLookupCache.lookup("Matthew Kelly", "Rediscover Catholicism"));
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.getExpectedDomains()).thenReturn(List.of());
+        when(mockProvider1.search(eq("Rediscover Catholicism"), eq("Matthew Kelly")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/rediscover"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("Provider1", result.getProviderName());
+        assertEquals("https://example.com/rediscover", result.getFreeTextUrl());
+        verify(mockProvider1).search("Rediscover Catholicism", "Matthew Kelly");
+    }
+
+    @Test
+    void lookupBook_cachedNotFoundAndProvidersMissReportsNotFoundInAnyProvider() {
+        Book book = createBook(1L, "Rediscover Catholicism", "Matthew Kelly");
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.error("Provider1", "Not found"));
+        when(mockProvider2.search(anyString(), anyString()))
+                .thenReturn(FreeTextLookupResult.error("Provider2", "Not found"));
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not found in any provider", result.getErrorMessage());
+        assertEquals(List.of("Provider1", "Provider2"), result.getProvidersSearched());
+    }
+
     private Book createBook(Long id, String title, String authorName) {
         Book book = new Book();
         book.setId(id);

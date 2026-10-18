@@ -88,6 +88,12 @@ public class LocOpenAccessProvider implements FreeTextProvider {
                 boolean titleMatches = resultTitle != null && TitleMatcher.titleMatches(resultTitle, title);
                 log.debug("LOC Open Access: Checking '{}' vs '{}' - match: {}", resultTitle, title, titleMatches);
 
+                if (titleMatches && !contributorMatches(result.getContributor(), authorName)) {
+                    log.debug("LOC Open Access: Skipping '{}' by {} (author is {})",
+                            resultTitle, result.getContributor(), authorName);
+                    titleMatches = false;
+                }
+
                 if (titleMatches) {
                     // Verify it has online text format (not just catalog entry)
                     List<String> formats = result.getOnlineFormat();
@@ -122,6 +128,18 @@ public class LocOpenAccessProvider implements FreeTextProvider {
         }
     }
 
+    /**
+     * When the book has an author and LOC lists contributors, one of them must be that
+     * author. "How to be happy." by Maria Frink (1893) is not Paul O'Sullivan's
+     * "How to Be Happy, How to Be Holy".
+     */
+    static boolean contributorMatches(List<String> contributors, String authorName) {
+        if (authorName == null || authorName.isBlank() || contributors == null || contributors.isEmpty()) {
+            return true;
+        }
+        return contributors.stream().anyMatch(c -> TitleMatcher.authorMatches(c, authorName));
+    }
+
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static class LocSearchResponse {
@@ -136,5 +154,6 @@ public class LocOpenAccessProvider implements FreeTextProvider {
         private String id;
         @JsonProperty("online_format")
         private List<String> onlineFormat;
+        private List<String> contributor;
     }
 }
