@@ -5,9 +5,12 @@ package com.muczynski.library.service.duplicate;
 
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.DuplicateTitleDismissal;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
+import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.DuplicateTitleDismissalRepository;
 import com.muczynski.library.service.duplicate.TitleNormalizer.NormalizedTitle;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,11 @@ import java.util.regex.Pattern;
  * <p>WITHDRAWN books are omitted before representative collapse and pairing.
  * A withdrawn copy is never a representative and never appears in a pair.
  * Other statuses, including a null status, are included.
+ *
+ * <p>A librarian can mark a pair as not a duplicate. The mark is the folded
+ * primary titles and normalized authors, so every extra copy of that pair is
+ * left out of later scans. Marks are removed before the top-100 cap.
+
  *
  * <h2>Score formula</h2>
  * <p>Primary signal: Jaro–Winkler on folded/normalized titles (and on
@@ -79,6 +87,7 @@ public class DuplicateTitleService {
             Pattern.compile("[^a-z0-9]+");
 
     private final BookRepository bookRepository;
+    private final DuplicateTitleDismissalRepository dismissalRepository;
 
     @Transactional(readOnly = true)
     public DuplicateTitlesResultDto findDuplicates() {
@@ -89,7 +98,7 @@ public class DuplicateTitleService {
         int booksScanned = projections.size();
 
         List<BookEntry> representatives = buildRepresentatives(projections);
-        List<DuplicateTitlePairDto> pairs = findPairs(representatives);
+        List<DuplicateTitlePairDto> pairs = excludeDismissed(findPairs(representatives));
 
         pairs.sort(Comparator.comparingDouble(DuplicateTitlePairDto::getScore).reversed()
                 .thenComparing(DuplicateTitlePairDto::getBookAId)
@@ -113,6 +122,73 @@ public class DuplicateTitleService {
                 .representativesCompared(representatives.size())
                 .message(message)
                 .build();
+    }
+
+    /**
+     * Remember that these two works are not duplicates. Copy suffixes and
+     * argument order are folded away. Marking an already stored pair does nothing.
+     */
+    @Transactional
+    public void dismiss(String titleA, String authorA, String titleB, String authorB) {
+        DuplicateTitlePairKey key = DuplicateTitlePairKey.fromRaw(titleA, authorA, titleB, authorB);
+        if (dismissalRepository.findByPairKey(key.pairKey()).isPresent()) {
+            return;
+        }
+        DuplicateTitleDismissal row = new DuplicateTitleDismissal();
+        row.setPairKey(key.pairKey());
+        row.setTitleA(key.titleA());
+        row.setAuthorA(key.authorA());
+        row.setTitleB(key.titleB());
+        row.setAuthorB(key.authorB());
+        dismissalRepository.save(row);
+        log.info("Marked title pair as not a duplicate: '{}' by '{}' / '{}' by '{}'",
+                key.titleA(), key.authorA(), key.titleB(), key.authorB());
+    }
+
+    /**
+     * Forget a not-duplicate mark. Missing marks are ignored so Undo can be
+     * repeated safely.
+     */
+    @Transactional
+    public void restore(String titleA, String authorA, String titleB, String authorB) {
+        DuplicateTitlePairKey key = DuplicateTitlePairKey.fromRaw(titleA, authorA, titleB, authorB);
+        dismissalRepository.findByPairKey(key.pairKey()).ifPresent(row -> {
+            dismissalRepository.delete(row);
+            log.info("Restored title pair to the duplicate scan: '{}' by '{}' / '{}' by '{}'",
+                    key.titleA(), key.authorA(), key.titleB(), key.authorB());
+        });
+    }
+
+    private List<DuplicateTitlePairDto> excludeDismissed(List<DuplicateTitlePairDto> pairs) {
+        List<DuplicateTitleDismissal> dismissed = dismissalRepository.findAll();
+        if (dismissed.isEmpty() || pairs.isEmpty()) {
+            return pairs;
+        }
+        Set<String> keys = new HashSet<>();
+        for (DuplicateTitleDismissal row : dismissed) {
+            if (row.getPairKey() != null && !row.getPairKey().isBlank()) {
+                keys.add(row.getPairKey());
+            }
+        }
+        List<DuplicateTitlePairDto> kept = new ArrayList<>();
+        for (DuplicateTitlePairDto pair : pairs) {
+            if (!keys.contains(dismissalKey(pair))) {
+                kept.add(pair);
+            }
+        }
+        return kept;
+    }
+
+    private static String dismissalKey(DuplicateTitlePairDto pair) {
+        try {
+            return DuplicateTitlePairKey.fromRaw(
+                    pair.getBookATitle(),
+                    pair.getBookAAuthorName(),
+                    pair.getBookBTitle(),
+                    pair.getBookBAuthorName()).pairKey();
+        } catch (LibraryException ex) {
+            return "";
+        }
     }
 
     /**

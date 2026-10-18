@@ -59,4 +59,40 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id FROM Author a WHERE a.id > :lastId ORDER BY a.id ASC")
     List<Long> findAuthorIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 
+    /**
+     * Authors for the book form. The term is already trimmed and lowercased.
+     * A canonical or alternate name that contains it scores 10, and an exact
+     * match scores 20 more. At most {@code matchLimit} rows, best score first.
+     */
+    interface AuthorNameMatchProjection {
+        Long getId();
+        String getName();
+    }
+
+    @Query(value = """
+        SELECT a.id AS "id", a.name AS "name"
+        FROM author a
+        WHERE (a.name IS NOT NULL AND strpos(lower(a.name), :term) > 0)
+           OR EXISTS (
+                SELECT 1 FROM unnest(a.alternate_names) AS alt
+                WHERE alt IS NOT NULL AND strpos(lower(alt), :term) > 0
+           )
+        ORDER BY (
+            (CASE WHEN a.name IS NOT NULL AND strpos(lower(a.name), :term) > 0 THEN 10 ELSE 0 END)
+            + (CASE WHEN a.name IS NOT NULL AND lower(a.name) = :term THEN 20 ELSE 0 END)
+            + (CASE WHEN EXISTS (
+                SELECT 1 FROM unnest(a.alternate_names) AS alt
+                WHERE alt IS NOT NULL AND strpos(lower(alt), :term) > 0
+            ) THEN 10 ELSE 0 END)
+            + (CASE WHEN EXISTS (
+                SELECT 1 FROM unnest(a.alternate_names) AS alt
+                WHERE alt IS NOT NULL AND lower(alt) = :term
+            ) THEN 20 ELSE 0 END)
+        ) DESC, a.name ASC, a.id ASC
+        LIMIT :matchLimit
+        """, nativeQuery = true)
+    List<AuthorNameMatchProjection> findNameMatches(
+            @Param("term") String term,
+            @Param("matchLimit") int matchLimit);
+
 }

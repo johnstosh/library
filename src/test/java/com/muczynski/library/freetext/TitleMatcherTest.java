@@ -306,4 +306,80 @@ class TitleMatcherTest {
         assertTrue(TitleMatcher.titleMatches("War and Peace (2nd Edition)", "War and Peace"));
         assertTrue(TitleMatcher.titleMatches("The Republic (Penguin Classics)", "The Republic"));
     }
+
+    // --- Subtitles: the main title is taken before the colon is normalized away ---
+
+    @Test
+    void titleMatches_shortCatalogTitleMatchesBookWithLongSubtitle() {
+        assertTrue(TitleMatcher.titleMatches("Philosophy of religion",
+                "Philosophy of Religion: The Impact of Modern Knowledge on Religion"));
+        assertTrue(TitleMatcher.titleMatches("Henry Edward Manning : his life and labours",
+                "Henry Edward Manning: His Life and Labours"));
+        assertTrue(TitleMatcher.titleMatches("Rediscover Jesus",
+                "Rediscover Jesus: An Invitation"));
+    }
+
+    @Test
+    void titleMatches_differentSubtitlesOnSameMainTitleDoNotMatch() {
+        assertFalse(TitleMatcher.titleMatches("Jesus of Nazareth: The Infancy Narratives",
+                "Jesus of Nazareth: From the Baptism in the Jordan to the Transfiguration"));
+        assertFalse(TitleMatcher.titleMatches("Jesus of Nazareth: Holy Week",
+                "Jesus of Nazareth: The Infancy Narratives"));
+    }
+
+    @Test
+    void titleMatches_dropsCatalogStatementOfResponsibility() {
+        assertTrue(TitleMatcher.titleMatches("The seven virtues / by Fulton J. Sheen.", "The Seven Virtues"));
+    }
+
+    @Test
+    void titleMatches_ampersandEqualsAnd() {
+        assertTrue(TitleMatcher.titleMatches(
+                "Rediscover Catholicism: A Spiritual Guide to Living with Passion and Purpose",
+                "Rediscover Catholicism: A Spiritual Guide to Living with Passion & Purpose"));
+    }
+
+    @Test
+    void titleMatches_ignoresAccents() {
+        assertTrue(TitleMatcher.titleMatches("Thérèse Neumann", "Therese Neumann"));
+    }
+
+    @Test
+    void titleMatches_sharedStopWordsDoNotMakeDifferentBooksMatch() {
+        // Word overlap on the main titles alone would pass this pair
+        assertFalse(TitleMatcher.titleMatches("paradise of the desert fathers",
+                "The Sayings of the Desert Fathers: The Alphabetical Collection"));
+    }
+
+    @Test
+    void titleMatches_unrelatedCatalogRecordDoesNotMatch() {
+        assertFalse(TitleMatcher.titleMatches("William Bingham's Maine lands, 1790-1820", "The Spear"));
+        assertFalse(TitleMatcher.titleMatches("The Seven Storey Mountain", "The Seven Virtues"));
+    }
+
+    // --- Authors in catalog "Last, First, dates" form ---
+
+    @Test
+    void authorMatches_catalogFormWithFullerNameAndDates() {
+        assertTrue(TitleMatcher.authorMatches("Sheen, Fulton J. (Fulton John), 1895-1979", "Fulton J. Sheen"));
+        assertTrue(TitleMatcher.authorMatches("Scott, Martin J. (Martin Jerome), 1865-1964", "Martin J. Scott"));
+        assertTrue(TitleMatcher.authorMatches("Leslie, Shane, 1885-1971", "Shane Leslie"));
+    }
+
+    @Test
+    void authorMatches_ignoresAccents() {
+        assertTrue(TitleMatcher.authorMatches("Mauriac, François, 1885-1970", "Francois Mauriac"));
+    }
+
+    @Test
+    void authorMatches_differentPeopleDoNotMatch() {
+        assertFalse(TitleMatcher.authorMatches("Sheed, F. J. (Frank J.), 1897-1981", "Fulton J. Sheen"));
+        assertFalse(TitleMatcher.authorMatches("1943", "Fulton J. Sheen"));
+    }
+
+    @Test
+    void mainTitle_takesTextBeforeColonAndDropsResponsibility() {
+        assertEquals("Seven pillars of peace", TitleMatcher.mainTitle("Seven pillars of peace / Fulton J. Sheen"));
+        assertEquals("God and Myself", TitleMatcher.mainTitle("God and Myself: An Inquiry into the True Religion"));
+    }
 }

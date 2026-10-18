@@ -1,7 +1,8 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox'
-import { useAuthors, useCreateAuthor } from '@/api/authors'
+import { useAuthor, useCreateAuthor } from '@/api/authors'
+import { AUTHOR_SEARCH_MIN_CHARS, useAuthorNameSearch } from '@/api/authorMatches'
 
 interface AuthorComboboxProps {
   value: string // authorId
@@ -17,70 +18,91 @@ export function AuthorCombobox({
   'data-test': dataTest,
 }: AuthorComboboxProps) {
   const [query, setQuery] = useState('')
-  const { data: authors, isLoading: authorsLoading } = useAuthors()
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null)
+  const search = useAuthorNameSearch(query)
+  const selectedId = Number(value)
+  const { data: selectedAuthor, isLoading: selectedLoading } = useAuthor(
+    Number.isInteger(selectedId) && selectedId > 0 ? selectedId : 0,
+  )
   const createAuthor = useCreateAuthor()
 
-  // Filter authors based on query
-  const filteredOptions = useMemo((): ComboboxOption[] => {
-    if (!authors) return []
+  const selectedName = picked?.id === value
+    ? picked.name
+    : selectedAuthor?.name
 
-    const normalizedQuery = query.toLowerCase().trim()
+  const trimmed = query.trim()
+  const searching = trimmed.length >= AUTHOR_SEARCH_MIN_CHARS
+  const normalizedQuery = trimmed.toLowerCase()
 
-    // Filter authors by partial name match
-    const filtered: ComboboxOption[] = authors
-      .filter((author) => author.name.toLowerCase().includes(normalizedQuery))
-      .map((author) => ({
-        value: author.id.toString(),
-        label: author.name,
-      }))
+  const options = useMemo((): ComboboxOption[] => {
+    const matches: ComboboxOption[] = search.data.map((author) => ({
+      value: author.id.toString(),
+      label: author.name,
+    }))
 
-    // Check if query exactly matches any author (case-insensitive)
-    const exactMatch = authors.some(
-      (author) => author.name.toLowerCase() === normalizedQuery
+    if (!searching && value && selectedName) {
+      matches.unshift({ value, label: selectedName })
+    }
+
+    const exactMatch = search.data.some(
+      (author) => author.name.toLowerCase() === normalizedQuery,
     )
-
-    // Add "Create" option if query doesn't exactly match and has content
-    if (normalizedQuery && !exactMatch) {
-      filtered.push({
-        value: `__create__${query.trim()}`,
-        label: query.trim(),
+    if (searching && !search.error && !exactMatch) {
+      matches.push({
+        value: `__create__${trimmed}`,
+        label: trimmed,
         isCreateOption: true,
       })
     }
 
-    return filtered
-  }, [authors, query])
+    return matches
+  }, [search.data, search.error, searching, normalizedQuery, trimmed, value, selectedName])
 
   const handleChange = async (selectedValue: string | null) => {
     if (!selectedValue) return
 
-    // Check if this is a create option
     if (selectedValue.startsWith('__create__')) {
       const newAuthorName = selectedValue.replace('__create__', '')
       try {
         const newAuthor = await createAuthor.mutateAsync({ name: newAuthorName })
+        setPicked({ id: newAuthor.id.toString(), name: newAuthor.name })
         onChange(newAuthor.id.toString())
         setQuery('')
       } catch (error) {
         console.error('Failed to create author:', error)
       }
-    } else {
-      onChange(selectedValue)
-      setQuery('')
+      return
     }
+
+    const match = search.data.find((author) => author.id.toString() === selectedValue)
+    if (match) {
+      setPicked({ id: match.id.toString(), name: match.name })
+    }
+    onChange(selectedValue)
+    setQuery('')
   }
+
+  const helpText = search.error
+    ? undefined
+    : searching && !search.isFetching
+      ? `Showing ${search.data.length} authors`
+      : 'Type at least 3 characters'
 
   return (
     <Combobox
       label="Author"
-      options={filteredOptions}
+      options={options}
       value={value}
       onChange={handleChange}
       query={query}
       onQueryChange={setQuery}
       placeholder="Search or create author..."
       required={required}
-      isLoading={authorsLoading || createAuthor.isPending}
+      isLoading={search.isFetching || selectedLoading || createAuthor.isPending}
+      displayLabel={selectedName}
+      error={search.error || undefined}
+      helpText={helpText}
+      disabled={createAuthor.isPending}
       data-test={dataTest}
     />
   )

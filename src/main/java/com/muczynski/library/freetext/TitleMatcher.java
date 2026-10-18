@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.freetext;
 
+import java.text.Normalizer;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -58,8 +59,10 @@ public final class TitleMatcher {
         }
 
         // Remove punctuation, convert to lowercase, expand Fr./St., split into words
-        String[] words = expandAbbreviations(title.toLowerCase()
-                .replaceAll("[^a-z0-9\\s]", ""))
+        String[] words = expandAbbreviations(stripAccents(title).toLowerCase()
+                .replace("&", " ")
+                .replaceAll("[^a-z0-9\\s]", "")
+                .trim())
                 .split("\\s+");
 
         // Keep only significant words (not in stop words list and not pure numbers)
@@ -132,31 +135,44 @@ public final class TitleMatcher {
 
         String normalizedCandidate = normalizeForComparison(candidate);
         String normalizedTarget = normalizeForComparison(target);
+        if (normalizedCandidate.isEmpty() || normalizedTarget.isEmpty()) {
+            return false;
+        }
 
         // Exact match after normalization
         if (normalizedCandidate.equals(normalizedTarget)) {
             return true;
         }
 
-        // Main title match (before colon)
-        String candidateMain = getMainTitle(normalizedCandidate);
-        String targetMain = getMainTitle(normalizedTarget);
+        // Split on the subtitle separator of the ORIGINAL text. Normalization removes
+        // colons, so the main title has to be taken before normalizing.
+        String candidateMain = normalizeForComparison(mainTitle(candidate));
+        String targetMain = normalizeForComparison(mainTitle(target));
+        String candidateSub = normalizeForComparison(subtitle(candidate));
+        String targetSub = normalizeForComparison(subtitle(target));
 
-        if (candidateMain.equals(targetMain)) {
+        // Two different subtitles on the same main title are usually different books,
+        // e.g. "Jesus of Nazareth: The Infancy Narratives" and
+        // "Jesus of Nazareth: From the Baptism in the Jordan to the Transfiguration".
+        if (!candidateSub.isEmpty() && !targetSub.isEmpty()
+                && !subtitlesCompatible(candidateSub, targetSub)) {
+            return false;
+        }
+
+        // Main title match when at most one side has a subtitle, or the subtitles agree
+        if (!candidateMain.isEmpty() && candidateMain.equals(targetMain)) {
             return true;
         }
 
         // Contains match for longer titles (to handle slight variations)
-        if (candidateMain.length() > 15 && targetMain.length() > 15) {
-            if (candidateMain.contains(targetMain) || targetMain.contains(candidateMain)) {
+        if (normalizedCandidate.length() > 15 && normalizedTarget.length() > 15) {
+            if (normalizedCandidate.contains(normalizedTarget) || normalizedTarget.contains(normalizedCandidate)) {
                 return true;
             }
-            // If no contains match, continue to word-based matching below
         }
 
         // Prefix match: if one title starts with the other, it's likely the same book
         // with different subtitle (e.g., "War and Peace" vs "War and Peace: Complete Edition")
-        // Note: The colon is removed during normalization, so we check startsWith instead
         if (normalizedCandidate.startsWith(normalizedTarget) || normalizedTarget.startsWith(normalizedCandidate)) {
             // Only accept if the shorter one has at least 2 significant words
             // to prevent single words from matching everything
@@ -166,26 +182,53 @@ public final class TitleMatcher {
             }
         }
 
-        // Word-based matching for shorter titles with bidirectional verification
-        return wordsMatch(candidateMain, targetMain);
+        // Word-based matching with bidirectional verification on the whole titles.
+        // Not on main titles alone: "Paradise of the Desert Fathers" would then pass
+        // for "The Sayings of the Desert Fathers: The Alphabetical Collection".
+        return wordsMatch(normalizedCandidate, normalizedTarget);
+    }
+
+    /**
+     * True when two normalized subtitles describe the same book: one contains the
+     * other, or their significant words agree in both directions.
+     */
+    private static boolean subtitlesCompatible(String a, String b) {
+        return a.contains(b) || b.contains(a) || wordsMatch(a, b);
     }
 
     /**
      * Normalize a title for comparison:
-     * - Convert to lowercase
+     * - Convert to lowercase and strip accents ("Brontë" becomes "bronte")
+     * - Drop a trailing statement of responsibility ("The seven virtues / by Fulton J. Sheen")
      * - Remove trailing parenthetical content (dates, editions, etc.)
      * - Remove leading articles (the, a, an)
-     * - Remove punctuation except spaces
+     * - Turn "&" into "and", then remove punctuation except spaces
      * - Expand Fr./St. abbreviations
      * - Collapse multiple spaces
      */
     public static String normalizeForComparison(String title) {
-        return expandAbbreviations(title.toLowerCase()
+        if (title == null) {
+            return "";
+        }
+        return expandAbbreviations(stripAccents(title).toLowerCase()
+                .replaceAll("\\s+/\\s+.*$", "")           // Remove " / by Author" catalog suffix
+                .replaceAll("[\\s.,;:]+$", "")
                 .replaceAll("\\s*\\([^)]*\\)\\s*$", "") // Remove trailing (date), (edition), etc.
                 .replaceAll("^(the|a|an)\\s+", "")
+                .replace("&", " and ")
                 .replaceAll("[^a-z0-9\\s]", "")
                 .replaceAll("\\s+", " ")
                 .trim());
+    }
+
+    /**
+     * Remove diacritical marks so "François Mauriac" compares equal to "Francois Mauriac".
+     */
+    public static String stripAccents(String text) {
+        if (text == null) {
+            return "";
+        }
+        return Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
 
     /**
@@ -208,11 +251,29 @@ public final class TitleMatcher {
     }
 
     /**
-     * Get the main title (text before colon or the full title if no colon).
+     * The main title of an un-normalized title: the text before the first colon,
+     * or the whole title when there is no colon. A " / by ..." statement of
+     * responsibility is dropped first.
      */
-    private static String getMainTitle(String title) {
-        int colonIndex = title.indexOf(':');
-        return colonIndex > 0 ? title.substring(0, colonIndex).trim() : title;
+    public static String mainTitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        String clean = title.replaceAll("\\s+/\\s+.*$", "");
+        int colonIndex = clean.indexOf(':');
+        return colonIndex > 0 ? clean.substring(0, colonIndex).trim() : clean.trim();
+    }
+
+    /**
+     * The subtitle of an un-normalized title: the text after the first colon, or "".
+     */
+    static String subtitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        String clean = title.replaceAll("\\s+/\\s+.*$", "");
+        int colonIndex = clean.indexOf(':');
+        return colonIndex > 0 ? clean.substring(colonIndex + 1).trim() : "";
     }
 
     /**
@@ -315,6 +376,9 @@ public final class TitleMatcher {
 
         String normalizedCandidate = normalizeAuthor(candidate);
         String normalizedTarget = normalizeAuthor(target);
+        if (normalizedCandidate.isEmpty() || normalizedTarget.isEmpty()) {
+            return false;
+        }
 
         // Exact match
         if (normalizedCandidate.equals(normalizedTarget)) {
@@ -365,10 +429,23 @@ public final class TitleMatcher {
     }
 
     /**
-     * Normalize an author name for comparison.
+     * Normalize an author name for comparison. Catalog forms are put into
+     * "first last" order before punctuation is removed, so
+     * "Sheen, Fulton J. (Fulton John), 1895-1979" becomes "fulton j sheen" and
+     * "Leslie, Shane, 1885-1971" becomes "shane leslie". Accents are stripped.
      */
-    private static String normalizeAuthor(String author) {
-        return author.toLowerCase()
+    static String normalizeAuthor(String author) {
+        String name = stripAccents(author)
+                .replaceAll("\\([^)]*\\)", " ")                 // (Fulton John)
+                .replaceAll("\\b(ca|fl|b|d)\\.?\\s*\\d.*$", " ")  // ca. 1217-1274
+                .replaceAll("\\d{3,4}\\??\\s*-.*$", " ")          // 1895-1979, 1865-
+                .replaceAll("\\d{3,4}.*$", " ");
+        String[] parts = name.split(",");
+        if (parts.length >= 2 && !parts[0].isBlank() && !parts[1].isBlank()
+                && parts[0].trim().split("\\s+").length <= 3) {
+            name = parts[1].trim() + " " + parts[0].trim();
+        }
+        return name.toLowerCase()
                 .replaceAll("[^a-z\\s]", "")
                 .replaceAll("\\s+", " ")
                 .trim();
@@ -379,11 +456,7 @@ public final class TitleMatcher {
      * Handles both "First Last" and "Last, First" formats.
      */
     private static String getLastName(String author) {
-        // Handle "Last, First" format
-        if (author.contains(",")) {
-            return author.split(",")[0].trim();
-        }
-        // Handle "First Last" format
+        // normalizeAuthor already put "Last, First" into "first last" order
         String[] parts = author.split("\\s+");
         return parts.length > 0 ? parts[parts.length - 1] : author;
     }

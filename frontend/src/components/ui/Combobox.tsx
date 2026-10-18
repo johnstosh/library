@@ -25,6 +25,8 @@ export interface ComboboxProps {
   placeholder?: string
   required?: boolean
   isLoading?: boolean
+  /** Shown when the selected value is not one of the current options. */
+  displayLabel?: string
   error?: string
   helpText?: string
   disabled?: boolean
@@ -41,12 +43,14 @@ export function Combobox({
   placeholder = 'Search...',
   required,
   isLoading,
+  displayLabel,
   error,
   helpText,
   disabled,
   'data-test': dataTest,
 }: ComboboxProps) {
   const selectedOption = options.find((opt) => opt.value === value)
+  const shownLabel = selectedOption?.label ?? displayLabel ?? ''
 
   return (
     <div className="w-full" data-test={dataTest}>
@@ -64,19 +68,20 @@ export function Combobox({
       <HeadlessCombobox
         value={value}
         onChange={onChange}
-        disabled={disabled || isLoading}
+        disabled={disabled}
       >
         <div className="relative">
           <ComboboxInput
+            key={`${value}:${shownLabel}`}
             className={clsx(
               'block w-full px-3 py-2 border rounded-md shadow-sm min-h-[44px] pr-10',
               'focus:ring-primary-500 focus:border-primary-500 focus:outline-none focus:ring-1',
               'disabled:bg-gray-100 disabled:cursor-not-allowed',
               error ? 'border-red-300' : 'border-gray-300'
             )}
-            displayValue={() => selectedOption?.label ?? ''}
+            displayValue={() => shownLabel}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={isLoading ? 'Loading...' : placeholder}
+            placeholder={isLoading && !shownLabel ? 'Loading...' : placeholder}
             data-test={dataTest ? `${dataTest}-input` : undefined}
           />
           <ComboboxButton className="absolute inset-y-0 right-0 flex items-center pr-3">

@@ -20,10 +20,13 @@ import {
   useRecalcIllegalGenres,
   useCleanupIllegalGenres,
   useFindDuplicateTitles,
+  useDismissDuplicateTitlePair,
+  useRestoreDuplicateTitlePair,
   type BookAvailabilityStatsDto,
   type PhotoZipPartDto,
   type IllegalGenresMaintenanceDto,
   type DuplicateTitlesResultDto,
+  type DuplicateTitlePairDto,
 } from '@/api/data-management'
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
@@ -84,9 +87,12 @@ export function DataManagementPage() {
   const [isRecalcing, setIsRecalcing] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
 
-  // Duplicate titles (Issue #351)
+  // Duplicate titles (Issue #351). Marks stay on the row until the next Find.
   const [duplicateTitlesResult, setDuplicateTitlesResult] = useState<DuplicateTitlesResultDto | null>(null)
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
+  const [markedDuplicatePairIds, setMarkedDuplicatePairIds] = useState<Set<string>>(new Set())
+  const [pendingDuplicatePairId, setPendingDuplicatePairId] = useState<string | null>(null)
+  const [duplicateMarkError, setDuplicateMarkError] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const zipFileInputRef = useRef<HTMLInputElement>(null)
@@ -109,6 +115,8 @@ export function DataManagementPage() {
   const recalcIllegalGenres = useRecalcIllegalGenres()
   const cleanupIllegalGenres = useCleanupIllegalGenres()
   const findDuplicateTitles = useFindDuplicateTitles()
+  const dismissDuplicateTitlePair = useDismissDuplicateTitlePair()
+  const restoreDuplicateTitlePair = useRestoreDuplicateTitlePair()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -270,6 +278,8 @@ export function DataManagementPage() {
     try {
       const result = await findDuplicateTitles.mutateAsync()
       setDuplicateTitlesResult(result)
+      setMarkedDuplicatePairIds(new Set())
+      setDuplicateMarkError('')
       if (result.error) {
         setErrorMessage(result.error)
       }
@@ -286,6 +296,40 @@ export function DataManagementPage() {
       })
     } finally {
       setIsFindingDuplicates(false)
+    }
+  }
+
+  const duplicatePairRowId = (pair: DuplicateTitlePairDto) => `${pair.bookAId}-${pair.bookBId}`
+
+  const handleToggleNotDuplicate = async (pair: DuplicateTitlePairDto) => {
+    const rowId = duplicatePairRowId(pair)
+    const marked = markedDuplicatePairIds.has(rowId)
+    setPendingDuplicatePairId(rowId)
+    setDuplicateMarkError('')
+    const body = {
+      titleA: pair.bookATitle ?? '',
+      authorA: pair.bookAAuthorName ?? '',
+      titleB: pair.bookBTitle ?? '',
+      authorB: pair.bookBAuthorName ?? '',
+    }
+    try {
+      if (marked) {
+        await restoreDuplicateTitlePair.mutateAsync(body)
+        setMarkedDuplicatePairIds((prev) => {
+          const next = new Set(prev)
+          next.delete(rowId)
+          return next
+        })
+      } else {
+        await dismissDuplicateTitlePair.mutateAsync(body)
+        setMarkedDuplicatePairIds((prev) => new Set(prev).add(rowId))
+      }
+    } catch (error) {
+      console.error('Failed to update not-duplicate mark:', error)
+      const msg = error instanceof Error ? error.message : 'Could not update this pair'
+      setDuplicateMarkError(msg)
+    } finally {
+      setPendingDuplicatePairId(null)
     }
   }
 
@@ -751,7 +795,9 @@ export function DataManagementPage() {
                 Find near-duplicate titles and alternate titles using keyword overlap and
                 Jaro–Winkler closeness. Copy suffixes like &quot;, c. 2&quot; are collapsed so
                 only one copy is considered. Withdrawn books are left out. Shows the top 100
-                closest pairs. Does not change data.
+                closest pairs. Mark a pair Not a duplicate to hide those titles for that
+                author, including every extra copy. The row stays until the next Find.
+                Undo is available until then.
               </p>
             </div>
           </div>
@@ -782,6 +828,11 @@ export function DataManagementPage() {
           {duplicateTitlesResult?.error && (
             <ErrorMessage message={duplicateTitlesResult.error} />
           )}
+          {duplicateMarkError && (
+            <div className="mb-3">
+              <ErrorMessage message={duplicateMarkError} data-test="duplicate-titles-mark-error" />
+            </div>
+          )}
 
           {duplicateTitlesResult && !duplicateTitlesResult.error && (
             <div className="overflow-x-auto" data-test="duplicate-titles-results">
@@ -791,6 +842,9 @@ export function DataManagementPage() {
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-3 py-2 text-left w-44">
+                        <span className="sr-only">Mark</span>
+                      </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Book A
                       </th>
@@ -800,8 +854,29 @@ export function DataManagementPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {duplicateTitlesResult.pairs.map((pair) => (
-                      <tr key={`${pair.bookAId}-${pair.bookBId}`}>
+                    {duplicateTitlesResult.pairs.map((pair) => {
+                      const rowId = duplicatePairRowId(pair)
+                      const marked = markedDuplicatePairIds.has(rowId)
+                      return (
+                        <tr
+                          key={rowId}
+                          data-test={`dup-pair-${rowId}`}
+                          className={marked ? 'bg-gray-100' : undefined}
+                        >
+                        <td className="px-3 py-3 align-top">
+                          <Button
+                            variant={marked ? 'secondary' : 'outline'}
+                            size="sm"
+                            className="whitespace-nowrap"
+                            aria-pressed={marked}
+                            onClick={() => handleToggleNotDuplicate(pair)}
+                            isLoading={pendingDuplicatePairId === rowId}
+                            disabled={isFindingDuplicates || (pendingDuplicatePairId !== null && pendingDuplicatePairId !== rowId)}
+                            data-test={`dup-not-duplicate-${rowId}`}
+                          >
+                            {marked ? 'Undo' : 'Not a duplicate'}
+                          </Button>
+                        </td>
                         <td className="px-4 py-3 align-top">
                           <Link
                             to={`/books/${pair.bookAId}`}
@@ -847,7 +922,8 @@ export function DataManagementPage() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               )}

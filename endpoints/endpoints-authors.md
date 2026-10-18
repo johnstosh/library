@@ -1,5 +1,20 @@
 # Author Endpoints
 
+## GET /api/authors/name-matches
+Authors for the book form. The same rules as checkout book search: a name shorter than 3 characters returns an empty list, and at most 10 authors come back. A canonical or alternate name that contains the text matches. An exact name ranks above a partial one.
+
+**Authentication:** Public (`permitAll()`)
+
+**Query Parameters:**
+- `name` — optional. Trimmed and matched case-insensitively. Fewer than 3 characters yields `[]`.
+
+**Response:** Array of `{ id, name }`
+
+**Use Case:**
+- The new-book and edit-book author field. It does not load every author.
+
+---
+
 ## GET /api/authors/filtered-summaries
 Returns author summaries (id, name, and lastModified) after every Authors page filter. The browser sorts by last name and loads full rows for the first 100, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request is at most 100 ids. A larger body is rejected with 400. The older single-chip endpoints below remain.
 

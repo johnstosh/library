@@ -182,6 +182,7 @@ Form Submit → handleSubmit() → Validation → Create/Update Mutation
 - JSON Import/Export functionality is on separate **Data Management** page
 - Photo Export functionality is on separate **Data Management** page
 - Duplicate catalog entries (`POST /api/maintenance/duplicate-titles/find`) compares titles and alternate titles. WITHDRAWN books are excluded from the scan and from pair results. Other statuses, including a null status, are included.
+- A librarian can mark a result row **Not a duplicate** (`POST /api/maintenance/duplicate-titles/dismissals`). The mark stores the folded primary titles and normalized authors, not book ids, so every extra copy of that pair stays hidden on later scans. **Undo** (`POST /api/maintenance/duplicate-titles/dismissals/undo`) removes the mark. The row stays in the current table until the next Find. Marks are not part of JSON import/export.
 - See `frontend/src/pages/branches/DataManagementPage.tsx`
 
 ### Test Data Generation

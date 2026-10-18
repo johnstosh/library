@@ -4,28 +4,41 @@
 package com.muczynski.library.service.duplicate;
 
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.DuplicateTitleDismissal;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
+import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.repository.DuplicateTitleDismissalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DuplicateTitleServiceTest {
 
     private BookRepository bookRepository;
+    private DuplicateTitleDismissalRepository dismissalRepository;
     private DuplicateTitleService service;
 
     @BeforeEach
     void setUp() {
         bookRepository = mock(BookRepository.class);
-        service = new DuplicateTitleService(bookRepository);
+        dismissalRepository = mock(DuplicateTitleDismissalRepository.class);
+        when(dismissalRepository.findAll()).thenReturn(List.of());
+        when(dismissalRepository.findByPairKey(anyString())).thenReturn(Optional.empty());
+        service = new DuplicateTitleService(bookRepository, dismissalRepository);
     }
 
     @Test
@@ -243,10 +256,117 @@ class DuplicateTitleServiceTest {
     }
 
     @Test
+    void dismissedCopyIsHiddenAndADifferentAuthorStays() {
+        DuplicateTitlePairKey key = DuplicateTitlePairKey.fromRaw(
+                "The Confessions of Augustine, c. 2", "Augustine",
+                "Confession of Augustine", "Augustine");
+        when(dismissalRepository.findAll()).thenReturn(List.of(stored(key)));
+
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                proj(50L, "The Confessions of Augustine, c. 3", null, "Augustine", BookStatus.ACTIVE),
+                proj(60L, "Confession of Augustine", null, "Augustine", BookStatus.LOST),
+                proj(70L, "The Confessions of Augustine", null, "Jean-Jacques Rousseau", BookStatus.ACTIVE),
+                proj(80L, "Confession of Augustine", null, "Jean-Jacques Rousseau", BookStatus.ACTIVE)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getPairs().size());
+        DuplicateTitlePairDto pair = result.getPairs().get(0);
+        assertEquals(Set.of(70L, 80L), Set.of(pair.getBookAId(), pair.getBookBId()));
+    }
+
+    @Test
+    void dismissedPairDoesNotConsumeTheResultCap() {
+        List<BookRepository.DuplicateTitleProjection> books = new ArrayList<>();
+        for (int i = 1; i <= 120; i++) {
+            books.add(proj((long) i, "Novella Number " + i, null, "Author", BookStatus.ACTIVE));
+            books.add(proj(1000L + i, "Novella Numbr " + i, null, "Author", BookStatus.ACTIVE));
+        }
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto full = service.findDuplicates();
+        assertEquals(DuplicateTitleService.MAX_RESULTS, full.getPairs().size());
+        DuplicateTitlePairDto hidden = full.getPairs().get(0);
+        when(dismissalRepository.findAll()).thenReturn(List.of(stored(DuplicateTitlePairKey.fromRaw(
+                hidden.getBookATitle(), hidden.getBookAAuthorName(),
+                hidden.getBookBTitle(), hidden.getBookBAuthorName()))));
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(DuplicateTitleService.MAX_RESULTS, result.getPairs().size(),
+                "a hidden pair must be dropped before the top-100 cap so another pair fills the slot");
+        assertTrue(result.getPairs().stream().noneMatch(pair ->
+                Set.of(pair.getBookAId(), pair.getBookBId())
+                        .equals(Set.of(hidden.getBookAId(), hidden.getBookBId()))));
+    }
+
+    @Test
+    void dismissStoresFoldedTitlesInCanonicalOrder() {
+        service.dismiss("Confession of Augustine", "Augustine",
+                "The Confessions of Augustine, c. 2", "Augustine");
+
+        ArgumentCaptor<DuplicateTitleDismissal> saved = ArgumentCaptor.forClass(DuplicateTitleDismissal.class);
+        verify(dismissalRepository).save(saved.capture());
+        DuplicateTitleDismissal row = saved.getValue();
+        assertEquals("confession of augustine", row.getTitleA());
+        assertEquals("augustine", row.getAuthorA());
+        assertEquals("the confessions of augustine", row.getTitleB());
+        assertEquals("augustine", row.getAuthorB());
+        assertEquals(DuplicateTitlePairKey.fromRaw(
+                "The Confessions of Augustine", "Augustine",
+                "Confession of Augustine", "Augustine").pairKey(), row.getPairKey());
+    }
+
+    @Test
+    void dismissOfAnExistingMarkDoesNotSaveAgain() {
+        DuplicateTitlePairKey key = DuplicateTitlePairKey.fromRaw(
+                "Confession of Augustine", "Augustine",
+                "The Confessions of Augustine", "Augustine");
+        when(dismissalRepository.findByPairKey(key.pairKey())).thenReturn(Optional.of(stored(key)));
+
+        service.dismiss("The Confessions of Augustine, c. 4", "Augustine",
+                "Confession of Augustine", "Augustine");
+
+        verify(dismissalRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void restoreDeletesTheStoredMark() {
+        DuplicateTitlePairKey key = DuplicateTitlePairKey.fromRaw(
+                "Confession of Augustine", "Augustine",
+                "The Confessions of Augustine, vol. 2", "Augustine");
+        DuplicateTitleDismissal row = stored(key);
+        when(dismissalRepository.findByPairKey(key.pairKey())).thenReturn(Optional.of(row));
+
+        service.restore("The Confessions of Augustine", "Augustine", "Confession of Augustine", "Augustine");
+
+        verify(dismissalRepository).delete(row);
+    }
+
+    @Test
+    void blankTitleCannotBeMarked() {
+        LibraryException ex = assertThrows(LibraryException.class,
+                () -> service.dismiss("   ", "Augustine", "Confession", "Augustine"));
+        assertEquals("Both books need a title before this pair can be marked.", ex.getMessage());
+    }
+
+    @Test
     void levenshteinSimilarityIdenticalIsOne() {
         assertEquals(1.0, DuplicateTitleService.levenshteinSimilarity("abc", "abc"));
         assertEquals(0.0, DuplicateTitleService.levenshteinSimilarity("", "abc"));
         assertTrue(DuplicateTitleService.levenshteinSimilarity("kitten", "sitting") < 1.0);
+    }
+
+    private static DuplicateTitleDismissal stored(DuplicateTitlePairKey key) {
+        DuplicateTitleDismissal row = new DuplicateTitleDismissal();
+        row.setPairKey(key.pairKey());
+        row.setTitleA(key.titleA());
+        row.setAuthorA(key.authorA());
+        row.setTitleB(key.titleB());
+        row.setAuthorB(key.authorB());
+        return row;
     }
 
     private static BookRepository.DuplicateTitleProjection proj(

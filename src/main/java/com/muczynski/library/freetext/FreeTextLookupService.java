@@ -84,17 +84,15 @@ public class FreeTextLookupService {
         List<String> authorNames = AuthorNames.lookupNames(book.getAuthor());
         String primaryTitle = book.getTitle();
 
-        // Check cache for every title and every author name. A cached miss on
-        // one form does not skip a form that has not been cached.
+        // Check cache for every title and every author name. Only cached URLs count.
+        // A cached "not found" entry is a snapshot from an old run; it must never stop
+        // a librarian who runs the tool now from searching the providers again.
         List<String> allCached = new ArrayList<>();
-        boolean sawUncached = false;
         for (String t : titles) {
             for (String lookupAuthor : authorNames) {
                 String cached = FreeTextLookupCache.lookup(lookupAuthor, t);
-                if (cached != null) {
+                if (cached != null && !cached.isBlank()) {
                     allCached.add(cached);
-                } else {
-                    sawUncached = true;
                 }
             }
         }
@@ -112,18 +110,6 @@ public class FreeTextLookupService {
                     .providersSearched(List.of("Cache"))
                     .build();
         }
-        if (!sawUncached && allCached.contains("")) {
-            log.info("Book {} was previously searched and not found (cached)", bookId);
-            return FreeTextBulkLookupResultDto.builder()
-                    .bookId(bookId)
-                    .bookTitle(primaryTitle)
-                    .authorName(authorName)
-                    .success(false)
-                    .errorMessage("Previously searched - not found (cached)")
-                    .providerName("Cache")
-                    .providersSearched(List.of("Cache"))
-                    .build();
-        }
 
         List<String> searchedProviders = new ArrayList<>();
 
@@ -133,9 +119,6 @@ public class FreeTextLookupService {
 
             for (String searchTitle : titles) {
                 for (String lookupAuthor : authorNames) {
-                    if (FreeTextLookupCache.lookup(lookupAuthor, searchTitle) != null) {
-                        continue;
-                    }
                     try {
                         log.debug("Searching {} for title '{}' (primary '{}') by '{}'",
                                 provider.getProviderName(), searchTitle, primaryTitle, lookupAuthor);
