@@ -22,6 +22,12 @@ import {
   useFindDuplicateTitles,
   useDismissDuplicateTitlePair,
   useRestoreDuplicateTitlePair,
+  useMergeDuplicateTitleAuthors,
+  useUndoDuplicateTitleAuthorMerge,
+  useMergeDuplicateTitles,
+  useUndoDuplicateTitleMerge,
+  useFixDuplicateTitles,
+  useUndoDuplicateTitleFix,
   type BookAvailabilityStatsDto,
   type PhotoZipPartDto,
   type IllegalGenresMaintenanceDto,
@@ -74,6 +80,87 @@ const AVAILABILITY_COUNT_ITEMS: {
   { key: 'aclaAudio', label: 'ACLA audio', test: 'availability-count-acla-audio' },
 ]
 
+interface AppliedDuplicateAction {
+  actionId: number
+  summary: string
+}
+
+function ActionChip({
+  children,
+  pressed,
+  disabled,
+  busy,
+  onClick,
+  testId,
+}: {
+  children: string
+  pressed?: boolean
+  disabled?: boolean
+  busy?: boolean
+  onClick: () => void
+  testId: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      aria-busy={busy || undefined}
+      disabled={disabled || busy}
+      onClick={onClick}
+      data-test={testId}
+      className={
+        'inline-flex items-center border border-gray-400 px-2 py-1 text-xs font-medium text-gray-800 rounded-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed ' +
+        (pressed ? 'bg-gray-100' : 'bg-white')
+      }
+    >
+      {children}
+    </button>
+  )
+}
+
+function DuplicateBookCell({
+  bookId,
+  title,
+  alternateTitle,
+  authorName,
+  authorAlternates,
+  kinds,
+  side,
+}: {
+  bookId: number
+  title?: string
+  alternateTitle?: string
+  authorName?: string
+  authorAlternates?: string[]
+  kinds: string[]
+  side: 'a' | 'b'
+}) {
+  const alternates = (authorAlternates ?? []).filter((name) => name && name.trim())
+  return (
+    <td className="px-4 py-3 align-top break-words">
+      <Link
+        to={`/books/${bookId}`}
+        className="text-indigo-700 hover:underline font-medium"
+        data-test={`dup-book-${side}-link-${bookId}`}
+      >
+        #{bookId} {title || '(no title)'}
+      </Link>
+      {alternateTitle && (
+        <div className="text-xs text-gray-500 mt-0.5">Alt: {alternateTitle}</div>
+      )}
+      {authorName && <div className="text-xs text-gray-600 mt-0.5">{authorName}</div>}
+      {alternates.length > 0 && (
+        <div className="text-xs text-gray-500 mt-0.5">Alt names: {alternates.join('; ')}</div>
+      )}
+      {kinds.length > 0 && (
+        <div className="text-xs text-gray-500 mt-0.5" data-test={`dup-book-${side}-kind`}>
+          {kinds.join(', ')}
+        </div>
+      )}
+    </td>
+  )
+}
+
 export function DataManagementPage() {
   const [isExportingJson, setIsExportingJson] = useState(false)
   const [jsonExportProgress, setJsonExportProgress] = useState(0)
@@ -91,6 +178,8 @@ export function DataManagementPage() {
   const [duplicateTitlesResult, setDuplicateTitlesResult] = useState<DuplicateTitlesResultDto | null>(null)
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
   const [markedDuplicatePairIds, setMarkedDuplicatePairIds] = useState<Set<string>>(new Set())
+  const [appliedAuthorMerges, setAppliedAuthorMerges] = useState<Record<string, AppliedDuplicateAction>>({})
+  const [appliedTitleActions, setAppliedTitleActions] = useState<Record<string, AppliedDuplicateAction>>({})
   const [pendingDuplicatePairId, setPendingDuplicatePairId] = useState<string | null>(null)
   const [duplicateMarkError, setDuplicateMarkError] = useState('')
 
@@ -117,6 +206,12 @@ export function DataManagementPage() {
   const findDuplicateTitles = useFindDuplicateTitles()
   const dismissDuplicateTitlePair = useDismissDuplicateTitlePair()
   const restoreDuplicateTitlePair = useRestoreDuplicateTitlePair()
+  const mergeDuplicateAuthors = useMergeDuplicateTitleAuthors()
+  const undoDuplicateAuthorMerge = useUndoDuplicateTitleAuthorMerge()
+  const mergeDuplicateTitles = useMergeDuplicateTitles()
+  const undoDuplicateTitleMerge = useUndoDuplicateTitleMerge()
+  const fixDuplicateTitles = useFixDuplicateTitles()
+  const undoDuplicateTitleFix = useUndoDuplicateTitleFix()
 
   const handleExportJson = async () => {
     setIsExportingJson(true)
@@ -279,6 +374,8 @@ export function DataManagementPage() {
       const result = await findDuplicateTitles.mutateAsync()
       setDuplicateTitlesResult(result)
       setMarkedDuplicatePairIds(new Set())
+      setAppliedAuthorMerges({})
+      setAppliedTitleActions({})
       setDuplicateMarkError('')
       if (result.error) {
         setErrorMessage(result.error)
@@ -301,10 +398,16 @@ export function DataManagementPage() {
 
   const duplicatePairRowId = (pair: DuplicateTitlePairDto) => `${pair.bookAId}-${pair.bookBId}`
 
+  const duplicateActionError = (error: unknown, fallback: string) => {
+    console.error(fallback, error)
+    const msg = error instanceof Error ? error.message : fallback
+    setDuplicateMarkError(msg)
+  }
+
   const handleToggleNotDuplicate = async (pair: DuplicateTitlePairDto) => {
     const rowId = duplicatePairRowId(pair)
     const marked = markedDuplicatePairIds.has(rowId)
-    setPendingDuplicatePairId(rowId)
+    setPendingDuplicatePairId(`mark:${rowId}`)
     setDuplicateMarkError('')
     const body = {
       titleA: pair.bookATitle ?? '',
@@ -325,9 +428,72 @@ export function DataManagementPage() {
         setMarkedDuplicatePairIds((prev) => new Set(prev).add(rowId))
       }
     } catch (error) {
-      console.error('Failed to update not-duplicate mark:', error)
-      const msg = error instanceof Error ? error.message : 'Could not update this pair'
-      setDuplicateMarkError(msg)
+      duplicateActionError(error, 'Could not update this pair')
+    } finally {
+      setPendingDuplicatePairId(null)
+    }
+  }
+
+  const handleToggleAuthorMerge = async (pair: DuplicateTitlePairDto) => {
+    const rowId = duplicatePairRowId(pair)
+    const applied = appliedAuthorMerges[rowId]
+    setPendingDuplicatePairId(`authors:${rowId}`)
+    setDuplicateMarkError('')
+    try {
+      if (applied) {
+        await undoDuplicateAuthorMerge.mutateAsync({ actionId: applied.actionId })
+        setAppliedAuthorMerges((prev) => {
+          const next = { ...prev }
+          delete next[rowId]
+          return next
+        })
+      } else {
+        const result = await mergeDuplicateAuthors.mutateAsync({
+          bookAId: pair.bookAId,
+          bookBId: pair.bookBId,
+        })
+        setAppliedAuthorMerges((prev) => ({
+          ...prev,
+          [rowId]: { actionId: result.actionId, summary: result.summary },
+        }))
+      }
+    } catch (error) {
+      duplicateActionError(error, 'Could not merge these authors')
+    } finally {
+      setPendingDuplicatePairId(null)
+    }
+  }
+
+  const handleToggleTitleAction = async (pair: DuplicateTitlePairDto) => {
+    const rowId = duplicatePairRowId(pair)
+    const applied = appliedTitleActions[rowId]
+    const fixing = pair.titleAction === 'FIX_TITLES'
+    setPendingDuplicatePairId(`titles:${rowId}`)
+    setDuplicateMarkError('')
+    try {
+      if (applied) {
+        if (fixing) {
+          await undoDuplicateTitleFix.mutateAsync({ actionId: applied.actionId })
+        } else {
+          await undoDuplicateTitleMerge.mutateAsync({ actionId: applied.actionId })
+        }
+        setAppliedTitleActions((prev) => {
+          const next = { ...prev }
+          delete next[rowId]
+          return next
+        })
+      } else {
+        const request = { bookAId: pair.bookAId, bookBId: pair.bookBId }
+        const result = fixing
+          ? await fixDuplicateTitles.mutateAsync(request)
+          : await mergeDuplicateTitles.mutateAsync(request)
+        setAppliedTitleActions((prev) => ({
+          ...prev,
+          [rowId]: { actionId: result.actionId, summary: result.summary },
+        }))
+      }
+    } catch (error) {
+      duplicateActionError(error, fixing ? 'Could not fix these titles' : 'Could not merge these titles')
     } finally {
       setPendingDuplicatePairId(null)
     }
@@ -784,20 +950,22 @@ export function DataManagementPage() {
       </div>
 
 
-      {/* Duplicate catalog entries (Issue #351) */}
+      {/* Duplicate Titles (Issue #351) */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6" data-test="duplicate-titles-section">
         <div className="bg-amber-700 px-6 py-4 text-white">
           <div className="flex items-center gap-3">
             <PiCopy className="w-8 h-8" />
             <div>
-              <h2 className="text-xl font-bold">Duplicate catalog entries</h2>
+              <h2 className="text-xl font-bold">Duplicate Titles</h2>
               <p className="text-sm text-amber-100">
                 Find near-duplicate titles and alternate titles using keyword overlap and
                 Jaro–Winkler closeness. Copy suffixes like &quot;, c. 2&quot; are collapsed so
                 only one copy is considered. Withdrawn books are left out. Shows the top 100
                 closest pairs. Mark a pair Not a duplicate to hide those titles for that
-                author, including every extra copy. The row stays until the next Find.
-                Undo is available until then.
+                author, including every extra copy. Merge authors, merge titles, or fix
+                titles when both copies have call numbers. The row stays until the next Find.
+                Undo is available on the row until then. Each merge or fix is kept in the
+                action table.
               </p>
             </div>
           </div>
@@ -839,17 +1007,25 @@ export function DataManagementPage() {
               {duplicateTitlesResult.pairs.length === 0 ? (
                 <p className="text-sm text-gray-500">No near-duplicate pairs found.</p>
               ) : (
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <table
+                  className="w-full min-w-[52rem] table-fixed divide-y divide-gray-200 text-sm"
+                  data-test="duplicate-titles-table"
+                >
+                  <colgroup>
+                    <col className="w-[34%]" />
+                    <col className="w-[34%]" />
+                    <col className="w-[32%]" />
+                  </colgroup>
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left w-44">
-                        <span className="sr-only">Mark</span>
-                      </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Book A
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Book B
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -857,69 +1033,94 @@ export function DataManagementPage() {
                     {duplicateTitlesResult.pairs.map((pair) => {
                       const rowId = duplicatePairRowId(pair)
                       const marked = markedDuplicatePairIds.has(rowId)
+                      const authorApplied = appliedAuthorMerges[rowId]
+                      const titleApplied = appliedTitleActions[rowId]
+                      const fixing = pair.titleAction === 'FIX_TITLES'
+                      const actionsBusy = isFindingDuplicates || pendingDuplicatePairId !== null
+                      const titleChipLabel = fixing
+                        ? (titleApplied ? 'Undo fix titles' : 'Fix titles')
+                        : (titleApplied ? 'Undo merge titles' : 'Merge titles')
+                      const titleChipDisabled = actionsBusy
+                        || !pair.titleAction
+                        || (fixing && !pair.titleChangeNeeded && !titleApplied)
                       return (
                         <tr
                           key={rowId}
                           data-test={`dup-pair-${rowId}`}
                           className={marked ? 'bg-gray-100' : undefined}
                         >
-                        <td className="px-3 py-3 align-top">
-                          <Button
-                            variant={marked ? 'secondary' : 'outline'}
-                            size="sm"
-                            className="whitespace-nowrap"
-                            aria-pressed={marked}
-                            onClick={() => handleToggleNotDuplicate(pair)}
-                            isLoading={pendingDuplicatePairId === rowId}
-                            disabled={isFindingDuplicates || (pendingDuplicatePairId !== null && pendingDuplicatePairId !== rowId)}
-                            data-test={`dup-not-duplicate-${rowId}`}
-                          >
-                            {marked ? 'Undo' : 'Not a duplicate'}
-                          </Button>
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Link
-                            to={`/books/${pair.bookAId}`}
-                            className="text-indigo-700 hover:underline font-medium"
-                            data-test={`dup-book-a-link-${pair.bookAId}`}
-                          >
-                            #{pair.bookAId} {pair.bookATitle || '(no title)'}
-                          </Link>
-                          {pair.bookAAlternateTitle && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              Alt: {pair.bookAAlternateTitle}
-                            </div>
+                        <DuplicateBookCell
+                          bookId={pair.bookAId}
+                          title={pair.bookATitle}
+                          alternateTitle={pair.bookAAlternateTitle}
+                          authorName={pair.bookAAuthorName}
+                          authorAlternates={pair.bookAAuthorAlternateNames}
+                          kinds={pair.bookACatalogLabels ?? []}
+                          side="a"
+                        />
+                        <DuplicateBookCell
+                          bookId={pair.bookBId}
+                          title={pair.bookBTitle}
+                          alternateTitle={pair.bookBAlternateTitle}
+                          authorName={pair.bookBAuthorName}
+                          authorAlternates={pair.bookBAuthorAlternateNames}
+                          kinds={pair.bookBCatalogLabels ?? []}
+                          side="b"
+                        />
+                        <td className="px-3 py-3 align-top break-words" data-test={`dup-actions-${rowId}`}>
+                          {pair.titleDifference && (
+                            <p className="text-xs text-gray-700 mb-1" data-test={`dup-title-diff-${rowId}`}>
+                              {pair.titleDifference}
+                            </p>
                           )}
-                          {pair.bookAAuthorName && (
-                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookAAuthorName}</div>
+                          {pair.authorDifference && (
+                            <p className="text-xs text-gray-700 mb-1" data-test={`dup-author-diff-${rowId}`}>
+                              {pair.authorDifference}
+                            </p>
                           )}
-                          {pair.bookAStatus && (
-                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-a-status">
-                              Status: {pair.bookAStatus}
-                            </div>
+                          {(titleApplied?.summary || pair.titlePlan) && (
+                            <p className="text-xs text-gray-600 mb-1" data-test={`dup-title-plan-${rowId}`}>
+                              {titleApplied?.summary ?? pair.titlePlan}
+                            </p>
                           )}
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Link
-                            to={`/books/${pair.bookBId}`}
-                            className="text-indigo-700 hover:underline font-medium"
-                            data-test={`dup-book-b-link-${pair.bookBId}`}
-                          >
-                            #{pair.bookBId} {pair.bookBTitle || '(no title)'}
-                          </Link>
-                          {pair.bookBAlternateTitle && (
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              Alt: {pair.bookBAlternateTitle}
-                            </div>
+                          {(authorApplied?.summary || pair.authorPlan) && (
+                            <p className="text-xs text-gray-600 mb-2" data-test={`dup-author-plan-${rowId}`}>
+                              {authorApplied?.summary ?? pair.authorPlan}
+                            </p>
                           )}
-                          {pair.bookBAuthorName && (
-                            <div className="text-xs text-gray-600 mt-0.5">{pair.bookBAuthorName}</div>
-                          )}
-                          {pair.bookBStatus && (
-                            <div className="text-xs text-gray-500 mt-0.5" data-test="dup-book-b-status">
-                              Status: {pair.bookBStatus}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <ActionChip
+                              pressed={marked}
+                              busy={pendingDuplicatePairId === `mark:${rowId}`}
+                              disabled={actionsBusy && pendingDuplicatePairId !== `mark:${rowId}`}
+                              onClick={() => handleToggleNotDuplicate(pair)}
+                              testId={`dup-not-duplicate-${rowId}`}
+                            >
+                              {marked ? 'Undo not a duplicate' : 'Not a duplicate'}
+                            </ActionChip>
+                            {(pair.authorMergeAvailable || authorApplied) && (
+                              <ActionChip
+                                pressed={Boolean(authorApplied)}
+                                busy={pendingDuplicatePairId === `authors:${rowId}`}
+                                disabled={actionsBusy && pendingDuplicatePairId !== `authors:${rowId}`}
+                                onClick={() => handleToggleAuthorMerge(pair)}
+                                testId={`dup-merge-authors-${rowId}`}
+                              >
+                                {authorApplied ? 'Undo merge authors' : 'Merge authors'}
+                              </ActionChip>
+                            )}
+                            {pair.titleAction && (
+                              <ActionChip
+                                pressed={Boolean(titleApplied)}
+                                busy={pendingDuplicatePairId === `titles:${rowId}`}
+                                disabled={titleChipDisabled && pendingDuplicatePairId !== `titles:${rowId}`}
+                                onClick={() => handleToggleTitleAction(pair)}
+                                testId={fixing ? `dup-fix-titles-${rowId}` : `dup-merge-titles-${rowId}`}
+                              >
+                                {titleChipLabel}
+                              </ActionChip>
+                            )}
+                          </div>
                         </td>
                       </tr>
                       )

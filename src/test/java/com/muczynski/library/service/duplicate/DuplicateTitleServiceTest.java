@@ -8,8 +8,10 @@ import com.muczynski.library.domain.DuplicateTitleDismissal;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.DuplicateTitleDismissalRepository;
+import com.muczynski.library.service.BookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -20,7 +22,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,9 +41,18 @@ class DuplicateTitleServiceTest {
     void setUp() {
         bookRepository = mock(BookRepository.class);
         dismissalRepository = mock(DuplicateTitleDismissalRepository.class);
+        AuthorRepository authorRepository = mock(AuthorRepository.class);
         when(dismissalRepository.findAll()).thenReturn(List.of());
         when(dismissalRepository.findByPairKey(anyString())).thenReturn(Optional.empty());
-        service = new DuplicateTitleService(bookRepository, dismissalRepository);
+        when(bookRepository.findDuplicateTitleFreeText(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of());
+        when(authorRepository.findDuplicateTitleAuthorNames(org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of());
+        BookService bookService = mock(BookService.class);
+        lenient().when(bookService.allocateFixTitles(nullable(String.class), anyLong(), nullable(String.class), anyLong()))
+                .thenAnswer(invocation -> new BookService.FixCopyTitles(
+                        invocation.getArgument(0), invocation.getArgument(2)));
+        service = new DuplicateTitleService(bookRepository, dismissalRepository, authorRepository, bookService);
     }
 
     @Test
@@ -395,6 +409,21 @@ class DuplicateTitleServiceTest {
             @Override
             public BookStatus getStatus() {
                 return status;
+            }
+
+            @Override
+            public Long getAuthorId() {
+                return null;
+            }
+
+            @Override
+            public String getLocNumber() {
+                return null;
+            }
+
+            @Override
+            public Boolean getElectronicResource() {
+                return null;
             }
         };
     }

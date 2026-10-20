@@ -8,6 +8,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * One near-duplicate title pair from the Data Management duplicate scan (Issue #351).
  */
@@ -37,4 +40,36 @@ public class DuplicateTitlePairDto {
     /** The specific title strings (primary or alternate) that produced the max score. */
     private String matchedTitleA;
     private String matchedTitleB;
+
+    /** {@code title} or {@code alternate title} for the strings that scored highest. */
+    private String matchedFieldA;
+    private String matchedFieldB;
+
+    private Long bookAAuthorId;
+    private Long bookBAuthorId;
+    @Builder.Default
+    private List<String> bookAAuthorAlternateNames = new ArrayList<>();
+    @Builder.Default
+    private List<String> bookBAuthorAlternateNames = new ArrayList<>();
+
+    private String bookALocNumber;
+    private String bookBLocNumber;
+    private Boolean bookAElectronicResource;
+    private Boolean bookBElectronicResource;
+
+    /** Books-page filter names, such as In-library or Electronic resource. */
+    @Builder.Default
+    private List<String> bookACatalogLabels = new ArrayList<>();
+    @Builder.Default
+    private List<String> bookBCatalogLabels = new ArrayList<>();
+
+    private String titleDifference;
+    private String authorDifference;
+
+    /** {@code MERGE_TITLES} or {@code FIX_TITLES}. */
+    private String titleAction;
+    private boolean titleChangeNeeded;
+    private String titlePlan;
+    private boolean authorMergeAvailable;
+    private String authorPlan;
 }

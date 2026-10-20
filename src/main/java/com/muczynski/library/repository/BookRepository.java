@@ -367,7 +367,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
      * Lightweight projection for duplicate-title scan (Issue #351).
-     * Loads only id, title, alternateTitle, author name, and status — never @Lob fields.
+     * Call number and the electronic flag are small columns used to name the
+     * Books-page filter and to choose Fix titles versus Merge titles.
+     * Free-text URLs and essays are not loaded here.
      */
     interface DuplicateTitleProjection {
         Long getId();
@@ -375,14 +377,25 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         String getAlternateTitle();
         String getAuthorName();
         BookStatus getStatus();
+        Long getAuthorId();
+        String getLocNumber();
+        Boolean getElectronicResource();
     }
 
     /**
      * Books for duplicate-title matching, excluding WITHDRAWN.
      * A null status is included. Avoids LOBs and full entities.
      */
-    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status "
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status, "
+            + "a.id as authorId, b.locNumber as locNumber, b.electronicResource as electronicResource "
             + "FROM Book b LEFT JOIN b.author a "
             + "WHERE b.status IS NULL OR b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN")
     List<DuplicateTitleProjection> findAllForDuplicateTitleScan();
+
+    /**
+     * Free-text URLs for the Duplicate Titles rows already chosen.
+     * Loaded after the scan so the full catalog's URL text is not read up front.
+     */
+    @Query("SELECT b.id, b.freeTextUrl FROM Book b WHERE b.id IN :ids")
+    List<Object[]> findDuplicateTitleFreeText(@Param("ids") java.util.Collection<Long> ids);
 }

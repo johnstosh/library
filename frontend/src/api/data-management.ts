@@ -664,6 +664,40 @@ export interface DuplicateTitlePairDto {
   bookBStatus?: string
   matchedTitleA?: string
   matchedTitleB?: string
+  matchedFieldA?: string
+  matchedFieldB?: string
+  bookAAuthorId?: number
+  bookBAuthorId?: number
+  bookAAuthorAlternateNames?: string[]
+  bookBAuthorAlternateNames?: string[]
+  bookALocNumber?: string
+  bookBLocNumber?: string
+  bookAElectronicResource?: boolean
+  bookBElectronicResource?: boolean
+  bookACatalogLabels?: string[]
+  bookBCatalogLabels?: string[]
+  titleDifference?: string
+  authorDifference?: string
+  titleAction?: string
+  titleChangeNeeded?: boolean
+  titlePlan?: string
+  authorMergeAvailable?: boolean
+  authorPlan?: string
+}
+
+export interface DuplicateTitleActionResultDto {
+  actionId: number
+  actionKind: string
+  summary: string
+}
+
+export interface DuplicateTitlePairActionRequest {
+  bookAId: number
+  bookBId: number
+}
+
+export interface DuplicateTitleUndoRequest {
+  actionId: number
 }
 
 export interface DuplicateTitlesResultDto {
@@ -700,4 +734,52 @@ export function useRestoreDuplicateTitlePair() {
     mutationFn: (body: DuplicateTitleDismissalRequest) =>
       api.post<void>('/maintenance/duplicate-titles/dismissals/undo', body),
   })
+}
+
+function useDuplicateTitleMutation(path: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DuplicateTitlePairActionRequest) =>
+      api.post<DuplicateTitleActionResultDto>(path, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+function useDuplicateTitleUndo(path: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DuplicateTitleUndoRequest) =>
+      api.post<DuplicateTitleActionResultDto>(path, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.books.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.authors.all })
+    },
+  })
+}
+
+export function useMergeDuplicateTitleAuthors() {
+  return useDuplicateTitleMutation('/maintenance/duplicate-titles/author-merges')
+}
+
+export function useUndoDuplicateTitleAuthorMerge() {
+  return useDuplicateTitleUndo('/maintenance/duplicate-titles/author-merges/undo')
+}
+
+export function useMergeDuplicateTitles() {
+  return useDuplicateTitleMutation('/maintenance/duplicate-titles/title-merges')
+}
+
+export function useUndoDuplicateTitleMerge() {
+  return useDuplicateTitleUndo('/maintenance/duplicate-titles/title-merges/undo')
+}
+
+export function useFixDuplicateTitles() {
+  return useDuplicateTitleMutation('/maintenance/duplicate-titles/title-fixes')
+}
+
+export function useUndoDuplicateTitleFix() {
+  return useDuplicateTitleUndo('/maintenance/duplicate-titles/title-fixes/undo')
 }
