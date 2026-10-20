@@ -45,6 +45,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -436,6 +437,13 @@ public class BookService {
     }
 
     /**
+     * The two titles a Duplicate Titles fix will write after the save-title
+     * copy-number rule has skipped numbers the catalog already uses.
+     */
+    public record FixCopyTitles(String leftTitle, String rightTitle) {
+    }
+
+    /**
      * Ensure a book title is unique by appending ", c. N" suffix if needed.
      * Strips any existing ", c. N" suffix to get the base title, then finds the
      * next available copy number.
@@ -445,45 +453,92 @@ public class BookService {
      * @return A unique title, either the original or with ", c. N" appended
      */
     public String ensureUniqueTitle(String desiredTitle, Long excludeBookId) {
+        return ensureUniqueTitle(desiredTitle, excludeBookId, null, List.of());
+    }
+
+    /**
+     * Same rule as {@link #ensureUniqueTitle(String, Long)} for a Duplicate Titles
+     * fix. Both books in the pair are ignored as the current holder. Titles already
+     * reserved for the other book in this fix count as taken, so the two books do
+     * not receive the same next copy number. When {@code ", c. 2"}, {@code ", c. 3"},
+     * and {@code ", c. 4"} already exist, the next title is {@code ", c. 5"}.
+     */
+    public FixCopyTitles allocateFixTitles(String leftDesired, long leftId, String rightDesired, long rightId) {
+        List<String> reserved = new ArrayList<>();
+        String left = ensureUniqueTitle(leftDesired, leftId, rightId, reserved);
+        if (left != null && !left.isBlank()) {
+            reserved.add(left);
+        }
+        String right = ensureUniqueTitle(rightDesired, rightId, leftId, reserved);
+        return new FixCopyTitles(left, right);
+    }
+
+    private String ensureUniqueTitle(String desiredTitle, Long excludeBookId, Long alsoExcludeBookId,
+                                      Collection<String> reservedTitles) {
         if (desiredTitle == null || desiredTitle.isBlank()) {
             return desiredTitle;
         }
-
-        // Check if there's a conflict
-        boolean conflict;
-        if (excludeBookId != null) {
-            conflict = bookRepository.existsByTitleAndIdNot(desiredTitle, excludeBookId);
-        } else {
-            conflict = bookRepository.existsByTitle(desiredTitle);
+        List<String> reserved = new ArrayList<>();
+        if (reservedTitles != null) {
+            for (String title : reservedTitles) {
+                if (title != null && !title.isBlank()) {
+                    reserved.add(title);
+                }
+            }
         }
-
-        if (!conflict) {
-            return desiredTitle;
+        String candidate = desiredTitle;
+        for (int attempt = 0; attempt < 40; attempt++) {
+            if (!titleTaken(candidate, excludeBookId, alsoExcludeBookId, reserved)) {
+                return candidate;
+            }
+            String baseTitle = Book.stripCopySuffix(candidate);
+            if (baseTitle == null || baseTitle.isBlank()) {
+                baseTitle = candidate;
+            }
+            candidate = baseTitle + ", c. " + (maxCopyNumber(baseTitle, reserved) + 1);
         }
-
-        // Strip any existing ", c. N" suffix to get the base title
         String baseTitle = Book.stripCopySuffix(desiredTitle);
+        throw new LibraryException("Could not find a free copy number for \"" + baseTitle + "\".");
+    }
 
-        // Find all titles matching the base or "base, c. N" pattern
-        String titlePattern = baseTitle + ", c. %";
-        List<String> existingTitles = bookRepository.findTitlesByBasePattern(baseTitle, titlePattern);
+    private boolean titleTaken(String title, Long excludeBookId, Long alsoExcludeBookId, List<String> reserved) {
+        for (String reservedTitle : reserved) {
+            if (title.equals(reservedTitle)) {
+                return true;
+            }
+        }
+        if (!bookRepository.existsByTitle(title)) {
+            return false;
+        }
+        if (excludeBookId != null && !bookRepository.existsByTitleAndIdNot(title, excludeBookId)) {
+            return false;
+        }
+        if (alsoExcludeBookId != null && !bookRepository.existsByTitleAndIdNot(title, alsoExcludeBookId)) {
+            return false;
+        }
+        return true;
+    }
 
-        // Parse copy numbers from existing titles
+    private int maxCopyNumber(String baseTitle, List<String> reserved) {
+        List<String> existingTitles = new ArrayList<>(
+                bookRepository.findTitlesByBasePattern(baseTitle, baseTitle + ", c. %"));
+        existingTitles.addAll(reserved);
         int maxCopyNumber = 0;
         Pattern numberedPattern = Pattern.compile(
                 "^" + Pattern.quote(baseTitle) + ",\\s*c\\.\\s*(\\d+)$");
         for (String title : existingTitles) {
+            if (title == null) {
+                continue;
+            }
             if (title.equals(baseTitle)) {
-                // The base title exists, count as copy 1
                 maxCopyNumber = Math.max(maxCopyNumber, 1);
             }
-            Matcher m = numberedPattern.matcher(title);
-            if (m.matches()) {
-                maxCopyNumber = Math.max(maxCopyNumber, Integer.parseInt(m.group(1)));
+            Matcher matcher = numberedPattern.matcher(title);
+            if (matcher.matches()) {
+                maxCopyNumber = Math.max(maxCopyNumber, Integer.parseInt(matcher.group(1)));
             }
         }
-
-        return baseTitle + ", c. " + (maxCopyNumber + 1);
+        return maxCopyNumber;
     }
 
     private Map<String, Object> extractJsonFromResponse(String response) {

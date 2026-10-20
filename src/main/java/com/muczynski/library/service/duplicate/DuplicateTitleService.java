@@ -9,18 +9,27 @@ import com.muczynski.library.domain.DuplicateTitleDismissal;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.DuplicateTitleDismissalRepository;
+import com.muczynski.library.service.BookService;
+import com.muczynski.library.service.duplicate.DuplicateTitlePlans.AuthorMergePlan;
+import com.muczynski.library.service.duplicate.DuplicateTitlePlans.AuthorSide;
+import com.muczynski.library.service.duplicate.DuplicateTitlePlans.TitlePlan;
+import com.muczynski.library.service.duplicate.DuplicateTitlePlans.TitleSide;
 import com.muczynski.library.service.duplicate.TitleNormalizer.NormalizedTitle;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -88,6 +97,8 @@ public class DuplicateTitleService {
 
     private final BookRepository bookRepository;
     private final DuplicateTitleDismissalRepository dismissalRepository;
+    private final AuthorRepository authorRepository;
+    private final BookService bookService;
 
     @Transactional(readOnly = true)
     public DuplicateTitlesResultDto findDuplicates() {
@@ -107,6 +118,7 @@ public class DuplicateTitleService {
         if (pairs.size() > MAX_RESULTS) {
             pairs = new ArrayList<>(pairs.subList(0, MAX_RESULTS));
         }
+        enrich(pairs);
 
         // Neutral count only — no score/threshold language for the UI.
         String message = pairs.isEmpty()
@@ -268,6 +280,18 @@ public class DuplicateTitleService {
                                 .bookBStatus(right.statusName())
                                 .matchedTitleA(best.matchedA)
                                 .matchedTitleB(best.matchedB)
+                                .matchedFieldA(best.fieldA)
+                                .matchedFieldB(best.fieldB)
+                                .bookAAuthorId(left.authorId)
+                                .bookBAuthorId(right.authorId)
+                                .bookALocNumber(left.locNumber)
+                                .bookBLocNumber(right.locNumber)
+                                .bookAElectronicResource(left.electronicResource)
+                                .bookBElectronicResource(right.electronicResource)
+                                .bookACatalogLabels(DuplicateCatalogLabels.of(
+                                        left.status, left.locNumber, left.electronicResource))
+                                .bookBCatalogLabels(DuplicateCatalogLabels.of(
+                                        right.status, right.locNumber, right.electronicResource))
                                 .build());
                     }
                 }
@@ -283,11 +307,11 @@ public class DuplicateTitleService {
         if (bothAuthorsPresent) {
             double authorJw = JaroWinklerSimilarity.similarity(authorA, authorB);
             if (authorJw < AUTHOR_SIMILARITY_THRESHOLD) {
-                return new BestMatch(0.0, 0.0, null, null);
+                return new BestMatch(0.0, 0.0, null, null, null, null);
             }
         }
 
-        BestMatch best = new BestMatch(0.0, 0.0, null, null);
+        BestMatch best = new BestMatch(0.0, 0.0, null, null, null, null);
         for (TitleVariant va : a.variants) {
             for (TitleVariant vb : b.variants) {
                 if (va.normalized.isEmpty() || vb.normalized.isEmpty()) {
@@ -330,7 +354,8 @@ public class DuplicateTitleService {
 
                 if (blended > best.score
                         || (blended == best.score && jw > best.primaryJw)) {
-                    best = new BestMatch(blended, jw, va.originalDisplay, vb.originalDisplay);
+                    best = new BestMatch(blended, jw, va.originalDisplay, vb.originalDisplay,
+                            va.fieldLabel, vb.fieldLabel);
                 }
             }
         }
@@ -413,7 +438,8 @@ public class DuplicateTitleService {
         return Math.round(v * 1_000_000.0) / 1_000_000.0;
     }
 
-    private record BestMatch(double score, double primaryJw, String matchedA, String matchedB) {
+    private record BestMatch(double score, double primaryJw, String matchedA, String matchedB,
+                              String fieldA, String fieldB) {
     }
 
     static final class BookEntry {
@@ -421,33 +447,43 @@ public class DuplicateTitleService {
         final String title;
         final String alternateTitle;
         final String authorName;
+        final Long authorId;
+        final String locNumber;
+        final Boolean electronicResource;
         final BookStatus status;
         final List<TitleVariant> variants;
 
-        BookEntry(long id, String title, String alternateTitle, String authorName,
-                  BookStatus status, List<TitleVariant> variants) {
+        BookEntry(long id, String title, String alternateTitle, String authorName, Long authorId,
+                  String locNumber, Boolean electronicResource, BookStatus status,
+                  List<TitleVariant> variants) {
             this.id = id;
             this.title = title;
             this.alternateTitle = alternateTitle;
             this.authorName = authorName;
+            this.authorId = authorId;
+            this.locNumber = locNumber;
+            this.electronicResource = electronicResource;
             this.status = status;
             this.variants = variants;
         }
 
         static BookEntry from(BookRepository.DuplicateTitleProjection p) {
             List<TitleVariant> variants = new ArrayList<>(2);
-            addVariant(variants, p.getTitle());
-            addVariant(variants, p.getAlternateTitle());
+            addVariant(variants, p.getTitle(), "title");
+            addVariant(variants, p.getAlternateTitle(), "alternate title");
             return new BookEntry(
                     p.getId(),
                     p.getTitle(),
                     p.getAlternateTitle(),
                     p.getAuthorName(),
+                    p.getAuthorId(),
+                    p.getLocNumber(),
+                    p.getElectronicResource(),
                     p.getStatus(),
                     variants);
         }
 
-        private static void addVariant(List<TitleVariant> variants, String raw) {
+        private static void addVariant(List<TitleVariant> variants, String raw, String fieldLabel) {
             if (raw == null || raw.isBlank()) {
                 return;
             }
@@ -456,7 +492,7 @@ public class DuplicateTitleService {
                     folded.isEmpty() ? Book.stripCopySuffix(raw) : folded);
             String compare = truncated == null ? "" : truncated.toLowerCase(Locale.ROOT).trim();
             NormalizedTitle norm = TitleNormalizer.normalize(raw);
-            variants.add(new TitleVariant(raw, compare, norm));
+            variants.add(new TitleVariant(raw, compare, norm, fieldLabel));
         }
 
         /**
@@ -487,6 +523,168 @@ public class DuplicateTitleService {
         }
     }
 
-    record TitleVariant(String originalDisplay, String strippedForCompare, NormalizedTitle normalized) {
+    record TitleVariant(String originalDisplay, String strippedForCompare, NormalizedTitle normalized,
+                         String fieldLabel) {
+    }
+
+    private void enrich(List<DuplicateTitlePairDto> pairs) {
+        if (pairs.isEmpty()) {
+            return;
+        }
+        Set<Long> bookIds = new LinkedHashSet<>();
+        Set<Long> authorIds = new LinkedHashSet<>();
+        for (DuplicateTitlePairDto pair : pairs) {
+            if (pair.getBookAId() != null) {
+                bookIds.add(pair.getBookAId());
+            }
+            if (pair.getBookBId() != null) {
+                bookIds.add(pair.getBookBId());
+            }
+            if (pair.getBookAAuthorId() != null) {
+                authorIds.add(pair.getBookAAuthorId());
+            }
+            if (pair.getBookBAuthorId() != null) {
+                authorIds.add(pair.getBookBAuthorId());
+            }
+        }
+        Map<Long, String> urls = freeTextByBook(bookIds);
+        Map<Long, AuthorNames> names = authorNames(authorIds);
+        for (DuplicateTitlePairDto pair : pairs) {
+            AuthorNames namesA = names.get(pair.getBookAAuthorId());
+            AuthorNames namesB = names.get(pair.getBookBAuthorId());
+            if (namesA != null) {
+                pair.setBookAAuthorAlternateNames(namesA.alternates());
+                if (pair.getBookAAuthorName() == null) {
+                    pair.setBookAAuthorName(namesA.name());
+                }
+            }
+            if (namesB != null) {
+                pair.setBookBAuthorAlternateNames(namesB.alternates());
+                if (pair.getBookBAuthorName() == null) {
+                    pair.setBookBAuthorName(namesB.name());
+                }
+            }
+            pair.setTitleDifference(DuplicateTitleDifference.titles(
+                    pair.getMatchedTitleA(), pair.getMatchedTitleB(),
+                    pair.getMatchedFieldA(), pair.getMatchedFieldB(),
+                    pair.getBookAAlternateTitle(), pair.getBookBAlternateTitle()));
+            pair.setAuthorDifference(DuplicateTitleDifference.authors(
+                    pair.getBookAAuthorId(), pair.getBookAAuthorName(), pair.getBookAAuthorAlternateNames(),
+                    pair.getBookBAuthorId(), pair.getBookBAuthorName(), pair.getBookBAuthorAlternateNames()));
+            TitleSide leftSide = new TitleSide(pair.getBookAId(), pair.getBookATitle(), pair.getBookAAlternateTitle(),
+                    pair.getBookALocNumber(), Boolean.TRUE.equals(pair.getBookAElectronicResource()),
+                    urls.get(pair.getBookAId()));
+            TitleSide rightSide = new TitleSide(pair.getBookBId(), pair.getBookBTitle(), pair.getBookBAlternateTitle(),
+                    pair.getBookBLocNumber(), Boolean.TRUE.equals(pair.getBookBElectronicResource()),
+                    urls.get(pair.getBookBId()));
+            TitlePlan titlePlan = DuplicateTitlePlans.titles(leftSide, rightSide);
+            pair.setTitleAction(titlePlan.actionKind());
+            if (DuplicateTitlePlans.FIX_TITLES.equals(titlePlan.actionKind())) {
+                BookService.FixCopyTitles copies = bookService.allocateFixTitles(
+                        titlePlan.leftTitle(), titlePlan.leftId(),
+                        titlePlan.rightTitle(), titlePlan.rightId());
+                String leftAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
+                        pair.getBookAAlternateTitle(), pair.getBookATitle(), copies.leftTitle());
+                String rightAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
+                        pair.getBookBAlternateTitle(), pair.getBookBTitle(), copies.rightTitle());
+                pair.setTitleChangeNeeded(!sameText(pair.getBookATitle(), copies.leftTitle())
+                        || !sameText(pair.getBookBTitle(), copies.rightTitle())
+                        || !sameText(pair.getBookAAlternateTitle(), leftAlternate)
+                        || !sameText(pair.getBookBAlternateTitle(), rightAlternate));
+                pair.setTitlePlan(DuplicateTitlePlans.fixSummary(
+                        leftSide, rightSide, copies.leftTitle(), copies.rightTitle(),
+                        leftAlternate, rightAlternate));
+            } else {
+                pair.setTitleChangeNeeded(titlePlan.changeNeeded());
+                pair.setTitlePlan(titlePlan.summary());
+            }
+            AuthorMergePlan authorPlan = DuplicateTitlePlans.authorMerge(
+                    new AuthorSide(idOrZero(pair.getBookAAuthorId()), pair.getBookAAuthorName(),
+                            pair.getBookAAuthorAlternateNames()),
+                    new AuthorSide(idOrZero(pair.getBookBAuthorId()), pair.getBookBAuthorName(),
+                            pair.getBookBAuthorAlternateNames()));
+            pair.setAuthorMergeAvailable(authorPlan.available());
+            pair.setAuthorPlan(authorPlan.summary());
+        }
+    }
+
+    private static boolean sameText(String left, String right) {
+        String a = left == null ? "" : left.trim();
+        String b = right == null ? "" : right.trim();
+        return a.equals(b);
+    }
+
+    private Map<Long, String> freeTextByBook(Collection<Long> bookIds) {
+        Map<Long, String> urls = new HashMap<>();
+        if (bookIds.isEmpty()) {
+            return urls;
+        }
+        for (Object[] row : bookRepository.findDuplicateTitleFreeText(bookIds)) {
+            if (row[0] instanceof Number id) {
+                urls.put(id.longValue(), row[1] == null ? null : row[1].toString());
+            }
+        }
+        return urls;
+    }
+
+    private Map<Long, AuthorNames> authorNames(Collection<Long> authorIds) {
+        Map<Long, AuthorNames> names = new HashMap<>();
+        if (authorIds.isEmpty()) {
+            return names;
+        }
+        for (Object[] row : authorRepository.findDuplicateTitleAuthorNames(authorIds)) {
+            if (!(row[0] instanceof Number id)) {
+                continue;
+            }
+            String name = row[1] == null ? null : row[1].toString();
+            names.put(id.longValue(), new AuthorNames(name, alternateNames(row[2])));
+        }
+        return names;
+    }
+
+    private static List<String> alternateNames(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        if (value instanceof String[] array) {
+            return listOf(array);
+        }
+        if (value instanceof java.sql.Array array) {
+            try {
+                Object raw = array.getArray();
+                if (raw instanceof String[] strings) {
+                    return listOf(strings);
+                }
+                if (raw instanceof Object[] objects) {
+                    List<String> names = new ArrayList<>();
+                    for (Object object : objects) {
+                        if (object != null && !object.toString().isBlank()) {
+                            names.add(object.toString());
+                        }
+                    }
+                    return names;
+                }
+            } catch (SQLException ex) {
+                throw new LibraryException("Could not read alternate author names.", ex);
+            }
+        }
+        return List.of();
+    }
+
+    private static List<String> listOf(String[] values) {
+        List<String> names = new ArrayList<>();
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                names.add(value);
+            }
+        }
+        return names;
+    }
+
+    private static long idOrZero(Long id) {
+        return id == null ? 0L : id;
+    }
+
+    private record AuthorNames(String name, List<String> alternates) {
     }
 }

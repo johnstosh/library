@@ -3,10 +3,14 @@
  */
 package com.muczynski.library.controller;
 
+import com.muczynski.library.dto.DuplicateTitleActionResultDto;
 import com.muczynski.library.dto.DuplicateTitleDismissalRequestDto;
+import com.muczynski.library.dto.DuplicateTitlePairActionRequestDto;
+import com.muczynski.library.dto.DuplicateTitleUndoRequestDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
 import com.muczynski.library.dto.IllegalGenresMaintenanceDto;
 import com.muczynski.library.service.MaintenanceService;
+import com.muczynski.library.service.duplicate.DuplicateTitleActionService;
 import com.muczynski.library.service.duplicate.DuplicateTitleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +20,9 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Maintenance API for librarian Data Management page (Issues #347, #351).
- * Provides illegal-genre cleanup, duplicate-title find, and not-duplicate marks.
+ * Provides illegal-genre cleanup, duplicate-title find, not-duplicate marks,
+ * and the Duplicate Titles merge and fix actions. Those actions are not a
+ * general author or book merge.
  */
 @Slf4j
 @RestController
@@ -26,6 +32,7 @@ public class MaintenanceController {
 
     private final MaintenanceService maintenanceService;
     private final DuplicateTitleService duplicateTitleService;
+    private final DuplicateTitleActionService duplicateTitleActionService;
 
     /**
      * Recalculates count of books affected by illegal or mismatched genre tags.
@@ -106,5 +113,76 @@ public class MaintenanceController {
         duplicateTitleService.restore(
                 request.getTitleA(), request.getAuthorA(), request.getTitleB(), request.getAuthorB());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Merge the two authors on one Duplicate Titles row.
+     * Not a general author merge. The change is recorded in duplicate_title_action.
+     */
+    @PostMapping("/duplicate-titles/author-merges")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> mergeDuplicateTitleAuthors(
+            @RequestBody DuplicateTitlePairActionRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.mergeAuthors(
+                request.getBookAId(), request.getBookBId()));
+    }
+
+    /**
+     * Reverse a Duplicate Titles author merge. Inserts an undo row and leaves the
+     * original row in place.
+     */
+    @PostMapping("/duplicate-titles/author-merges/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> undoDuplicateTitleAuthorMerge(
+            @RequestBody DuplicateTitleUndoRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.undoAuthorMerge(request.getActionId()));
+    }
+
+    /**
+     * Merge the two books on one Duplicate Titles row by combining free-text URLs.
+     * Refuses when both books have call numbers. Not a general book merge.
+     */
+    @PostMapping("/duplicate-titles/title-merges")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> mergeDuplicateTitles(
+            @RequestBody DuplicateTitlePairActionRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.mergeTitles(
+                request.getBookAId(), request.getBookBId()));
+    }
+
+    /**
+     * Reverse a Duplicate Titles title merge. Inserts an undo row and leaves the
+     * original row in place.
+     */
+    @PostMapping("/duplicate-titles/title-merges/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> undoDuplicateTitleMerge(
+            @RequestBody DuplicateTitleUndoRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.undoTitleMerge(request.getActionId()));
+    }
+
+    /**
+     * Add the next ", c. N" copy suffix on a Duplicate Titles row whose books both
+     * have call numbers. Uses the save-title copy-number rule, so existing
+     * ", c. 2", ", c. 3", and ", c. 4" copies make the next title ", c. 5".
+     * Does not delete either book.
+     */
+    @PostMapping("/duplicate-titles/title-fixes")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> fixDuplicateTitles(
+            @RequestBody DuplicateTitlePairActionRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.fixTitles(
+                request.getBookAId(), request.getBookBId()));
+    }
+
+    /**
+     * Reverse a Duplicate Titles fix. Inserts an undo row and leaves the original
+     * row in place.
+     */
+    @PostMapping("/duplicate-titles/title-fixes/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<DuplicateTitleActionResultDto> undoDuplicateTitleFix(
+            @RequestBody DuplicateTitleUndoRequestDto request) {
+        return ResponseEntity.ok(duplicateTitleActionService.undoFixTitles(request.getActionId()));
     }
 }

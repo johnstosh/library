@@ -1,12 +1,58 @@
 // (c) Copyright 2025 by Muczynski
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
 
-const { dismissDuplicatePair, restoreDuplicatePair } = vi.hoisted(() => ({
+const {
+  dismissDuplicatePair,
+  restoreDuplicatePair,
+  mergeAuthors,
+  undoAuthorMerge,
+  mergeTitles,
+  undoTitleMerge,
+  fixTitles,
+  undoFixTitles,
+  duplicateFindResult,
+} = vi.hoisted(() => ({
   dismissDuplicatePair: vi.fn().mockResolvedValue(undefined),
   restoreDuplicatePair: vi.fn().mockResolvedValue(undefined),
+  mergeAuthors: vi.fn().mockResolvedValue({
+    actionId: 11,
+    actionKind: 'MERGE_AUTHORS',
+    summary: 'Authors merged.',
+  }),
+  undoAuthorMerge: vi.fn().mockResolvedValue({
+    actionId: 12,
+    actionKind: 'UNDO_MERGE_AUTHORS',
+    summary: 'Authors restored.',
+  }),
+  mergeTitles: vi.fn().mockResolvedValue({
+    actionId: 13,
+    actionKind: 'MERGE_TITLES',
+    summary: 'Titles merged.',
+  }),
+  undoTitleMerge: vi.fn().mockResolvedValue({
+    actionId: 14,
+    actionKind: 'UNDO_MERGE_TITLES',
+    summary: 'Titles restored.',
+  }),
+  fixTitles: vi.fn().mockResolvedValue({
+    actionId: 15,
+    actionKind: 'FIX_TITLES',
+    summary: 'Titles fixed.',
+  }),
+  undoFixTitles: vi.fn().mockResolvedValue({
+    actionId: 16,
+    actionKind: 'UNDO_FIX_TITLES',
+    summary: 'Titles put back.',
+  }),
+  duplicateFindResult: {
+    pairs: [] as Array<Record<string, unknown>>,
+    booksScanned: 10,
+    representativesCompared: 9,
+    message: '1 pairs found.',
+  },
 }))
 
 vi.mock('@/api/data-management', () => ({
@@ -82,26 +128,10 @@ vi.mock('@/api/data-management', () => ({
   }),
   // Duplicate titles mocks for Issue #351
   useFindDuplicateTitles: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({
-      pairs: [
-        {
-          score: 0.950123,
-          bookAId: 1,
-          bookATitle: 'Confessions',
-          bookAAlternateTitle: null,
-          bookAAuthorName: 'Augustine',
-          bookAStatus: 'ACTIVE',
-          bookBId: 2,
-          bookBTitle: 'Confession',
-          bookBAlternateTitle: null,
-          bookBAuthorName: 'Augustine',
-          bookBStatus: 'LOST',
-        },
-      ],
-      booksScanned: 10,
-      representativesCompared: 9,
-      message: '1 pairs found.',
-    }),
+    mutateAsync: vi.fn().mockImplementation(async () => ({
+      ...duplicateFindResult,
+      pairs: duplicateFindResult.pairs.map((pair) => ({ ...pair })),
+    })),
     isPending: false,
   }),
   useDismissDuplicateTitlePair: () => ({
@@ -110,6 +140,30 @@ vi.mock('@/api/data-management', () => ({
   }),
   useRestoreDuplicateTitlePair: () => ({
     mutateAsync: restoreDuplicatePair,
+    isPending: false,
+  }),
+  useMergeDuplicateTitleAuthors: () => ({
+    mutateAsync: mergeAuthors,
+    isPending: false,
+  }),
+  useUndoDuplicateTitleAuthorMerge: () => ({
+    mutateAsync: undoAuthorMerge,
+    isPending: false,
+  }),
+  useMergeDuplicateTitles: () => ({
+    mutateAsync: mergeTitles,
+    isPending: false,
+  }),
+  useUndoDuplicateTitleMerge: () => ({
+    mutateAsync: undoTitleMerge,
+    isPending: false,
+  }),
+  useFixDuplicateTitles: () => ({
+    mutateAsync: fixTitles,
+    isPending: false,
+  }),
+  useUndoDuplicateTitleFix: () => ({
+    mutateAsync: undoFixTitles,
     isPending: false,
   }),
 }))
@@ -248,11 +302,59 @@ describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
   })
 })
 
+function samplePair(overrides: Record<string, unknown> = {}) {
+  return {
+    score: 0.950123,
+    bookAId: 1,
+    bookATitle: 'Confessions',
+    bookAAlternateTitle: null,
+    bookAAuthorName: 'Augustine',
+    bookAStatus: 'ACTIVE',
+    bookACatalogLabels: ['Without LOC'],
+    bookBId: 2,
+    bookBTitle: 'Confession',
+    bookBAlternateTitle: null,
+    bookBAuthorName: 'Augustine',
+    bookBStatus: 'LOST',
+    bookBCatalogLabels: ['Lost'],
+    titleDifference: 'Titles differ by a one-letter misspelling.',
+    authorDifference: 'Authors match exactly.',
+    titleAction: 'MERGE_TITLES',
+    titleChangeNeeded: true,
+    titlePlan: 'Merge titles keeps the shelf copy and combines URLs.',
+    authorMergeAvailable: true,
+    authorPlan: 'Author names already match. Alternate names are combined.',
+    ...overrides,
+  }
+}
+
 describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
+  beforeEach(() => {
+    duplicateFindResult.pairs = [samplePair()]
+    duplicateFindResult.booksScanned = 10
+    duplicateFindResult.representativesCompared = 9
+    dismissDuplicatePair.mockReset()
+    dismissDuplicatePair.mockResolvedValue(undefined)
+    restoreDuplicatePair.mockReset()
+    restoreDuplicatePair.mockResolvedValue(undefined)
+    mergeAuthors.mockReset()
+    mergeAuthors.mockResolvedValue({
+      actionId: 11,
+      actionKind: 'MERGE_AUTHORS',
+      summary: 'Authors merged.',
+    })
+    undoAuthorMerge.mockReset()
+    undoAuthorMerge.mockResolvedValue({
+      actionId: 12,
+      actionKind: 'UNDO_MERGE_AUTHORS',
+      summary: 'Authors restored.',
+    })
+  })
+
   it('renders the duplicate titles section with a Find button', () => {
     renderPage()
 
-    expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate catalog entries')
+    expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Duplicate Titles')
     expect(screen.getByTestId('duplicate-titles-section')).toHaveTextContent('Withdrawn books are left out')
     expect(screen.getByTestId('find-duplicate-titles')).toHaveTextContent('Find')
     expect(screen.getByText(/Click Find to scan the catalog for near-duplicate titles/)).toBeInTheDocument()
@@ -266,8 +368,17 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('duplicate-titles-results')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('dup-book-a-status')).toHaveTextContent('Status: ACTIVE')
-    expect(screen.getByTestId('dup-book-b-status')).toHaveTextContent('Status: LOST')
+    expect(screen.getByTestId('dup-book-a-kind')).toHaveTextContent('Without LOC')
+    expect(screen.getByTestId('dup-book-b-kind')).toHaveTextContent('Lost')
+    expect(screen.getByTestId('dup-title-diff-1-2')).toHaveTextContent('one-letter misspelling')
+    expect(screen.getByTestId('dup-author-diff-1-2')).toHaveTextContent('Authors match exactly.')
+    const table = screen.getByTestId('duplicate-titles-table')
+    expect(table).toHaveClass('table-fixed')
+    const cols = table.querySelectorAll('col')
+    expect(cols[0]?.className).toBe(cols[1]?.className)
+    expect(cols[0]?.className).toContain('w-[34%]')
+    expect(screen.getByTestId('dup-actions-1-2')).toHaveTextContent('Merge authors')
+    expect(screen.getByTestId('dup-merge-titles-1-2')).toHaveTextContent('Merge titles')
     expect(screen.queryByText(/Matched:/)).not.toBeInTheDocument()
     // No Score column or numeric score display
     expect(screen.queryByText('Score')).not.toBeInTheDocument()
@@ -296,7 +407,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     fireEvent.click(mark)
 
     await waitFor(() => {
-      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Undo')
+      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Undo not a duplicate')
     })
     expect(dismissDuplicatePair).toHaveBeenCalledWith({
       titleA: 'Confessions',
@@ -311,7 +422,7 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
 
     fireEvent.click(screen.getByTestId('dup-not-duplicate-1-2'))
     await waitFor(() => {
-      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+      expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent(/^Not a duplicate$/)
     })
     expect(restoreDuplicatePair).toHaveBeenCalledWith({
       titleA: 'Confessions',
@@ -332,7 +443,52 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     fireEvent.click(await screen.findByTestId('dup-not-duplicate-1-2'))
 
     expect(await screen.findByTestId('duplicate-titles-mark-error')).toHaveTextContent('Could not save')
-    expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+    expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent(/^Not a duplicate$/)
     expect(screen.getByTestId('dup-book-a-link-1')).toBeInTheDocument()
+  })
+
+  it('switches merge authors to undo and shows the server summary', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+    fireEvent.click(await screen.findByTestId('dup-merge-authors-1-2'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dup-merge-authors-1-2')).toHaveTextContent('Undo merge authors')
+    })
+    expect(mergeAuthors).toHaveBeenCalledWith({ bookAId: 1, bookBId: 2 })
+    expect(screen.getByTestId('dup-author-plan-1-2')).toHaveTextContent('Authors merged.')
+    expect(screen.getByTestId('dup-pair-1-2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('dup-merge-authors-1-2'))
+    await waitFor(() => {
+      expect(screen.getByTestId('dup-merge-authors-1-2')).toHaveTextContent(/^Merge authors$/)
+    })
+    expect(undoAuthorMerge).toHaveBeenCalledWith({ actionId: 11 })
+    expect(screen.getByTestId('dup-author-plan-1-2')).toHaveTextContent('Author names already match.')
+  })
+
+  it('disables Fix titles when the copy numbers are already in place', async () => {
+    duplicateFindResult.pairs = [
+      samplePair({
+        bookAId: 3,
+        bookBId: 4,
+        bookACatalogLabels: ['In-library'],
+        bookBCatalogLabels: ['In-library'],
+        titleAction: 'FIX_TITLES',
+        titleChangeNeeded: false,
+        titlePlan: 'Both titles already show the copy number.',
+        authorMergeAvailable: false,
+        authorPlan: 'Same author record, so Merge authors is not offered.',
+      }),
+    ]
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+    const fix = await screen.findByTestId('dup-fix-titles-3-4')
+    expect(fix).toBeDisabled()
+    expect(fix).toHaveTextContent('Fix titles')
+    expect(screen.queryByTestId('dup-merge-authors-3-4')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('dup-merge-titles-3-4')).not.toBeInTheDocument()
   })
 })

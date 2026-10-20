@@ -23,6 +23,8 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
 
     List<Favorite> findByAuthor_Id(Long authorId);
 
+    List<Favorite> findByBook_Id(Long bookId);
+
     Optional<Favorite> findByUser_IdAndListNameAndBook_Id(Long userId, String listName, Long bookId);
 
     Optional<Favorite> findByUser_IdAndListNameAndAuthor_Id(Long userId, String listName, Long authorId);

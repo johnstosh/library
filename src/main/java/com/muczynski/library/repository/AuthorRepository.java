@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +39,12 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     interface NamedAuthorSummaryProjection extends AuthorSummaryProjection {
         String getName();
     }
+
+    /**
+     * Names for a Duplicate Titles pair. Skips biography and the other large text columns.
+     */
+    @Query(value = "SELECT id, name, alternate_names FROM author WHERE id IN (:ids)", nativeQuery = true)
+    List<Object[]> findDuplicateTitleAuthorNames(@Param("ids") Collection<Long> ids);
 
     @Query("SELECT a.id as id, a.lastModified as lastModified FROM Author a")
     List<AuthorSummaryProjection> findAllSummaries();

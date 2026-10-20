@@ -18,6 +18,8 @@ import java.util.Optional;
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
 
+    List<Loan> findByBook_Id(Long bookId);
+
     @Query("SELECT DISTINCT l FROM Loan l " +
            "LEFT JOIN FETCH l.book b " +
            "LEFT JOIN FETCH b.author " +
