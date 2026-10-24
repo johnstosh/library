@@ -1,12 +1,14 @@
 // (c) Copyright 2025 by Muczynski
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import { PageCard } from '@/components/ui/PageCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
+import { DataTable, type Column } from '@/components/table/DataTable'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
 import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
 import { TableSummary } from '@/components/table/TableSummary'
@@ -22,7 +24,7 @@ import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDiffic
 import { StatusFilters } from '@/pages/books/components/StatusFilters'
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
-import type { BookListingDto } from '@/types/dtos'
+import type { BookDto, BookListingDto } from '@/types/dtos'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { bindingsFromSearchParams } from '@/utils/bookBinding'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
@@ -153,6 +155,8 @@ export function SavingsPage() {
   // Selection is not the loaded window. A title picked on another page or
   // search stays selected, and compute uses that stored title and author.
   const [selected, setSelected] = useState<Map<number, SelectedTitle>>(() => new Map())
+  const [selectAll, setSelectAll] = useState(false)
+  const [showSingleBooks, setShowSingleBooks] = useState(false)
   const [running, setRunning] = useState(false)
   const [phase, setPhase] = useState<'idle' | 'loading' | 'computing' | 'done'>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -164,6 +168,7 @@ export function SavingsPage() {
   }
 
   function toggle(book: { id: number; title: string; author?: string | null }) {
+    setSelectAll(false)
     setSelected((current) => {
       const next = new Map(current)
       if (next.has(book.id)) next.delete(book.id)
@@ -179,6 +184,36 @@ export function SavingsPage() {
       return next
     })
   }
+
+  function handleSelectAll() {
+    if (selectAll) {
+      setSelected(new Map())
+      setSelectAll(false)
+      return
+    }
+    selectVisible()
+    setSelectAll(true)
+  }
+
+  const shownKey = books.map((book) => book.id).join(',')
+  useEffect(() => {
+    setSelectAll(false)
+  }, [shownKey])
+
+  const columns = useMemo((): Column<BookDto>[] => [
+    {
+      key: 'title',
+      header: 'Title',
+      accessor: (book) => (
+        <div>
+          <div className="font-medium text-gray-900">{book.title}</div>
+          {book.author && <div className="text-gray-500">{book.author}</div>}
+        </div>
+      ),
+    },
+  ], [])
+
+  const selectedIds = useMemo(() => new Set(selected.keys()), [selected])
 
   async function compute() {
     const chosen = [...selected.values()]
@@ -330,13 +365,7 @@ export function SavingsPage() {
               writeUrl({ chips: { ...chips, priceOlder: true }, priceOlderDays: days })
             }
           />
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={selectVisible} data-test="savings-select-visible">
-              Select shown
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setSelected(new Map())} data-test="savings-clear">
-              Clear
-            </Button>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               onClick={() => { void compute() }}
@@ -346,6 +375,12 @@ export function SavingsPage() {
             >
               Compute savings
             </Button>
+            <Checkbox
+              label="Show single books in the results"
+              checked={showSingleBooks}
+              onChange={(event) => setShowSingleBooks(event.target.checked)}
+              data-test="savings-show-singles"
+            />
           </div>
           <p className="text-sm text-gray-600" data-test="savings-selected-count">
             {selected.size} {selected.size === 1 ? 'title' : 'titles'} selected
@@ -372,31 +407,21 @@ export function SavingsPage() {
               librarySystemName={firstBranch?.librarySystemName}
             />
           </SelectionToolbar>
-          <div data-test="savings-book-list">
-            {isLoading && <p className="py-3 text-sm text-gray-600">Loading titles…</p>}
-            {!isLoading && books.length === 0 && (
-              <p className="py-3 text-sm text-gray-600">No titles match.</p>
-            )}
-            <ul className="divide-y divide-gray-100">
-              {books.map((book) => (
-                <li key={book.id}>
-                  <label className="flex items-start gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={selected.has(book.id)}
-                      onChange={() => toggle(book)}
-                      data-test={`savings-book-${book.id}`}
-                    />
-                    <span>
-                      <span className="font-medium text-gray-900">{book.title}</span>
-                      {book.author && <span className="block text-gray-500">{book.author}</span>}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <DataTable
+            data={books}
+            columns={columns}
+            keyExtractor={(book) => book.id}
+            selectable
+            selectedIds={selectedIds}
+            selectAll={selectAll}
+            onSelectToggle={(id) => {
+              const book = books.find((item) => item.id === id)
+              if (book) toggle(book)
+            }}
+            onSelectAll={handleSelectAll}
+            isLoading={isLoading}
+            emptyMessage="No titles match."
+          />
         </div>
         <CatalogLoadMore
           hasMore={hasMore}
@@ -414,12 +439,12 @@ export function SavingsPage() {
           isLoading={isLoading}
         />
       </PageCard>
-      {report && <SavingsReportView report={report} />}
+      {report && <SavingsReportView report={report} showSingleBooks={showSingleBooks} />}
     </div>
   )
 }
 
-function SavingsReportView({ report }: { report: SavingsReport }) {
+function SavingsReportView({ report, showSingleBooks }: { report: SavingsReport; showSingleBooks: boolean }) {
   return (
     <div className="mt-6 space-y-6" data-test="savings-report">
       <PageCard>
@@ -505,7 +530,7 @@ function SavingsReportView({ report }: { report: SavingsReport }) {
           </div>
         </section>
       )}
-      {report.individual.length > 0 && (
+      {showSingleBooks && report.individual.length > 0 && (
         <section data-test="savings-individual">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Buy individually</h2>
           <PageCard>
