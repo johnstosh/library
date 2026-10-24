@@ -401,6 +401,7 @@ export function SavingsPage() {
         <CatalogLoadMore
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
+          shownCount={books.length}
           onLoadMore={loadMore}
           data-test="savings-load-more"
         />

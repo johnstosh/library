@@ -138,6 +138,7 @@ export function SellersPage() {
         <CatalogLoadMore
           hasMore={hasMore}
           isLoadingMore={false}
+          shownCount={visible.length}
           onLoadMore={loadMore}
           data-test="sellers-load-more"
         />

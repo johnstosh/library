@@ -2,7 +2,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { PricesPage } from '../PricesPage'
 import type { BookDto, BookPriceDto } from '@/types/dtos'
@@ -150,7 +150,12 @@ const { prices, books, filterBooks, priceHooks } = vi.hoisted(() => {
     prices,
     books,
     filterBooks,
-    priceHooks: { options: undefined as { pageSize?: number } | undefined },
+    priceHooks: {
+      options: undefined as { pageSize?: number } | undefined,
+      fetching: false,
+      loadMore: vi.fn(),
+      total: null as number | null,
+    },
   }
 })
 
@@ -158,7 +163,8 @@ vi.mock('@/api/prices', () => ({
   usePrices: (options?: any) => ({
     data: prices,
     isLoading: false,
-    isFetching: false,
+    isFetching: priceHooks.fetching,
+    isPlaceholderData: false,
     error: null,
   }),
 }))
@@ -169,11 +175,12 @@ vi.mock('@/api/books', () => ({
     const data = filterBooks(filters)
     const pageSize = options?.pageSize
     const window = pageSize == null ? data : data.slice(0, pageSize)
+    const total = priceHooks.total ?? data.length
     return {
       ids: window.map((book) => book.id),
-      total: data.length,
-      hasMore: pageSize != null && data.length > pageSize,
-      loadMore: () => {},
+      total,
+      hasMore: pageSize != null && total > window.length,
+      loadMore: priceHooks.loadMore,
       isLoadingMore: false,
       isLoading: false,
       isFetching: false,
@@ -196,15 +203,34 @@ vi.mock('@/api/favorites', () => ({
   listNameToTestId: (name: string) => name,
 }))
 
-function renderPrices(path = '/prices') {
-  return render(
+function pricesTree(path = '/prices') {
+  return (
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={[path]}>
       <PricesPage />
     </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
 }
+
+function renderPrices(path = '/prices') {
+  return render(pricesTree(path))
+}
+
+function nearBottom(scrollY: number) {
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  Object.defineProperty(window, 'scrollY', { configurable: true, writable: true, value: scrollY })
+  Object.defineProperty(document.documentElement, 'scrollHeight', {
+    configurable: true,
+    value: scrollY + 800 + 100,
+  })
+}
+
+afterEach(() => {
+  priceHooks.fetching = false
+  priceHooks.total = null
+  priceHooks.loadMore.mockClear()
+})
 
 describe('PricesPage', () => {
   it('uses Search on the title filter like Books and Search', () => {
@@ -332,5 +358,24 @@ describe('PricesPage', () => {
       'href',
       '/books?q=Pride&status=in-library&lookupErrors=true&mostRecent=false',
     )
+  })
+
+  it('does not load the next 100 while the current prices are still loading', () => {
+    priceHooks.total = 250
+    priceHooks.fetching = true
+    nearBottom(0)
+    const view = renderPrices('/prices')
+    const button = screen.getByTestId('prices-load-more')
+    expect(button).toBeDisabled()
+
+    for (let i = 0; i < 6; i++) fireEvent.scroll(window)
+    expect(priceHooks.loadMore).not.toHaveBeenCalled()
+
+    priceHooks.fetching = false
+    view.rerender(pricesTree('/prices'))
+    priceHooks.loadMore.mockClear()
+    nearBottom(100)
+    for (let i = 0; i < 6; i++) fireEvent.scroll(window)
+    expect(priceHooks.loadMore).toHaveBeenCalledTimes(1)
   })
 })

@@ -49,7 +49,7 @@ Deleting a book cascades to its prices.
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
 - The page loads matching book ids from `GET /api/books/filtered-summaries` and then the price rows for the current window of those ids. It does not load full book records. Title and author on each row come from the price.
-- The window is 100 books, most recently added first, same as Books. Scroll or **Load more** (`data-test="prices-load-more"`) adds the next 100. Each step requests prices only for the books loaded so far.
+- The window is 100 books, most recently added first, same as Books. Scroll or **Load more** (`data-test="prices-load-more"`) adds the next 100 only after the price request for the current window has finished. A scroll that reaches the bottom starts one page. The next automatic page waits until those prices are in and the user scrolls farther, so a short table cannot walk the whole catalog before the current 100 have loaded. Each step requests prices only for the books loaded so far.
 - Table:
   - **Book** column links to the catalog book. **Seller** (`data-test="price-seller-{id}"`) links to Seller Info when the winning listing named a seller.
   - **Status** (`data-test="price-status-{id}"`) shows `lookupError` (`No matching listing`, `AbeBooks rate limited`, `AbeBooks HTTP 500`, …); blank (`—`) when the row is a real listing

@@ -155,7 +155,13 @@ export function PricesPage() {
   // Price rows (max total, recent hours, cover chips) stay in the browser.
   // Full book rows are not loaded; the price row already carries title and author.
   // Prices are requested only for the current 100-book window.
-  const { data: scopedPrices = [], isLoading: pricesLoading, isFetching: pricesFetching, error } = usePrices({
+  const {
+    data: scopedPrices = [],
+    isLoading: pricesLoading,
+    isFetching: pricesFetching,
+    isPlaceholderData: pricesPlaceholder = false,
+    error,
+  } = usePrices({
     bookIds: matchingBookIdsList,
     enabled: !booksLoading,
   })
@@ -191,11 +197,22 @@ export function PricesPage() {
   }, [prices])
 
   const isLoading = pricesLoading || booksLoading
-  const loadingMorePrices = pricesFetching && matchingBookIdsList.length > CATALOG_PAGE_SIZE
+  // The id window grows in memory before the price request returns. Hold the
+  // next page until that request has left the placeholder and finished, or a
+  // short table keeps asking for the next 100 on every scroll event.
+  const [pendingMore, setPendingMore] = useState(false)
+  const priceWindowLoading = pricesFetching || pricesPlaceholder
+  const loadingMorePrices = pendingMore || priceWindowLoading
   const isFilterPending = !isLoading && !loadingMorePrices && (pricesFetching || booksFetching)
 
+  useEffect(() => {
+    if (!pendingMore || priceWindowLoading) return
+    setPendingMore(false)
+  }, [pendingMore, priceWindowLoading])
+
   const requestMore = () => {
-    if (pricesFetching || booksFetching) return
+    if (pendingMore || priceWindowLoading || booksFetching || !hasMore) return
+    setPendingMore(true)
     loadMore()
   }
 
@@ -382,6 +399,7 @@ export function PricesPage() {
         <CatalogLoadMore
           hasMore={hasMore}
           isLoadingMore={loadingMorePrices}
+          shownCount={matchingBookIdsList.length}
           onLoadMore={requestMore}
           data-test="prices-load-more"
         />
