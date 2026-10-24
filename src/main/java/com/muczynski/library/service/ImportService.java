@@ -380,15 +380,32 @@ public class ImportService {
             auth = new Author();
             auth.setName(aDto.getName());
         }
-        // Update fields (merge)
-        auth.setDateOfBirth(aDto.getDateOfBirth());
-        auth.setDateOfDeath(aDto.getDateOfDeath());
-        auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
-        auth.setBirthCountry(aDto.getBirthCountry());
-        auth.setNationality(aDto.getNationality());
-        auth.setBiographicalEssay(aDto.getBriefBiography());
-        auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
-        auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
+        // A null field was omitted or set to null in the JSON. Keep the stored value
+        // so a name-only author entry does not blank dates, biography, or alternate names.
+        if (aDto.getDateOfBirth() != null) {
+            auth.setDateOfBirth(aDto.getDateOfBirth());
+        }
+        if (aDto.getDateOfDeath() != null) {
+            auth.setDateOfDeath(aDto.getDateOfDeath());
+        }
+        if (aDto.getReligiousAffiliation() != null) {
+            auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
+        }
+        if (aDto.getBirthCountry() != null) {
+            auth.setBirthCountry(aDto.getBirthCountry());
+        }
+        if (aDto.getNationality() != null) {
+            auth.setNationality(aDto.getNationality());
+        }
+        if (aDto.getBriefBiography() != null) {
+            auth.setBiographicalEssay(aDto.getBriefBiography());
+        }
+        if (aDto.getGrokipediaUrl() != null) {
+            auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
+        }
+        if (aDto.getAlternateNames() != null) {
+            auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
+        }
         auth = authorRepository.save(auth);
         // Keep map LOB-free so post-clear refresh / heap do not retain essay text
         authorMap.put(aDto.getName(), authorStub(auth.getId(), auth.getName()));

@@ -7,6 +7,8 @@ import com.muczynski.library.domain.*;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.repository.*;
 import com.muczynski.library.service.BookPriceService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
@@ -67,6 +70,9 @@ class ImportControllerIntegrationTest {
 
     @Autowired
     private BookPriceRepository bookPriceRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private Library testLibrary;
     private Author testAuthor;
@@ -1262,6 +1268,121 @@ class ImportControllerIntegrationTest {
                 "Author should be overwritten when DTO provides one");
         org.junit.jupiter.api.Assertions.assertEquals(2001, after.getPublicationYear());
         org.junit.jupiter.api.Assertions.assertEquals("Updated Publisher", after.getPublisher());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_NameOnlyAuthorKeepsExistingDetails() throws Exception {
+        String authorName = "Preserve Details Author";
+        String fullAuthorJson = """
+            {
+                "libraries": [{"branchName": "Preserve Author Library", "librarySystemName": "Preserve System"}],
+                "authors": [{
+                    "name": "Preserve Details Author",
+                    "alternateNames": ["Pen Name", "Catalog Form"],
+                    "dateOfBirth": "1853-12-26",
+                    "dateOfDeath": "1932-07-20",
+                    "religiousAffiliation": "Catholic",
+                    "birthCountry": "France",
+                    "nationality": "French",
+                    "briefBiography": "A filled-in life of the author that a name-only import must keep.",
+                    "grokipediaUrl": "https://grokipedia.example/preserve-details-author"
+                }],
+                "books": [{
+                    "title": "Preserve Author First Book",
+                    "libraryName": "Preserve Author Library",
+                    "authorName": "Preserve Details Author"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(fullAuthorJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Author before = reloadAuthor(authorName);
+        Long authorId = before.getId();
+        assertAuthorDetails(before);
+
+        String nameOnlyJson = """
+            {
+                "authors": [{"name": "Preserve Details Author"}],
+                "books": [{
+                    "title": "Preserve Author Second Book",
+                    "libraryName": "Preserve Author Library",
+                    "authorName": "Preserve Details Author"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(nameOnlyJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Author afterNameOnly = reloadAuthor(authorName);
+        org.junit.jupiter.api.Assertions.assertEquals(authorId, afterNameOnly.getId());
+        assertAuthorDetails(afterNameOnly);
+        Book secondBook = bookRepository.findAllByTitleOrderByIdAsc("Preserve Author Second Book").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(authorId, secondBook.getAuthor().getId());
+
+        String nationalityOnlyJson = """
+            {
+                "authors": [{
+                    "name": "Preserve Details Author",
+                    "nationality": "Breton"
+                }]
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(nationalityOnlyJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", equalTo(true)));
+
+        Author afterNationality = reloadAuthor(authorName);
+        org.junit.jupiter.api.Assertions.assertEquals(authorId, afterNationality.getId());
+        org.junit.jupiter.api.Assertions.assertEquals("Breton", afterNationality.getNationality());
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(1853, 12, 26), afterNationality.getDateOfBirth());
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(1932, 7, 20), afterNationality.getDateOfDeath());
+        org.junit.jupiter.api.Assertions.assertEquals("Catholic", afterNationality.getReligiousAffiliation());
+        org.junit.jupiter.api.Assertions.assertEquals("France", afterNationality.getBirthCountry());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "A filled-in life of the author that a name-only import must keep.",
+                afterNationality.getBiographicalEssay());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "https://grokipedia.example/preserve-details-author",
+                afterNationality.getGrokipediaUrl());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                List.of("Pen Name", "Catalog Form"),
+                afterNationality.getAlternateNames());
+    }
+
+    private Author reloadAuthor(String name) {
+        entityManager.flush();
+        entityManager.clear();
+        List<Author> found = authorRepository.findAllByNameOrderByIdAsc(name);
+        org.junit.jupiter.api.Assertions.assertEquals(1, found.size(), "Expected one author named " + name);
+        return found.get(0);
+    }
+
+    private void assertAuthorDetails(Author author) {
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(1853, 12, 26), author.getDateOfBirth());
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDate.of(1932, 7, 20), author.getDateOfDeath());
+        org.junit.jupiter.api.Assertions.assertEquals("Catholic", author.getReligiousAffiliation());
+        org.junit.jupiter.api.Assertions.assertEquals("France", author.getBirthCountry());
+        org.junit.jupiter.api.Assertions.assertEquals("French", author.getNationality());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "A filled-in life of the author that a name-only import must keep.",
+                author.getBiographicalEssay());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "https://grokipedia.example/preserve-details-author",
+                author.getGrokipediaUrl());
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("Pen Name", "Catalog Form"), author.getAlternateNames());
     }
 
 }
