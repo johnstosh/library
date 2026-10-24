@@ -153,6 +153,8 @@ export interface BookPriceDto {
   bookId: number
   bookTitle?: string
   author?: string
+  sellerId?: number | null
+  sellerName?: string | null
   cover: BookCoverType
   priceDollars?: number | null
   shippingDollars?: number | null
@@ -162,6 +164,52 @@ export interface BookPriceDto {
   detailsUrl?: string
   lookupError?: string
   lastModified?: string
+}
+
+export type AdditionalShippingSource = 'PARSED' | 'LIBRARIAN' | 'FREE' | 'UNKNOWN'
+
+export interface AbeSellerDto {
+  id: number
+  vendorId: number
+  name?: string | null
+  city?: string | null
+  region?: string | null
+  country?: string | null
+  starRating?: number | null
+  storefrontUrl?: string | null
+  shipRatesUrl?: string | null
+  sampleStandardShipping?: number | null
+  samplePriorityShipping?: number | null
+  shippingTerms?: string | null
+  additionalShippingDollars?: number | null
+  additionalShippingSource: AdditionalShippingSource
+  listingCount: number
+  lookedUpAt?: string | null
+  ratesLookedUpAt?: string | null
+  lastModified?: string | null
+}
+
+export interface BookListingDto {
+  id: number
+  bookId: number
+  catalogTitle?: string | null
+  listingTitle?: string | null
+  sellerId: number
+  vendorId?: number | null
+  sellerName?: string | null
+  storefrontUrl?: string | null
+  shipRatesUrl?: string | null
+  priceDollars?: number | null
+  shippingDollars?: number | null
+  priorityShippingDollars?: number | null
+  additionalShippingDollars?: number | null
+  additionalShippingSource?: AdditionalShippingSource | null
+  condition?: string | null
+  binding?: BookCoverType | null
+  isbn13?: string | null
+  quantity?: number | null
+  detailsUrl?: string | null
+  lookedUpAt?: string | null
 }
 
 export interface BookPriceLookupResultDto {

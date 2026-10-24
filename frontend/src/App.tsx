@@ -45,6 +45,9 @@ const BooksFromFeedPage = lazy(() => import('@/pages/books-from-feed/BooksFromFe
 const PhotosPage = lazy(() => import('@/pages/photos/PhotosPage').then(m => ({ default: m.PhotosPage })))
 const PhotoViewPage = lazy(() => import('@/pages/photos/PhotoViewPage').then(m => ({ default: m.PhotoViewPage })))
 const PricesPage = lazy(() => import('@/pages/prices/PricesPage').then(m => ({ default: m.PricesPage })))
+const SellersPage = lazy(() => import('@/pages/sellers/SellersPage').then(m => ({ default: m.SellersPage })))
+const SellerViewPage = lazy(() => import('@/pages/sellers/SellerViewPage').then(m => ({ default: m.SellerViewPage })))
+const SavingsPage = lazy(() => import('@/pages/savings/SavingsPage').then(m => ({ default: m.SavingsPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -120,6 +123,9 @@ function App() {
                 <Route path="/data-management" element={<DataManagementPage />} />
                 <Route path="/photos-management" element={<PhotosPage />} />
                 <Route path="/prices" element={<PricesPage />} />
+                <Route path="/sellers" element={<SellersPage />} />
+                <Route path="/sellers/:id" element={<SellerViewPage />} />
+                <Route path="/savings" element={<SavingsPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/users/new" element={<UserNewPage />} />
                 <Route path="/users/:id" element={<UserViewPage />} />

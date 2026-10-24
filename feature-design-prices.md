@@ -12,9 +12,9 @@ Librarians can look up used-book prices on AbeBooks for hardcover, softcover, an
   - no `bi` parameter
   - `sortby=17` = lowest total price (item + shipping)
   - `cond=new an fine nf vg good` = good or better on the first search (excludes Fair, Poor, As Described). Title-only fallback omits `cond` so ungraded `Used` listings still appear.
-  - `ds=30`; further pages use `p` / `spo` when the first page does not yet have both covers
+  - `ds=30`; further pages use `p` / `spo`
 - Query strategy:
-  1. Title + author last name, paging until a typed hardcover **and** typed softcover are found, or the pager has no next page (cap 5 pages). Library binding is saved when seen on those pages; paging does not wait for it.
+  1. Title + author last name. When a next page exists, keep reading until **3 pages** even after both typed covers are filled (still stop at 5 pages, and stop when the pager has no next page). Library binding is saved when seen on those pages.
   2. If both covers still cannot be filled and the cleaned title has **more than 7 letter-bearing words**, retry title-only (`tn`, no `an`, no `cond`) with the same paging.
 - Each listing's Attributes row sets the cover (`Hardcover`, `Softcover`, `Library Binding`, leather/spiral/board book → `OTHER`). Listings with no binding attribute are **unknown**: they fill hardcover/softcover that still lack a typed listing during search, and are saved as `UNKNOWN`.
 - The cheapest remaining listing per cover is saved. The HTML parser keeps Good/Very Good/New **and** ungraded `Used`, and still rejects Fair, Poor, Acceptable, and As Described.
@@ -49,7 +49,7 @@ Deleting a book cascades to its prices.
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
 - Table:
-  - **Book** column is 20% of table width
+  - **Book** column links to the catalog book. **Seller** (`data-test="price-seller-{id}"`) links to Seller Info when the winning listing named a seller.
   - **Status** (`data-test="price-status-{id}"`) shows `lookupError` (`No matching listing`, `AbeBooks rate limited`, `AbeBooks HTTP 500`, …); blank (`—`) when the row is a real listing
   - **Listing** shows an AbeBooks URL: the listing when a price was found (`AbeBooks`), or the last search used when no price was found (`Search`)
 - Filters:
@@ -78,3 +78,15 @@ Librarian only.
 
 ## Import/export
 JSON export includes a `prices` array keyed by `bookTitle` + `bookAuthorName` + `cover`. Import merges on that key. Database stats `priceCount` is unique books with at least one usable listing (`priceDollars` present and no `lookupError`).
+
+`sellers` (keyed by AbeBooks `vendorId`) and `listings` (keyed by AbeBooks listing id) follow `prices`. Sellers are imported before listings. A listing whose seller or book title is missing is skipped.
+
+## Sellers and candidate listings
+Lookup also stores the bookseller and up to 24 good-or-better offers per book (`book_listing`), plus the cover winners when they fall outside that cap. The cheapest row per cover on `book_price` is unchanged. Seller identity, item price, and first-book shipping come from the search JSON already downloaded. After the price rows are saved, one ShipRates fetch runs per seller whose terms are missing or older than 30 days. A rate limit on that fetch keeps the saved prices and stops further ShipRates calls.
+
+AbeBooks does not publish the extra-book rate on the search card or the ShipRates table (only “First book”, plus optional prose). When the prose states a dollar amount or “additional books ship free”, that amount is stored. A librarian amount on Seller Info is never replaced by a later fetch. Clearing it re-reads the stored terms and does not call AbeBooks.
+
+## Seller Info and Savings
+- **Sellers** (`/sellers`, `data-test="nav-sellers"`) lists captured booksellers and the storefront URL. `/sellers/:id` shows terms and is the only place to enter each-additional-book dollars.
+- **Savings** (`/savings`, `data-test="nav-savings"`) lets a librarian select any number of titles and compute basket savings from stored listings. It does not call AbeBooks. While the compute runs, `data-test="savings-timer"` shows elapsed seconds. There is no title cap.
+- A bundle’s shipping is first-book plus `(n − 1) × additional`. Savings are against the cheapest single-listing total for each book. A seller with an unpublished extra-book rate is not priced, unless every copy already has $0 first-book shipping. The report lists priced sellers by savings, then unpublished multi-book sellers, then titles to buy individually, then titles that still need a price lookup.

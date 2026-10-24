@@ -70,7 +70,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.streamImportJson(any())).thenReturn(result);
 
@@ -136,7 +136,7 @@ class ImportControllerTest {
         importDto.setBooks(List.of());
         importDto.setBranches(List.of());
 
-        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0);
+        ImportResponseDto.ImportCounts counts = new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(counts);
         when(importService.streamImportJson(any())).thenReturn(result);
 

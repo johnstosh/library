@@ -28,8 +28,21 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
           {price.author && <div className="text-sm text-gray-500">{price.author}</div>}
         </div>
       ),
-      width: '20%',
+      width: '18%',
       cellClassName: 'px-3 sm:px-6 py-3 sm:py-4 max-w-0 align-top text-sm',
+    },
+    {
+      key: 'seller',
+      header: 'Seller',
+      accessor: (price) =>
+        price.sellerId ? (
+          <EntityLink to={`/sellers/${price.sellerId}`} data-test={`price-seller-${price.id}`}>
+            {price.sellerName || 'Seller'}
+          </EntityLink>
+        ) : (
+          '—'
+        ),
+      width: '12%',
     },
     {
       key: 'cover',

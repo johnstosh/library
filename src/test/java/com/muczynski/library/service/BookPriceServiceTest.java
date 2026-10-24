@@ -3,14 +3,19 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.AbeSeller;
+import com.muczynski.library.domain.AdditionalShippingSource;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
+import com.muczynski.library.domain.BookListing;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
 import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
+import com.muczynski.library.repository.AbeSellerRepository;
+import com.muczynski.library.repository.BookListingRepository;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +27,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -366,6 +374,136 @@ class BookPriceServiceTest {
         bookPriceService.lookupAndUpdateBook(1L);
 
         verify(abeBooksClient, times(1)).findCheapestGoodOrBetter(any(), any());
+    }
+
+    @Test
+    void capListings_keepsCheapestAndTheCoverWinner() {
+        List<AbeBooksListing> pool = new ArrayList<>();
+        for (int i = 1; i <= 25; i++) {
+            pool.add(AbeBooksListing.builder()
+                    .listingId((long) i)
+                    .sellerId(1L)
+                    .priceDollars(new BigDecimal(i))
+                    .shippingDollars(BigDecimal.ZERO)
+                    .build());
+        }
+        AbeBooksListing cover = pool.get(24);
+        List<AbeBooksListing> kept = BookPriceService.capListings(pool, List.of(cover));
+        assertEquals(25, kept.size());
+        assertEquals(1L, kept.get(0).getListingId());
+        assertTrue(kept.stream().anyMatch(listing -> listing.getListingId() == 25L));
+    }
+
+    @Test
+    void lookupAndUpdateBook_storesSellerAndDoesNotOverwriteLibrarianRate() {
+        Book book = book("Pride and Prejudice", "Jane Austen");
+        AbeSeller existing = new AbeSeller();
+        existing.setId(7L);
+        existing.setVendorId(99L);
+        existing.setName("World of Books");
+        existing.setAdditionalShippingSource(AdditionalShippingSource.LIBRARIAN);
+        existing.setAdditionalShippingDollars(new BigDecimal("2.00"));
+        final AbeSeller[] stored = {existing};
+
+        AbeSellerRepository sellerRepository = org.mockito.Mockito.mock(AbeSellerRepository.class);
+        BookListingRepository listingRepository = org.mockito.Mockito.mock(BookListingRepository.class);
+        BookPriceService persisting = new BookPriceService(
+                bookRepository, bookPriceRepository, abeBooksClient, 0, 0, null, null,
+                sellerRepository, listingRepository);
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(sellerRepository.findByVendorId(99L)).thenAnswer(invocation -> Optional.of(stored[0]));
+        when(sellerRepository.save(any(AbeSeller.class))).thenAnswer(invocation -> {
+            stored[0] = invocation.getArgument(0);
+            return stored[0];
+        });
+        when(sellerRepository.findById(7L)).thenAnswer(invocation -> Optional.of(stored[0]));
+        when(abeBooksClient.fetchShipRates(99L, 111L)).thenReturn(AbeBooksShipRates.builder()
+                .standardDollars(new BigDecimal("6.00"))
+                .priorityDollars(new BigDecimal("12.00"))
+                .terms("Each additional book US$ 1.50")
+                .additionalDollars(new BigDecimal("1.50"))
+                .additionalSource(AdditionalShippingSource.PARSED)
+                .build());
+        AbeBooksListing offer = AbeBooksListing.builder()
+                .listingId(111L)
+                .sellerId(99L)
+                .sellerName("World of Books")
+                .priceDollars(new BigDecimal("4.86"))
+                .shippingDollars(BigDecimal.ZERO)
+                .condition("Used - Good")
+                .detailsUrl("https://www.abebooks.com/h")
+                .binding(BookCoverType.HARDCOVER)
+                .listingTitle("Pride and Prejudice")
+                .build();
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder()
+                        .hardcover(offer)
+                        .candidates(List.of(offer))
+                        .build());
+
+        BookPriceLookupResultDto result = persisting.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(7L, result.getHardcover().getSellerId());
+        assertEquals("World of Books", result.getHardcover().getSellerName());
+        assertEquals(AdditionalShippingSource.LIBRARIAN, stored[0].getAdditionalShippingSource());
+        assertEquals(new BigDecimal("2.00"), stored[0].getAdditionalShippingDollars());
+        assertNotNull(stored[0].getRatesLookedUpAt());
+        assertEquals("Each additional book US$ 1.50", stored[0].getShippingTerms());
+        ArgumentCaptor<BookListing> listings = ArgumentCaptor.forClass(BookListing.class);
+        verify(listingRepository).save(listings.capture());
+        assertEquals(111L, listings.getValue().getAbeListingId());
+        assertEquals(existing, listings.getValue().getSeller());
+        verify(listingRepository).deleteByAbeListingIdIn(anyCollection());
+        verify(listingRepository).deleteByBook_Id(1L);
+        verify(listingRepository).flush();
+    }
+
+    @Test
+    void lookupAndUpdateBook_shipRatesRateLimitKeepsSavedPrice() {
+        Book book = book("Pride and Prejudice", "Jane Austen");
+        final AbeSeller[] stored = {null};
+        AbeSellerRepository sellerRepository = org.mockito.Mockito.mock(AbeSellerRepository.class);
+        BookListingRepository listingRepository = org.mockito.Mockito.mock(BookListingRepository.class);
+        BookPriceService persisting = new BookPriceService(
+                bookRepository, bookPriceRepository, abeBooksClient, 0, 0, null, null,
+                sellerRepository, listingRepository);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(bookPriceRepository.findByBook_IdAndCover(eq(1L), any())).thenReturn(Optional.empty());
+        when(bookPriceRepository.save(any(BookPrice.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(sellerRepository.findByVendorId(99L)).thenAnswer(invocation -> Optional.ofNullable(stored[0]));
+        when(sellerRepository.save(any(AbeSeller.class))).thenAnswer(invocation -> {
+            AbeSeller seller = invocation.getArgument(0);
+            if (seller.getId() == null) {
+                seller.setId(7L);
+            }
+            stored[0] = seller;
+            return seller;
+        });
+        when(sellerRepository.findById(7L)).thenAnswer(invocation -> Optional.ofNullable(stored[0]));
+        when(abeBooksClient.fetchShipRates(99L, 111L)).thenThrow(new AbeBooksRateLimitedException());
+        AbeBooksListing offer = AbeBooksListing.builder()
+                .listingId(111L)
+                .sellerId(99L)
+                .sellerName("World of Books")
+                .priceDollars(new BigDecimal("4.86"))
+                .shippingDollars(BigDecimal.ZERO)
+                .condition("Used - Good")
+                .detailsUrl("https://www.abebooks.com/h")
+                .binding(BookCoverType.HARDCOVER)
+                .build();
+        when(abeBooksClient.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen"))
+                .thenReturn(AbeBooksCoverListings.builder().hardcover(offer).candidates(List.of(offer)).build());
+
+        BookPriceLookupResultDto result = persisting.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals(new BigDecimal("4.86"), result.getHardcover().getPriceDollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, stored[0].getAdditionalShippingSource());
+        assertNull(stored[0].getRatesLookedUpAt());
     }
 
     private static Book book(String title, String authorName) {

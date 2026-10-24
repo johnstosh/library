@@ -144,6 +144,32 @@ class AbeBooksClientTest {
     }
 
     @Test
+    void findCheapestGoodOrBetter_readsThreePagesWhenNextExists() {
+        AbeBooksListing soft = listing("s", "3.00", BookCoverType.SOFTCOVER);
+        AbeBooksListing hard = listing("h", "4.86", BookCoverType.HARDCOVER);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenAnswer(invocation -> {
+                    URI uri = invocation.getArgument(0);
+                    String url = uri.toString();
+                    String html = url.contains("p=2") ? "page3" : url.contains("p=1") ? "page2" : "page1";
+                    return ResponseEntity.ok(html);
+                });
+        when(parser.parseGoodOrBetter("page1")).thenReturn(List.of(soft, hard));
+        when(parser.hasNextPage("page1")).thenReturn(true);
+        when(parser.parseGoodOrBetter("page2")).thenReturn(List.of());
+        when(parser.hasNextPage("page2")).thenReturn(true);
+        when(parser.parseGoodOrBetter("page3")).thenReturn(List.of());
+        when(parser.hasNextPage("page3")).thenReturn(true);
+
+        AbeBooksCoverListings found = client.findCheapestGoodOrBetter("Pride and Prejudice", "Jane Austen");
+
+        assertEquals(hard, found.getHardcover());
+        assertEquals(soft, found.getSoftcover());
+        verify(restTemplate, times(3))
+                .exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class));
+    }
+
+    @Test
     void findCheapestGoodOrBetter_keepsLibraryBindingFromSamePages() {
         AbeBooksListing soft = listing("s", "3.00", BookCoverType.SOFTCOVER);
         AbeBooksListing lib = listing("l", "12.00", BookCoverType.LIBRARY_BINDING);

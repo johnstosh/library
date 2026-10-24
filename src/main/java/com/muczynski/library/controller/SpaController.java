@@ -19,6 +19,8 @@ public class SpaController {
      * - /authors
      * - /loans
      * - /prices
+     * - /sellers
+     * - /savings
      * - etc.
      *
      * API routes (/api/**) are not affected by this mapping.
@@ -60,7 +62,11 @@ public class SpaController {
             "/photos",
             "/photos/**",
             "/prices",
-            "/prices/**"
+            "/prices/**",
+            "/sellers",
+            "/sellers/**",
+            "/savings",
+            "/savings/**"
     })
     public String forward() {
         return "forward:/index.html";
