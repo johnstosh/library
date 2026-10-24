@@ -48,6 +48,7 @@ Deleting a book cascades to its prices.
 ## Prices page
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
+- The page loads matching book ids from `GET /api/books/filtered-summaries` and then the price rows for those ids. It does not load full book records. Title and author on each row come from the price.
 - Table:
   - **Book** column links to the catalog book. **Seller** (`data-test="price-seller-{id}"`) links to Seller Info when the winning listing named a seller.
   - **Status** (`data-test="price-status-{id}"`) shows `lookupError` (`No matching listing`, `AbeBooks rate limited`, `AbeBooks HTTP 500`, …); blank (`—`) when the row is a real listing

@@ -22,7 +22,7 @@ import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilter
 import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
-import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
+import { useBookCount, useFilteredBookIds, type BookListFilters } from '@/api/books'
 import { useBranches } from '@/api/branches'
 import { isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
@@ -136,43 +136,39 @@ export function PricesPage() {
   }), [searchParams])
 
   const {
-    data: matchingBooks = [],
+    ids: matchingBookIdsList,
     total: searchResultsCount = 0,
     isLoading: booksLoading,
     isFetching: booksFetching,
     error: booksError,
-  } = useBooks(listFilters)
+  } = useFilteredBookIds(listFilters)
   const { data: bookCount } = useBookCount()
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
 
   // Book-level chips, including price chips, are applied by filtered-summaries.
   // Price rows (max total, recent hours, cover chips) stay in the browser.
-  const candidateBookIds = useMemo(
-    () => matchingBooks.map((b) => b.id),
-    [matchingBooks],
-  )
-
+  // Full book rows are not loaded; the price row already carries title and author.
   const { data: scopedPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices({
-    bookIds: candidateBookIds,
+    bookIds: matchingBookIdsList,
     enabled: !booksLoading,
   })
 
   const priceStatistics = useMemo(
-    () => summarizeBookPrices(matchingBooks, scopedPrices),
-    [matchingBooks, scopedPrices],
+    () => summarizeBookPrices(matchingBookIdsList.map((id) => ({ id })), scopedPrices),
+    [matchingBookIdsList, scopedPrices],
   )
 
   const prices = useMemo(() => {
-    const matchingBookIds = new Set(matchingBooks.map((b) => b.id))
-    // Scope price rows to matchingBooks (restores pre-#342 noPrices/withPrices/etc behavior).
+    const matchingBookIds = new Set(matchingBookIdsList)
+    // Scope price rows to the filtered book ids (restores pre-#342 noPrices/withPrices/etc behavior).
     // lookupErrors row filter applies on top (shows only error rows, not real listings for those books).
     let rows = scopedPrices.filter((price) => matchingBookIds.has(price.bookId))
     if (chips.lookupErrors) {
       rows = rows.filter(isLookupError)
     }
     return applyPriceFilters(rows, priceChips, maxTotal, Date.now(), recentHours)
-  }, [scopedPrices, matchingBooks, chips.lookupErrors, priceChips, maxTotal, recentHours])
+  }, [scopedPrices, matchingBookIdsList, chips.lookupErrors, priceChips, maxTotal, recentHours])
 
   const displayedBookCount = useMemo(() => {
     const ids = new Set<number>()

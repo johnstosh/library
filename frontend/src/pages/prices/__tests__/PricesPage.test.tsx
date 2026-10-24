@@ -158,10 +158,10 @@ vi.mock('@/api/prices', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: (filters?: Parameters<typeof filterBooks>[0]) => {
+  useFilteredBookIds: (filters?: Parameters<typeof filterBooks>[0]) => {
     const data = filterBooks(filters)
     return {
-      data,
+      ids: data.map((book) => book.id),
       total: data.length,
       isLoading: false,
       isFetching: false,

@@ -107,11 +107,41 @@ export interface CatalogWindow {
   isLoadingMore: boolean
 }
 
+/**
+ * Matching book ids for a catalog filter. Does not load full book rows.
+ * Prices uses this so opening the page does not pull every book 100 at a time.
+ */
+export function useFilteredBookIds(filters: BookListFilters) {
+  const filterQuery = bookListFilterQuery(filters)
+  const endpoint = filterQuery
+    ? `/books/filtered-summaries?${filterQuery}`
+    : '/books/filtered-summaries'
+  const query = useQuery({
+    queryKey: queryKeys.books.filteredSummaries(filterQuery),
+    queryFn: () => api.get<BookSummaryDto[]>(endpoint),
+    staleTime: 30 * 1000,
+    refetchOnMount: true,
+    placeholderData: keepPreviousData,
+  })
+  const ids = useMemo(
+    () => (query.data ?? []).map((summary) => summary.id),
+    [query.data],
+  )
+  return {
+    ids,
+    total: query.data?.length ?? 0,
+    isLoading: query.isLoading && ids.length === 0,
+    isFetching: query.isFetching,
+    error: query.error,
+  }
+}
+
 // Hook to get books with optimized lastModified caching.
-// Pass filters for the Books and Prices pages (GET /books/filtered-summaries).
+// Pass filters for the Books page (GET /books/filtered-summaries).
 // Call with no argument for the unfiltered summary list (GET /books/summaries).
 // pageSize limits full-row loads to that many matching books at a time.
 // Full rows are loaded from /books/by-ids at most 100 ids at a time.
+// Prices must use useFilteredBookIds instead of loading every full row.
 export function useBooks(filters?: BookListFilters, options?: { pageSize?: number }) {
   const queryClient = useQueryClient()
   const pageSize = options?.pageSize
