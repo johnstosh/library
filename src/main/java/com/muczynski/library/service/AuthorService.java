@@ -97,10 +97,18 @@ public class AuthorService {
 
     public AuthorDto updateAuthor(Long id, AuthorDto authorDto) {
         Author author = authorRepository.findById(id).orElseThrow(() -> new LibraryException("Author not found: " + id));
-        Author updatedAuthor = authorMapper.toEntity(authorDto);
-        updatedAuthor.setId(id);
-        updatedAuthor.setAlternateNames(AuthorNames.normalize(updatedAuthor.getName(), updatedAuthor.getAlternateNames()));
-        Author savedAuthor = authorRepository.save(updatedAuthor);
+        // Write the form onto this managed row. A new Author with the same id starts
+        // with an empty photos list, and orphanRemoval would delete the portraits.
+        author.setName(authorDto.getName());
+        author.setDateOfBirth(authorDto.getDateOfBirth());
+        author.setDateOfDeath(authorDto.getDateOfDeath());
+        author.setReligiousAffiliation(authorDto.getReligiousAffiliation());
+        author.setBirthCountry(authorDto.getBirthCountry());
+        author.setNationality(authorDto.getNationality());
+        author.setBiographicalEssay(authorDto.getBriefBiography());
+        author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
+        author.setAlternateNames(AuthorNames.normalize(author.getName(), authorDto.getAlternateNames()));
+        Author savedAuthor = authorRepository.save(author);
         return authorMapper.toDto(savedAuthor);
     }
 

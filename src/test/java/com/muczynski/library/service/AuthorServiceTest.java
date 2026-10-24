@@ -6,6 +6,7 @@ package com.muczynski.library.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.Photo;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.dto.AuthorEnrichmentResultDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -124,24 +126,40 @@ class AuthorServiceTest {
     }
 
     @Test
-    void updateAuthor() {
+    void updateAuthor_writesFieldsOntoTheManagedAuthorAndLeavesPhotos() {
+        Photo portrait = new Photo();
+        portrait.setId(9L);
+        portrait.setPermanentId("google-photos-9");
+        Author author = new Author();
+        author.setId(1L);
+        author.setName("Original Author");
+        author.setNationality("English");
+        author.getPhotos().add(portrait);
+
         AuthorDto authorDto = new AuthorDto();
         authorDto.setId(1L);
         authorDto.setName("Updated Author");
         authorDto.setGrokipediaUrl("https://grokipedia.example.com/author/1/updated");
-        Author author = new Author();
-        author.setId(1L);
-        author.setName("Updated Author");
-        author.setGrokipediaUrl("https://grokipedia.example.com/author/1/updated");
+        authorDto.setNationality("Irish");
+        authorDto.setBriefBiography("A short life.");
+        authorDto.setAlternateNames(List.of(" Updated Author ", "Pen Name"));
+
         when(authorRepository.findById(1L)).thenReturn(Optional.of(author));
-        when(authorMapper.toEntity(authorDto)).thenReturn(author);
         when(authorRepository.save(author)).thenReturn(author);
         when(authorMapper.toDto(author)).thenReturn(authorDto);
 
         AuthorDto result = authorService.updateAuthor(1L, authorDto);
 
         assertEquals(authorDto, result);
+        assertEquals("Updated Author", author.getName());
+        assertEquals("Irish", author.getNationality());
+        assertEquals("https://grokipedia.example.com/author/1/updated", author.getGrokipediaUrl());
+        assertEquals("A short life.", author.getBiographicalEssay());
+        assertEquals(List.of("Pen Name"), author.getAlternateNames());
+        assertEquals(1, author.getPhotos().size());
+        assertSame(portrait, author.getPhotos().get(0));
         verify(authorRepository).save(author);
+        verify(authorMapper, never()).toEntity(any());
     }
 
     @Test
