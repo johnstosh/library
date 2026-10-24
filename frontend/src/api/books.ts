@@ -110,12 +110,26 @@ export interface CatalogWindow {
 /**
  * Matching book ids for a catalog filter. Does not load full book rows.
  * Prices uses this so opening the page does not pull every book 100 at a time.
+ * pageSize returns that many ids at a time, most recently added first, the same
+ * window as Books. Load more only grows the id list. It does not fetch BookDtos.
  */
-export function useFilteredBookIds(filters: BookListFilters) {
+export function useFilteredBookIds(filters: BookListFilters, options?: { pageSize?: number }) {
+  const pageSize = options?.pageSize
   const filterQuery = bookListFilterQuery(filters)
   const endpoint = filterQuery
     ? `/books/filtered-summaries?${filterQuery}`
     : '/books/filtered-summaries'
+  const windowKey = pageSize ? endpoint : ''
+  const [loadedCount, setLoadedCount] = useState(pageSize ?? 0)
+  const totalRef = useRef(0)
+  const pendingRef = useRef(false)
+
+  useEffect(() => {
+    if (!pageSize) return
+    pendingRef.current = false
+    setLoadedCount(pageSize)
+  }, [windowKey, pageSize])
+
   const query = useQuery({
     queryKey: queryKeys.books.filteredSummaries(filterQuery),
     queryFn: () => api.get<BookSummaryDto[]>(endpoint),
@@ -123,13 +137,44 @@ export function useFilteredBookIds(filters: BookListFilters) {
     refetchOnMount: true,
     placeholderData: keepPreviousData,
   })
-  const ids = useMemo(
-    () => (query.data ?? []).map((summary) => summary.id),
-    [query.data],
-  )
+
+  const summariesReady = query.data !== undefined && !query.isPlaceholderData
+  if (summariesReady && query.data) totalRef.current = query.data.length
+
+  const windowIds = useMemo(() => {
+    if (!summariesReady || !query.data) return []
+    const ordered = pageSize ? orderedBookSummaries(query.data) : query.data
+    const visible = pageSize ? ordered.slice(0, loadedCount) : ordered
+    return visible.map((summary) => summary.id)
+  }, [query.data, summariesReady, pageSize, loadedCount])
+
+  const previousIdsRef = useRef<number[]>([])
+  const settledEmpty =
+    query.data !== undefined && query.data.length === 0 && !query.isFetching && !query.isPlaceholderData
+  useEffect(() => {
+    if (windowIds.length > 0) previousIdsRef.current = windowIds
+    else if (settledEmpty) previousIdsRef.current = []
+  }, [windowIds, settledEmpty])
+
+  const ids = windowIds.length > 0 ? windowIds : settledEmpty ? [] : previousIdsRef.current
+  const matchCount = summariesReady && query.data ? query.data.length : totalRef.current
+  const total = pageSize ? matchCount : (query.data?.length ?? 0)
+  const hasMore = Boolean(pageSize) && summariesReady && loadedCount < matchCount
+  const loadMore = () => {
+    if (!pageSize || !hasMore || query.isFetching || pendingRef.current) return
+    pendingRef.current = true
+    setLoadedCount((count) => count + pageSize)
+  }
+
+  useEffect(() => {
+    pendingRef.current = false
+  }, [loadedCount])
+
   return {
     ids,
-    total: query.data?.length ?? 0,
+    total,
+    hasMore,
+    loadMore,
     isLoading: query.isLoading && ids.length === 0,
     isFetching: query.isFetching,
     error: query.error,

@@ -4,7 +4,7 @@ import { api } from './client'
 /** Must match com.muczynski.library.service.ByIds.MAX_BATCH. */
 export const BY_IDS_BATCH_SIZE = 100
 
-/** Books and Authors pages load one by-ids batch, then wait for scroll or Load more. */
+/** Catalog tables show this many rows, then wait for scroll or Load more. */
 export const CATALOG_PAGE_SIZE = BY_IDS_BATCH_SIZE
 
 /**

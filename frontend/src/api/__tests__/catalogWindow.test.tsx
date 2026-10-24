@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultAuthorChipFilters } from '@/utils/authorChipFilters'
 import { defaultBookChipFilters } from '@/utils/bookChipFilters'
 import { useFilteredAuthors } from '../authors'
-import { useBooks } from '../books'
+import { useBooks, useFilteredBookIds } from '../books'
 import { api } from '../client'
 
 afterEach(() => {
@@ -114,5 +114,36 @@ describe('catalog windows', () => {
     expect(posted[1]).toHaveLength(30)
     await waitFor(() => expect(result.current.data).toHaveLength(130))
     expect(result.current.hasMore).toBe(false)
+  })
+
+  it('windows price book ids without loading full book rows', async () => {
+    const summaries = Array.from({ length: 250 }, (_, index) => ({
+      id: index + 1,
+      lastModified: '2026-01-01T00:00:00',
+      dateAddedToLibrary: new Date(Date.UTC(2020, 0, 1) + index * 86_400_000).toISOString(),
+    }))
+    vi.mocked(api.get).mockResolvedValue(summaries)
+    vi.mocked(api.post).mockResolvedValue([])
+
+    const { result } = renderHook(
+      () => useFilteredBookIds({ chips: defaultBookChipFilters }, { pageSize: 100 }),
+      { wrapper: wrapperFor() },
+    )
+
+    await waitFor(() => expect(result.current.ids).toHaveLength(100))
+    expect(result.current.total).toBe(250)
+    expect(result.current.hasMore).toBe(true)
+    expect(result.current.ids[0]).toBe(250)
+    expect(result.current.ids[99]).toBe(151)
+    expect(api.post).not.toHaveBeenCalled()
+
+    act(() => result.current.loadMore())
+    await waitFor(() => expect(result.current.ids).toHaveLength(200))
+    expect(api.post).not.toHaveBeenCalled()
+
+    act(() => result.current.loadMore())
+    await waitFor(() => expect(result.current.ids).toHaveLength(250))
+    expect(result.current.hasMore).toBe(false)
+    expect(api.post).not.toHaveBeenCalled()
   })
 })

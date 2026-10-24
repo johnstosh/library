@@ -48,7 +48,8 @@ Deleting a book cascades to its prices.
 ## Prices page
 - Route: `/prices` (librarian only)
 - Nav: **Prices** (`data-test="nav-prices"`)
-- The page loads matching book ids from `GET /api/books/filtered-summaries` and then the price rows for those ids. It does not load full book records. Title and author on each row come from the price.
+- The page loads matching book ids from `GET /api/books/filtered-summaries` and then the price rows for the current window of those ids. It does not load full book records. Title and author on each row come from the price.
+- The window is 100 books, most recently added first, same as Books. Scroll or **Load more** (`data-test="prices-load-more"`) adds the next 100. Each step requests prices only for the books loaded so far.
 - Table:
   - **Book** column links to the catalog book. **Seller** (`data-test="price-seller-{id}"`) links to Seller Info when the winning listing named a seller.
   - **Status** (`data-test="price-status-{id}"`) shows `lookupError` (`No matching listing`, `AbeBooks rate limited`, `AbeBooks HTTP 500`, …); blank (`—`) when the row is a real listing
@@ -61,12 +62,13 @@ Deleting a book cascades to its prices.
     - **Books with Pricing** / **Books without Pricing** / **Lookup Errors** / **Price older than N days** (default 90) / **Total less than $X** (`data-test="prices-max-total"`) from BookPriceFilters
     - Binding filters (Hardcover/Softcover/Library Binding/Other/Unknown) are in the separate BindingFilters section (not in Pricing)
 - Title/author filter submit is **Search** (`data-test="prices-search-button"`), matching Books and Search. Other list pages (Authors, Loans, Users, Applications) filter as you type and have no submit button. **Apply** is reserved for the library-card application form.
-- Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), books matching the current search and filters (`search-results-count`), total books in the Sacred Heart Library System (`database-count`), plus price rows in the table (`price-row-count`).
-- Footer (`data-test="price-statistics"`) on Prices reports:
-  - **Total cost** — sum of the cheaper hardcover/softcover/library-binding total (item + shipping) per book in the current book filters. Other/Unknown listings are used only when none of those typed covers has a usable price.
-  - **Over $20 / Over $40 / Over $80** — counts of books whose cheapest total is strictly greater than that amount (cumulative).
-  - **Total books** — books in the current book filters.
-  - **Without prices** — books with no usable listing (missing rows, `No matching listing`, rate-limited, or other lookup errors).
+- Counts above the table (`data-test="prices-stats"`) match Books: unique books in the current rows (`table-count`), books matching the current search and filters (`search-results-count`), total books in the Sacred Heart Library System (`database-count`), plus price rows in the table (`price-row-count`). A max-total or recent-hours filter changes the table count and the price-row count. It does not change the search-results count.
+- The line under the table matches Books: `Showing N books` when every match is loaded, otherwise `Showing N of M books`. N is the loaded window. M is the search-results count.
+- Footer (`data-test="price-statistics"`) on Prices reports figures for books loaded in the table, not for matches still on later pages:
+  - **Total cost** — sum of the cheaper hardcover/softcover/library-binding total (item + shipping) per loaded book. Other/Unknown listings are used only when none of those typed covers has a usable price.
+  - **Over $20 / Over $40 / Over $80** — counts of loaded books whose cheapest total is strictly greater than that amount (cumulative).
+  - **Total books** — books loaded in the table.
+  - **Without prices** — loaded books with no usable listing (missing rows, `No matching listing`, rate-limited, or other lookup errors). Matches that have not been loaded are left out.
 - Open in Prices (`data-test="open-in-prices"`) on Books copies the current Books filters onto `/prices?...` (one-way handoff, not live sync). Open in Books (`data-test="open-in-books"`) on Prices copies the current Prices inventory filters onto `/books?...`. Both are React Router links (Button `to=`) so they can be opened in a new tab. Visiting `/prices` from the nav with no query shows every saved price. Direct loads and new-tab opens of `/prices` are forwarded to `index.html` by `SpaController` (same as `/books`).
 
 ## API
@@ -88,6 +90,7 @@ Lookup also stores the bookseller and up to 24 good-or-better offers per book (`
 AbeBooks does not publish the extra-book rate on the search card or the ShipRates table (only “First book”, plus optional prose). When the prose states a dollar amount or “additional books ship free”, that amount is stored. A librarian amount on Seller Info is never replaced by a later fetch. Clearing it re-reads the stored terms and does not call AbeBooks.
 
 ## Seller Info and Savings
-- **Sellers** (`/sellers`, `data-test="nav-sellers"`) lists captured booksellers and the storefront URL. `/sellers/:id` shows terms and is the only place to enter each-additional-book dollars.
+- **Sellers** (`/sellers`, `data-test="nav-sellers"`) lists captured booksellers and the storefront URL, 100 at a time (`data-test="sellers-load-more"`). Counts match Books with the nouns seller/sellers: rows in the table, sellers in the search results, and sellers in the library system. The seller list is one request, so the search-results count and the library-system count are both the full list. `/sellers/:id` shows terms and is the only place to enter each-additional-book dollars.
 - **Savings** (`/savings`, `data-test="nav-savings"`) lets a librarian select any number of titles and compute basket savings from stored listings. It does not call AbeBooks. While the compute runs, `data-test="savings-timer"` shows elapsed seconds. There is no title cap.
+- Savings uses the Books filters (title search on Search, chips, labels, status, binding, reading difficulty, favorites, and the pricing chips) and the same 100-book window (`data-test="savings-load-more"`), count lines, and `Showing N of M books` footer. Recent Arrivals starts on, as it does on Books. Full book rows are loaded only for the window. A checked title stays selected when the search or page changes, and compute includes those titles. Select shown adds the titles currently loaded.
 - A bundle’s shipping is first-book plus `(n − 1) × additional`. Savings are against the cheapest single-listing total for each book. A seller with an unpublished extra-book rate is not priced, unless every copy already has $0 first-book shipping. The report lists priced sellers by savings, then unpublished multi-book sellers, then titles to buy individually, then titles that still need a price lookup.

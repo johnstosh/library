@@ -1,9 +1,15 @@
 // (c) Copyright 2025 by Muczynski
+import { useState } from 'react'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { PageCard } from '@/components/ui/PageCard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
 import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
+import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { TableSummary } from '@/components/table/TableSummary'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
+import { useBranches } from '@/api/branches'
 import { useSellers } from '@/api/sellers'
 import type { AbeSellerDto, AdditionalShippingSource } from '@/types/dtos'
 import { formatUsd } from '@/utils/formatters'
@@ -28,6 +34,15 @@ export function sourceLabel(source: AdditionalShippingSource | null | undefined)
 
 export function SellersPage() {
   const { data: sellers = [], isLoading, error } = useSellers()
+  const { data: branches = [] } = useBranches()
+  const firstBranch = branches[0]
+  const [loadedCount, setLoadedCount] = useState(CATALOG_PAGE_SIZE)
+  const visible = sellers.slice(0, loadedCount)
+  const hasMore = loadedCount < sellers.length
+  const loadMore = () => {
+    if (!hasMore) return
+    setLoadedCount((count) => count + CATALOG_PAGE_SIZE)
+  }
 
   const columns: Column<AbeSellerDto>[] = [
     {
@@ -99,11 +114,38 @@ export function SellersPage() {
         </p>
       )}
       <PageCard padding={false}>
-        <DataTable
-          data={sellers}
-          columns={columns}
-          keyExtractor={(seller) => seller.id}
-          emptyMessage="No sellers yet. Look up prices to capture AbeBooks sellers."
+        <div className="p-4">
+          <SelectionToolbar dataTest="sellers-stats" selected={false}>
+            <TableCountPlaceholder
+              tableCount={visible.length}
+              searchResultsCount={sellers.length}
+              totalCount={sellers.length}
+              singular="seller"
+              plural="sellers"
+              isLoading={isLoading}
+              branchName={firstBranch?.branchName}
+              librarySystemName={firstBranch?.librarySystemName}
+            />
+          </SelectionToolbar>
+          <DataTable
+            data={visible}
+            columns={columns}
+            keyExtractor={(seller) => seller.id}
+            emptyMessage="No sellers yet. Look up prices to capture AbeBooks sellers."
+            isLoading={isLoading}
+          />
+        </div>
+        <CatalogLoadMore
+          hasMore={hasMore}
+          isLoadingMore={false}
+          onLoadMore={loadMore}
+          data-test="sellers-load-more"
+        />
+        <TableSummary
+          count={visible.length}
+          total={sellers.length}
+          singular="seller"
+          plural="sellers"
           isLoading={isLoading}
         />
       </PageCard>

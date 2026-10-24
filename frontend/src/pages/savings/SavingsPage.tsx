@@ -1,20 +1,56 @@
 // (c) Copyright 2025 by Muczynski
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useRef, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PageCard } from '@/components/ui/PageCard'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { useBooks } from '@/api/books'
+import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
+import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { TableSummary } from '@/components/table/TableSummary'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
+import { useBookCount, useBooks, type BookListFilters } from '@/api/books'
+import { useBranches } from '@/api/branches'
+import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import { fetchListingsForBooks } from '@/api/sellers'
+import { BookFilters } from '@/pages/books/components/BookFilters'
+import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
+import { BindingFilters } from '@/pages/books/components/BindingFilters'
+import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
+import { StatusFilters } from '@/pages/books/components/StatusFilters'
+import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
+import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
 import type { BookListingDto } from '@/types/dtos'
+import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
+import { bindingsFromSearchParams } from '@/utils/bookBinding'
+import type { BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  bookFilterParamsForUrl,
+  chipsFromSearchParams,
+  favoriteListsFromSearchParams,
+  labelsFromSearchParams,
+  priceOlderDaysFromSearchParams,
+} from '@/utils/bookFilterParams'
+import {
+  bookStatusesFromSearchParams,
+  type BookStatusFilter,
+} from '@/utils/bookStatus'
 import { formatUsd } from '@/utils/formatters'
 import { coverLabel } from '@/utils/priceFilters'
+import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 import {
   computeShippingSavings,
   type SavingsListing,
   type SavingsReport,
 } from '@/utils/shippingSavings'
+
+interface SelectedTitle {
+  id: number
+  title: string
+  author: string | null
+}
 
 function toSavingsListing(row: BookListingDto): SavingsListing {
   return {
@@ -39,44 +75,113 @@ function seconds(ms: number): string {
 }
 
 export function SavingsPage() {
-  const { data: books = [], isLoading, error: booksError } = useBooks()
-  const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<Set<number>>(() => new Set())
+  const [searchParams, setSearchParams] = useSearchParams()
+  const chips = chipsFromSearchParams(searchParams, 'books')
+  const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
+  const selectedLabels = labelsFromSearchParams(searchParams)
+  const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
+  const selectedBindings = bindingsFromSearchParams(searchParams)
+  const selectedStatuses = bookStatusesFromSearchParams(searchParams)
+  const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const { data: favoriteSummary } = useFavoriteSummary()
+  const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'books')
+  const urlQuery = searchParams.get('q') ?? ''
+  const [inputValue, setInputValue] = useState(urlQuery)
+  const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  const ownQuery = useRef<string | null>(null)
+  if (urlQuery !== syncedQuery) {
+    const own = ownQuery.current === urlQuery
+    ownQuery.current = null
+    setSyncedQuery(urlQuery)
+    if (!own) setInputValue(urlQuery)
+  }
+
+  const writeUrl = (next: {
+    chips?: BookChipFilters
+    labels?: string[]
+    readingDifficulties?: string[]
+    bindings?: string[]
+    statuses?: string[]
+    favoriteLists?: string[]
+    q?: string
+    priceOlderDays?: number
+  }) => {
+    const q = next.q !== undefined ? next.q : urlQuery
+    if (next.q !== undefined) ownQuery.current = q
+    setSearchParams(
+      bookFilterParamsForUrl(
+        {
+          chips: next.chips ?? chips,
+          labels: next.labels ?? selectedLabels,
+          readingDifficulties: next.readingDifficulties ?? selectedDifficulties,
+          bindings: next.bindings ?? selectedBindings,
+          statuses: next.statuses ?? selectedStatuses,
+          favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
+          q,
+          priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+        },
+        'books',
+      ),
+    )
+  }
+
+  const listFilters: BookListFilters = {
+    q: searchParams.get('q') ?? '',
+    labels: labelsFromSearchParams(searchParams),
+    statuses: bookStatusesFromSearchParams(searchParams),
+    readingDifficulties: readingDifficultiesFromSearchParams(searchParams),
+    bindings: bindingsFromSearchParams(searchParams),
+    favoriteLists: favoriteListsFromSearchParams(searchParams),
+    priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
+    chips: chipsFromSearchParams(searchParams, 'books'),
+  }
+
+  const {
+    data: books = [],
+    total = 0,
+    hasMore = false,
+    loadMore = () => {},
+    isLoadingMore = false,
+    isLoading,
+    isFetching,
+    error: booksError,
+  } = useBooks(listFilters, { pageSize: CATALOG_PAGE_SIZE })
+  const { data: bookCount } = useBookCount()
+  const { data: branches = [] } = useBranches()
+  const firstBranch = branches[0]
+
+  // Selection is not the loaded window. A title picked on another page or
+  // search stays selected, and compute uses that stored title and author.
+  const [selected, setSelected] = useState<Map<number, SelectedTitle>>(() => new Map())
   const [running, setRunning] = useState(false)
   const [phase, setPhase] = useState<'idle' | 'loading' | 'computing' | 'done'>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
   const [report, setReport] = useState<SavingsReport | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (!needle) return books
-    return books.filter((book) => {
-      const title = book.title.toLowerCase()
-      const author = (book.author ?? '').toLowerCase()
-      return title.includes(needle) || author.includes(needle)
-    })
-  }, [books, query])
+  function remember(book: { id: number; title: string; author?: string | null }): SelectedTitle {
+    return { id: book.id, title: book.title, author: book.author ?? null }
+  }
 
-  function toggle(id: number) {
+  function toggle(book: { id: number; title: string; author?: string | null }) {
     setSelected((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const next = new Map(current)
+      if (next.has(book.id)) next.delete(book.id)
+      else next.set(book.id, remember(book))
       return next
     })
   }
 
   function selectVisible() {
     setSelected((current) => {
-      const next = new Set(current)
-      for (const book of visible) next.add(book.id)
+      const next = new Map(current)
+      for (const book of books) next.set(book.id, remember(book))
       return next
     })
   }
 
   async function compute() {
-    const chosen = books.filter((book) => selected.has(book.id))
+    const chosen = [...selected.values()]
     if (chosen.length === 0 || running) return
     setRunning(true)
     setError(null)
@@ -96,7 +201,7 @@ export function SavingsPage() {
             books: chosen.map((book) => ({
               id: book.id,
               title: book.title,
-              author: book.author ?? null,
+              author: book.author,
             })),
             listings: rows.map(toSavingsListing),
           },
@@ -118,28 +223,118 @@ export function SavingsPage() {
     }
   }
 
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const field = event.currentTarget.elements.namedItem('q')
+    const typed = field instanceof HTMLInputElement ? field.value : inputValue
+    writeUrl({ q: typed.trim() })
+  }
+
   return (
     <div>
       <PageHeader
         title="Savings"
         description="Pick any number of titles. Savings are computed from listings already stored by Lookup Prices. This page does not call AbeBooks."
       />
-      <PageCard>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <Input
-              label="Find titles"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Title or author"
-              data-test="savings-search"
-            />
-          </div>
+      {booksError && (
+        <p className="mb-4 text-sm text-red-700" data-test="savings-books-error">
+          Could not load the catalog.
+        </p>
+      )}
+      <PageCard padding={false} className="relative">
+        <div className="p-4 border-b border-gray-200 space-y-3">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 items-start">
+            <div className="flex-1 w-full">
+              <Input
+                type="search"
+                name="q"
+                label="Filter by title or author"
+                hideLabel
+                placeholder="Filter by title or author..."
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                data-test="savings-search"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              leftIcon={<PiMagnifyingGlass />}
+              data-test="savings-search-button"
+            >
+              Search
+            </Button>
+          </form>
+          <BookFilters
+            chips={chips}
+            onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
+            showAvailabilityFilters
+            showCatalogerFilters
+          />
+          <BookLabelFilters
+            selectedLabels={selectedLabels}
+            onToggleLabel={(label) => {
+              const nextLabels = selectedLabels.includes(label)
+                ? selectedLabels.filter((item) => item !== label)
+                : [...selectedLabels, label]
+              writeUrl({ labels: nextLabels })
+            }}
+            onClearLabels={() => writeUrl({ labels: [] })}
+          />
+          <StatusFilters
+            selected={selectedStatuses}
+            onToggle={(value: BookStatusFilter) => {
+              const next = selectedStatuses.includes(value)
+                ? selectedStatuses.filter((item) => item !== value)
+                : [...selectedStatuses, value]
+              writeUrl({ statuses: next })
+            }}
+            onClear={() => writeUrl({ statuses: [] })}
+          />
+          <BindingFilters
+            selected={selectedBindings}
+            onToggle={(value: BookCoverType) => {
+              const next = selectedBindings.includes(value)
+                ? selectedBindings.filter((item) => item !== value)
+                : [...selectedBindings, value]
+              writeUrl({ bindings: next })
+            }}
+            onClear={() => writeUrl({ bindings: [] })}
+          />
+          <ReadingDifficultyFilters
+            selected={selectedDifficulties}
+            onToggle={(value: ReadingDifficulty) => {
+              const next = selectedDifficulties.includes(value)
+                ? selectedDifficulties.filter((item) => item !== value)
+                : [...selectedDifficulties, value]
+              writeUrl({ readingDifficulties: next })
+            }}
+            onClear={() => writeUrl({ readingDifficulties: [] })}
+          />
+          <FavoriteListFilters
+            lists={favoriteChips}
+            selected={selectedFavoriteLists}
+            onToggle={(listName) => {
+              const next = selectedFavoriteLists.includes(listName)
+                ? selectedFavoriteLists.filter((name) => name !== listName)
+                : [...selectedFavoriteLists, listName]
+              writeUrl({ favoriteLists: next })
+            }}
+            onClear={() => writeUrl({ favoriteLists: [] })}
+          />
+          <BookPriceFilters
+            chips={chips}
+            onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
+            priceOlderDays={priceOlderDays}
+            onPriceOlderDaysChange={(days) =>
+              writeUrl({ chips: { ...chips, priceOlder: true }, priceOlderDays: days })
+            }
+          />
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" onClick={selectVisible} data-test="savings-select-visible">
               Select shown
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setSelected(new Set())} data-test="savings-clear">
+            <Button type="button" variant="secondary" onClick={() => setSelected(new Map())} data-test="savings-clear">
               Clear
             </Button>
             <Button
@@ -152,45 +347,71 @@ export function SavingsPage() {
               Compute savings
             </Button>
           </div>
-        </div>
-        <p className="mt-3 text-sm text-gray-600" data-test="savings-selected-count">
-          {selected.size} {selected.size === 1 ? 'title' : 'titles'} selected
-          {query.trim() ? ` · ${visible.length} shown` : ''}
-        </p>
-        {(phase === 'loading' || phase === 'computing' || phase === 'done') && (
-          <p className="mt-2 text-sm font-medium text-gray-900" data-test="savings-timer">
-            {phase === 'loading' && 'Loading listings…'}
-            {phase === 'computing' && `Computing… ${seconds(elapsedMs)}s`}
-            {phase === 'done' && `Computed in ${seconds(elapsedMs)}s`}
+          <p className="text-sm text-gray-600" data-test="savings-selected-count">
+            {selected.size} {selected.size === 1 ? 'title' : 'titles'} selected
           </p>
-        )}
-        {error && <p className="mt-2 text-sm text-red-700" data-test="savings-error">{error}</p>}
-        {booksError && <p className="mt-2 text-sm text-red-700">Could not load the catalog.</p>}
-        <div className="mt-4 max-h-[28rem] overflow-y-auto border border-gray-200 rounded-md" data-test="savings-book-list">
-          {isLoading && <p className="p-3 text-sm text-gray-600">Loading titles…</p>}
-          {!isLoading && visible.length === 0 && (
-            <p className="p-3 text-sm text-gray-600">No titles match.</p>
+          {(phase === 'loading' || phase === 'computing' || phase === 'done') && (
+            <p className="text-sm font-medium text-gray-900" data-test="savings-timer">
+              {phase === 'loading' && 'Loading listings…'}
+              {phase === 'computing' && `Computing… ${seconds(elapsedMs)}s`}
+              {phase === 'done' && `Computed in ${seconds(elapsedMs)}s`}
+            </p>
           )}
-          <ul className="divide-y divide-gray-100">
-            {visible.map((book) => (
-              <li key={book.id}>
-                <label className="flex items-start gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={selected.has(book.id)}
-                    onChange={() => toggle(book.id)}
-                    data-test={`savings-book-${book.id}`}
-                  />
-                  <span>
-                    <span className="font-medium text-gray-900">{book.title}</span>
-                    {book.author && <span className="block text-gray-500">{book.author}</span>}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
+          {error && <p className="text-sm text-red-700" data-test="savings-error">{error}</p>}
         </div>
+        <div className="p-4">
+          <SelectionToolbar dataTest="savings-stats" selected={false}>
+            <TableCountPlaceholder
+              tableCount={books.length}
+              searchResultsCount={total}
+              totalCount={bookCount?.count}
+              singular="book"
+              plural="books"
+              isLoading={isLoading}
+              branchName={firstBranch?.branchName}
+              librarySystemName={firstBranch?.librarySystemName}
+            />
+          </SelectionToolbar>
+          <div data-test="savings-book-list">
+            {isLoading && <p className="py-3 text-sm text-gray-600">Loading titles…</p>}
+            {!isLoading && books.length === 0 && (
+              <p className="py-3 text-sm text-gray-600">No titles match.</p>
+            )}
+            <ul className="divide-y divide-gray-100">
+              {books.map((book) => (
+                <li key={book.id}>
+                  <label className="flex items-start gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={selected.has(book.id)}
+                      onChange={() => toggle(book)}
+                      data-test={`savings-book-${book.id}`}
+                    />
+                    <span>
+                      <span className="font-medium text-gray-900">{book.title}</span>
+                      {book.author && <span className="block text-gray-500">{book.author}</span>}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <CatalogLoadMore
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMore}
+          data-test="savings-load-more"
+        />
+        <LoadingOverlay show={isFetching && !isLoading} />
+        <TableSummary
+          count={books.length}
+          total={total}
+          singular="book"
+          plural="books"
+          isLoading={isLoading}
+        />
       </PageCard>
       {report && <SavingsReportView report={report} />}
     </div>

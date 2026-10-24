@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PiBooks, PiMagnifyingGlass } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PageCard } from '@/components/ui/PageCard'
 import { LoadingOverlay } from '@/components/progress/LoadingOverlay'
+import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
 import { PriceStatisticsSummary } from '@/components/table/PriceStatisticsSummary'
 import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/SelectionToolbar'
+import { TableSummary } from '@/components/table/TableSummary'
 import { TransientFetchErrorBanner } from '@/components/ui/TransientFetchErrorBanner'
 import { queryKeys } from '@/config/queryClient'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,6 +24,7 @@ import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilter
 import { PriceFilters } from './components/PriceFilters'
 import { PriceTable } from './components/PriceTable'
 import { usePrices } from '@/api/prices'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { useBookCount, useFilteredBookIds, type BookListFilters } from '@/api/books'
 import { useBranches } from '@/api/branches'
 import { isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
@@ -138,10 +141,12 @@ export function PricesPage() {
   const {
     ids: matchingBookIdsList,
     total: searchResultsCount = 0,
+    hasMore = false,
+    loadMore = () => {},
     isLoading: booksLoading,
     isFetching: booksFetching,
     error: booksError,
-  } = useFilteredBookIds(listFilters)
+  } = useFilteredBookIds(listFilters, { pageSize: CATALOG_PAGE_SIZE })
   const { data: bookCount } = useBookCount()
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
@@ -149,14 +154,21 @@ export function PricesPage() {
   // Book-level chips, including price chips, are applied by filtered-summaries.
   // Price rows (max total, recent hours, cover chips) stay in the browser.
   // Full book rows are not loaded; the price row already carries title and author.
-  const { data: scopedPrices = [], isLoading: pricesLoading, isFetching, error } = usePrices({
+  // Prices are requested only for the current 100-book window.
+  const { data: scopedPrices = [], isLoading: pricesLoading, isFetching: pricesFetching, error } = usePrices({
     bookIds: matchingBookIdsList,
     enabled: !booksLoading,
   })
 
+  // While the next page is in flight, keep statistics on the books already loaded.
+  // Unloaded matches must not be counted as books without prices.
+  const settledWindowRef = useRef<number[]>([])
+  if (!pricesFetching) settledWindowRef.current = matchingBookIdsList
+  const statisticsBookIds = pricesFetching ? settledWindowRef.current : matchingBookIdsList
+
   const priceStatistics = useMemo(
-    () => summarizeBookPrices(matchingBookIdsList.map((id) => ({ id })), scopedPrices),
-    [matchingBookIdsList, scopedPrices],
+    () => summarizeBookPrices(statisticsBookIds.map((id) => ({ id })), scopedPrices),
+    [statisticsBookIds, scopedPrices],
   )
 
   const prices = useMemo(() => {
@@ -179,7 +191,13 @@ export function PricesPage() {
   }, [prices])
 
   const isLoading = pricesLoading || booksLoading
-  const isFilterPending = ((isFetching || booksFetching) && !isLoading) || (booksLoading && !pricesLoading)
+  const loadingMorePrices = pricesFetching && matchingBookIdsList.length > CATALOG_PAGE_SIZE
+  const isFilterPending = !isLoading && !loadingMorePrices && (pricesFetching || booksFetching)
+
+  const requestMore = () => {
+    if (pricesFetching || booksFetching) return
+    loadMore()
+  }
 
   return (
     <div>
@@ -361,7 +379,20 @@ export function PricesPage() {
           <PriceTable prices={prices} isLoading={isLoading} />
         </div>
 
+        <CatalogLoadMore
+          hasMore={hasMore}
+          isLoadingMore={loadingMorePrices}
+          onLoadMore={requestMore}
+          data-test="prices-load-more"
+        />
         <LoadingOverlay show={isFilterPending} />
+        <TableSummary
+          count={matchingBookIdsList.length}
+          total={searchResultsCount}
+          singular="book"
+          plural="books"
+          isLoading={isLoading}
+        />
         <PriceStatisticsSummary stats={priceStatistics} isLoading={isLoading} />
       </PageCard>
     </div>

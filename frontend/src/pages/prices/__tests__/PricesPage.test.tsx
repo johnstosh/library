@@ -3,10 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { PricesPage } from '../PricesPage'
 import type { BookDto, BookPriceDto } from '@/types/dtos'
 
-const { prices, books, filterBooks } = vi.hoisted(() => {
+const { prices, books, filterBooks, priceHooks } = vi.hoisted(() => {
   const books: BookDto[] = [
     {
       id: 1,
@@ -145,7 +146,12 @@ const { prices, books, filterBooks } = vi.hoisted(() => {
       return true
     })
   }
-  return { prices, books, filterBooks }
+  return {
+    prices,
+    books,
+    filterBooks,
+    priceHooks: { options: undefined as { pageSize?: number } | undefined },
+  }
 })
 
 vi.mock('@/api/prices', () => ({
@@ -158,11 +164,17 @@ vi.mock('@/api/prices', () => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useFilteredBookIds: (filters?: Parameters<typeof filterBooks>[0]) => {
+  useFilteredBookIds: (filters?: Parameters<typeof filterBooks>[0], options?: { pageSize?: number }) => {
+    priceHooks.options = options
     const data = filterBooks(filters)
+    const pageSize = options?.pageSize
+    const window = pageSize == null ? data : data.slice(0, pageSize)
     return {
-      ids: data.map((book) => book.id),
+      ids: window.map((book) => book.id),
       total: data.length,
+      hasMore: pageSize != null && data.length > pageSize,
+      loadMore: () => {},
+      isLoadingMore: false,
       isLoading: false,
       isFetching: false,
       error: null,
@@ -206,6 +218,9 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('search-results-count')).toHaveTextContent('4 books in the search results')
     expect(screen.getByTestId('database-count')).toHaveTextContent('12 books in the Sacred Heart Library System')
     expect(screen.getByTestId('price-row-count')).toHaveTextContent('5 prices in this table')
+    expect(screen.getByText('Showing 4 books')).toBeInTheDocument()
+    expect(screen.queryByTestId('prices-load-more')).not.toBeInTheDocument()
+    expect(priceHooks.options).toEqual({ pageSize: CATALOG_PAGE_SIZE })
   })
 
   it('reports cheapest-cover totals and threshold counts at the bottom of the page', () => {
