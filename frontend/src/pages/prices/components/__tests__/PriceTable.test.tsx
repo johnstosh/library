@@ -33,20 +33,20 @@ function renderTable(prices: BookPriceDto[] = [price]) {
 }
 
 describe('PriceTable column widths', () => {
-  it('widens Book, narrows Seller, Cover, and Looked up, and stacks the amounts', () => {
+  it('sets Book to half its previous share and Seller to 60% of Book', () => {
     renderTable()
 
     const headers = screen.getAllByRole('columnheader')
     const header = (name: string) => headers.find((cell) => cell.textContent === name)
 
-    expect(header('Book')).toHaveStyle({ width: '65.5%' })
-    expect(header('Seller')).toHaveStyle({ width: '3.6%' })
-    expect(header('Cover')).toHaveStyle({ width: '5.7%' })
-    expect(header('Condition')).toHaveStyle({ width: '4%' })
-    expect(header('Price')).toHaveStyle({ width: '7.3%' })
-    expect(header('Looked up')).toHaveStyle({ width: '4.5%' })
-    expect(header('Status')).toHaveStyle({ width: '5.8%' })
-    expect(header('Listing')).toHaveStyle({ width: '3.6%' })
+    expect(header('Book')).toHaveStyle({ width: '32.75%' })
+    expect(header('Seller')).toHaveStyle({ width: '19.65%' })
+    expect(header('Cover')).toHaveStyle({ width: '8.8%' })
+    expect(header('Condition')).toHaveStyle({ width: '6.2%' })
+    expect(header('Price')).toHaveStyle({ width: '11.3%' })
+    expect(header('Looked up')).toHaveStyle({ width: '6.9%' })
+    expect(header('Status')).toHaveStyle({ width: '8.9%' })
+    expect(header('Listing')).toHaveStyle({ width: '5.5%' })
     expect(header('Shipping')).toBeUndefined()
     expect(header('Total')).toBeUndefined()
 

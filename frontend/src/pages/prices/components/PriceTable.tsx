@@ -12,12 +12,12 @@ interface PriceTableProps {
 }
 
 /**
- * Shares of the table. The previous widths summed to 110, so each old visual
- * share was width/110. Book, Seller, Cover, and Looked up are those shares
- * times 4, 1/3, 0.7, and 1/2. Price keeps the width of the old Price column
- * and stacks item, shipping, and total. Condition, Status, and Listing split
- * the remaining width in their old 11:16:10 ratio.
+ * Shares of the table. Book is half of its previous 65.5% share (32.75%).
+ * Seller is 60% of Book (19.65%). Cover, Condition, Price, Looked up, Status,
+ * and Listing keep their previous proportion of the remaining width.
  */
+const BOOK_WIDTH = 32.75
+const SELLER_WIDTH = BOOK_WIDTH * 0.6
 const NARROW_HEADER = 'px-1 py-2 text-[10px] tracking-normal whitespace-normal leading-tight break-words'
 
 function PriceAmounts({ price }: { price: BookPriceDto }) {
@@ -59,7 +59,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
           {price.author && <div className="text-sm text-gray-500">{price.author}</div>}
         </div>
       ),
-      width: '65.5%',
+      width: `${BOOK_WIDTH}%`,
       cellClassName: 'px-3 py-2 max-w-0 align-top text-sm',
     },
     {
@@ -75,7 +75,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
         ) : (
           '—'
         ),
-      width: '3.6%',
+      width: `${SELLER_WIDTH}%`,
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 max-w-0 overflow-hidden align-top text-sm',
     },
@@ -87,7 +87,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
           {coverAbbrev(price.cover)}
         </span>
       ),
-      width: '5.7%',
+      width: '8.8%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 align-top text-sm whitespace-nowrap',
     },
@@ -95,7 +95,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
       key: 'condition',
       header: 'Condition',
       accessor: (price) => price.condition || '—',
-      width: '4%',
+      width: '6.2%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 align-top text-sm break-words',
     },
@@ -104,7 +104,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
       header: 'Price',
       headerTitle: 'Item price, shipping, and total',
       accessor: (price) => <PriceAmounts price={price} />,
-      width: '7.3%',
+      width: '11.3%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 max-w-0 overflow-hidden align-top text-sm whitespace-normal',
     },
@@ -120,7 +120,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
           </span>
         )
       },
-      width: '4.5%',
+      width: '6.9%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 align-top text-sm whitespace-nowrap',
       hideOnMobile: true,
@@ -136,7 +136,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
         ) : (
           <span data-test={`price-status-${price.id}`}>—</span>
         ),
-      width: '5.8%',
+      width: '8.9%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 align-top text-sm',
     },
@@ -157,7 +157,7 @@ export function PriceTable({ prices, isLoading }: PriceTableProps) {
         ) : (
           '—'
         ),
-      width: '3.6%',
+      width: '5.5%',
       headerClassName: NARROW_HEADER,
       cellClassName: 'px-1 py-2 align-top text-sm',
     },
