@@ -98,7 +98,7 @@ public class AbeBooksListingParser {
 
     /**
      * True when the HTML (or lack of it) looks like a block/captcha page
-     * rather than an AbeBooks search-results page.
+     * rather than an AbeBooks search-results or ShipRates page.
      */
     public boolean isBlockedPage(String html) {
         if (html == null || html.isBlank()) {
@@ -114,10 +114,10 @@ public class AbeBooksListingParser {
                 || lower.contains("request unsuccessful")) {
             return true;
         }
-        if (hasListing(html)) {
+        if (hasListing(html) || looksLikeSearchResults(html) || looksLikeShipRates(html)) {
             return false;
         }
-        return !looksLikeSearchResults(html);
+        return true;
     }
 
     /**
@@ -130,7 +130,7 @@ public class AbeBooksListingParser {
         if (isBlockedPage(html)) {
             return true;
         }
-        if (looksLikeSearchResults(html) || hasListing(html)) {
+        if (looksLikeSearchResults(html) || hasListing(html) || looksLikeShipRates(html)) {
             return false;
         }
         return elapsedMs >= 0 && elapsedMs < 250;
@@ -149,6 +149,18 @@ public class AbeBooksListingParser {
         return html.contains("srp-search-results-list")
                 || lower.contains("closest match to your search")
                 || html.contains("data-test-id=\"result-count\"");
+    }
+
+    /**
+     * A seller ShipRates page. It has no search-result markup, so the search
+     * block check must not treat it as a captcha.
+     */
+    static boolean looksLikeShipRates(String html) {
+        if (html == null || html.isBlank()) {
+            return false;
+        }
+        String lower = html.toLowerCase(Locale.ROOT);
+        return lower.contains("bookseller shipping terms") || lower.contains("first book:");
     }
 
     /**
@@ -418,7 +430,9 @@ public class AbeBooksListingParser {
         String text = terms.replace('\u00a0', ' ').replaceAll("[ \\t\\x0B\\f\\r]+", " ").trim();
         AdditionalRate explicit = null;
         boolean standardFree = false;
-        for (String sentence : text.split("(?<![A-Z].)(?<=[.!?])\\s+|\\n+")) {
+        // Split on a sentence end. A single capital before the period, as in "U.S.",
+        // is an abbreviation. "FREE. Priority" is a new sentence.
+        for (String sentence : text.split("(?<![^A-Za-z][A-Za-z][.!?])(?<=[.!?])\\s+(?=[A-Z])|\\n+")) {
             boolean priority = mentionsPriority(sentence);
             boolean international = mentionsInternational(sentence);
             for (String clause : sentence.split("\\s*(?:;|,|\\band\\b)\\s*")) {

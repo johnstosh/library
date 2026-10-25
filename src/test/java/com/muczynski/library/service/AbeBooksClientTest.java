@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.AdditionalShippingSource;
 import com.muczynski.library.domain.BookCoverType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -280,6 +281,26 @@ class AbeBooksClientTest {
 
         assertThrows(AbeBooksRateLimitedException.class,
                 () -> client.findCheapestGoodOrBetter("Emma", "Jane Austen"));
+    }
+
+    @Test
+    void fetchShipRates_keepsAShippingPage() {
+        AbeBooksClient realParser = new AbeBooksClient(restTemplate, new AbeBooksListingParser());
+        String html = """
+                <html><body>
+                <table><tr><td>First book:</td><td>US$ 0.00</td><td>US$ 5.99</td></tr></table>
+                <p><strong>Bookseller Shipping Terms:</strong> <p>STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Shipping is only $1 each additional.</p></p>
+                </body></html>
+                """;
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok(html));
+
+        AbeBooksShipRates rates = realParser.fetchShipRates(8895L, 31127556503L);
+
+        assertEquals(new BigDecimal("0.00"), rates.getStandardDollars());
+        assertEquals(BigDecimal.ZERO, rates.getAdditionalDollars());
+        assertEquals(AdditionalShippingSource.FREE, rates.getAdditionalSource());
+        assertTrue(rates.getTerms().contains("STANDARD DOMESTIC"));
     }
 
     @Test

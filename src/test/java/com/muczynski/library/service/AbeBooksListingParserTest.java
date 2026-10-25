@@ -78,6 +78,14 @@ class AbeBooksListingParserTest {
         assertFalse(parser.isRateLimited(emptyResults, 400));
         assertTrue(parser.isRateLimited("<html>not a search page</html>", 80),
                 "a tiny non-search page that returns too fast is treated as rate limited");
+        String shipRates = """
+                <html><body><table><tr><td>First book:</td><td>US$ 4.00</td></tr></table>
+                <strong>Bookseller Shipping Terms</strong><p>Each additional book US$ 1.50</p>
+                </body></html>
+                """;
+        assertFalse(parser.isBlockedPage(shipRates), "a ShipRates page is not a block page");
+        assertFalse(parser.isRateLimited(shipRates, 40),
+                "a fast ShipRates page is not a rate limit");
     }
 
     @Test
@@ -248,6 +256,10 @@ class AbeBooksListingParserTest {
         assertEquals(AdditionalShippingSource.UNKNOWN, abroad.source());
 
         assertParsed("1.50", "Outside the U.S. each additional book is $8 and within the United States each additional book is $1.50.");
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Shipping is only $1 each additional.").source());
+        assertEquals(BigDecimal.ZERO, AbeBooksListingParser.parseAdditionalRate(
+                "STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Shipping is only $1 each additional.").dollars());
         assertParsed("1.00", "Priority shipping is $3 each additional and standard is $1 each additional.");
 
         AbeBooksListingParser.AdditionalRate heavy = AbeBooksListingParser.parseAdditionalRate(
