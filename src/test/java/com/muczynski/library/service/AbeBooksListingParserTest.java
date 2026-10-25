@@ -201,6 +201,66 @@ class AbeBooksListingParserTest {
         assertEquals(AdditionalShippingSource.UNKNOWN, unknown.source());
     }
 
+    @Test
+    void parseShipRates_readsLiveNestedTermsAndIgnoresPriorityRate() {
+        String html = """
+                <html><body><table>
+                <tr><td>First book:</td><td>US$ 0.00</td><td>US$ 5.99</td></tr>
+                </table>
+                <p><strong>Bookseller Shipping Terms:</strong> <p>STANDARD DOMESTIC U.S. SHIPPING IS FREE.  Priority Shipping is only $6.99 for first item, $1 each additional. Orders ship within 2 business days. Shipping outside of U.S. is typically between $8-13 and takes between 8-15 business days.  Heavier books may require additional shipping.  Faster Needs Please Inquire.</p></p>
+                <p><span class="required">*</span> Shipping speeds are estimates based on the carriers' delivery times and cannot be guaranteed.</p>
+                </body></html>
+                """;
+        AbeBooksShipRates rates = parser.parseShipRates(html);
+        assertEquals(new BigDecimal("0.00"), rates.getStandardDollars());
+        assertEquals(new BigDecimal("5.99"), rates.getPriorityDollars());
+        assertEquals(BigDecimal.ZERO, rates.getAdditionalDollars());
+        assertEquals(AdditionalShippingSource.FREE, rates.getAdditionalSource());
+        assertTrue(rates.getTerms().contains("STANDARD DOMESTIC"));
+        assertTrue(rates.getTerms().contains("$1 each additional"));
+        assertFalse(rates.getTerms().toLowerCase().contains("shipping speeds"));
+    }
+
+    @Test
+    void parseAdditionalRate_readsStandardMultiBookPhrases() {
+        assertParsed("1.50", "Each additional book US$ 1.50");
+        assertParsed("1.50", "$1.50 for each additional book");
+        assertParsed("1.00", "US$ 1.00 per additional item");
+        assertParsed("2", "each extra book $2");
+        assertParsed("1.25", "First book $4.50, $1.25 thereafter");
+        assertParsed("0.50", "second book $.50");
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "Additional books in the same order ship for FREE via Standard Shipping.").source());
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "No additional charge for extra books.").source());
+    }
+
+    @Test
+    void parseAdditionalRate_skipsPriorityAndInternationalRates() {
+        AbeBooksListingParser.AdditionalRate priorityOnly = AbeBooksListingParser.parseAdditionalRate(
+                "Priority Shipping is only $6.99 for first item, $1 each additional.");
+        assertNull(priorityOnly.dollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, priorityOnly.source());
+
+        AbeBooksListingParser.AdditionalRate abroad = AbeBooksListingParser.parseAdditionalRate(
+                "Outside the U.S. each additional book is $12.");
+        assertNull(abroad.dollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, abroad.source());
+
+        assertParsed("1.50", "Outside the U.S. each additional book is $8 and within the United States each additional book is $1.50.");
+        assertParsed("1.00", "Priority shipping is $3 each additional and standard is $1 each additional.");
+
+        AbeBooksListingParser.AdditionalRate heavy = AbeBooksListingParser.parseAdditionalRate(
+                "Heavier books may require additional shipping. The bookseller may contact you about extra charges.");
+        assertEquals(AdditionalShippingSource.UNKNOWN, heavy.source());
+    }
+
+    private static void assertParsed(String dollars, String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertEquals(0, new BigDecimal(dollars).compareTo(rate.dollars()), terms);
+        assertEquals(AdditionalShippingSource.PARSED, rate.source(), terms);
+    }
+
     private static String listing(String href, String condition, String price, String shipping, String binding) {
         String attributes = binding == null ? ""
                 : "<ul aria-label=\"Attributes\"><li><span aria-label=\"" + binding + "\">"
