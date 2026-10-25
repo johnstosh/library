@@ -1,6 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
 import { EntityLink } from '@/components/ui/EntityLink'
+import { FilterChip } from '@/components/ui/FilterChip'
 import { PageCard } from '@/components/ui/PageCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { CatalogLoadMore } from '@/components/table/CatalogLoadMore'
@@ -32,16 +33,29 @@ export function sourceLabel(source: AdditionalShippingSource | null | undefined)
   return 'Not published'
 }
 
+/** True when the Each extra book column shows "Not published". */
+export function isRateNotPublished(
+  seller: Pick<AbeSellerDto, 'additionalShippingDollars' | 'additionalShippingSource'>,
+): boolean {
+  return additionalRateLabel(seller) === 'Not published'
+}
+
 export function SellersPage() {
   const { data: sellers = [], isLoading, error } = useSellers()
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
+  const [includeNotPublished, setIncludeNotPublished] = useState(false)
   const [loadedCount, setLoadedCount] = useState(CATALOG_PAGE_SIZE)
-  const visible = sellers.slice(0, loadedCount)
-  const hasMore = loadedCount < sellers.length
+  const filtered = includeNotPublished ? sellers : sellers.filter((seller) => !isRateNotPublished(seller))
+  const visible = filtered.slice(0, loadedCount)
+  const hasMore = loadedCount < filtered.length
   const loadMore = () => {
     if (!hasMore) return
     setLoadedCount((count) => count + CATALOG_PAGE_SIZE)
+  }
+  const toggleNotPublished = () => {
+    setIncludeNotPublished((on) => !on)
+    setLoadedCount(CATALOG_PAGE_SIZE)
   }
 
   const columns: Column<AbeSellerDto>[] = [
@@ -114,11 +128,22 @@ export function SellersPage() {
         </p>
       )}
       <PageCard padding={false}>
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex flex-wrap gap-2" data-test="seller-filter-chips">
+            <FilterChip
+              label="Not published"
+              active={includeNotPublished}
+              onClick={toggleNotPublished}
+              tooltip="Include sellers whose extra-book rate is not published. Off hides them."
+              dataTest="filter-not-published"
+            />
+          </div>
+        </div>
         <div className="p-4">
           <SelectionToolbar dataTest="sellers-stats" selected={false}>
             <TableCountPlaceholder
               tableCount={visible.length}
-              searchResultsCount={sellers.length}
+              searchResultsCount={filtered.length}
               totalCount={sellers.length}
               singular="seller"
               plural="sellers"
@@ -131,7 +156,11 @@ export function SellersPage() {
             data={visible}
             columns={columns}
             keyExtractor={(seller) => seller.id}
-            emptyMessage="No sellers yet. Look up prices to capture AbeBooks sellers."
+            emptyMessage={
+              sellers.length > 0
+                ? 'No sellers with a published extra-book rate.'
+                : 'No sellers yet. Look up prices to capture AbeBooks sellers.'
+            }
             isLoading={isLoading}
           />
         </div>
@@ -144,7 +173,7 @@ export function SellersPage() {
         />
         <TableSummary
           count={visible.length}
-          total={sellers.length}
+          total={filtered.length}
           singular="seller"
           plural="sellers"
           isLoading={isLoading}
