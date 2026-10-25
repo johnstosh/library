@@ -4,7 +4,7 @@
  * Reads via file.stream() and never JSON.parse()s the whole file.
  * Emits sequential request bodies (~fileSize/33) so Cloud Run stays under 600s.
  * Every top-level array (libraries, authors, users, books, loans, photos,
- * favorites, prices) is split by the same byte budget — authors alone may
+ * favorites, prices, sellers, listings) is split by the same byte budget — authors alone may
  * span multiple POSTs.
  */
 
@@ -21,6 +21,8 @@ const SECTION_KEYS = [
   'photos',
   'favorites',
   'prices',
+  'sellers',
+  'listings',
 ] as const
 
 const KNOWN_KEYS = new Set<string>([...SECTION_KEYS, 'branches'])

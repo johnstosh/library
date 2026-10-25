@@ -21,4 +21,6 @@ public class AbeBooksCoverListings {
     AbeBooksListing other;
     String searchUrl;
     boolean rateLimited;
+    /** Good-or-better offers from the pages that were fetched, including the cover winners. */
+    java.util.List<AbeBooksListing> candidates;
 }

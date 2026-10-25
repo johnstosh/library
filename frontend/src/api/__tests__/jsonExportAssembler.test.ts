@@ -88,6 +88,8 @@ describe('jsonExportAssembler', () => {
       'photos',
       'favorites',
       'prices',
+      'sellers',
+      'listings',
     ])
     expect(parsed.libraries).toHaveLength(1)
     expect(parsed.books).toHaveLength(1)

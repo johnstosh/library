@@ -52,7 +52,13 @@ export function usePrices(options?: { enabled?: boolean; bookIds?: number[] | un
       .map((s) => s.id)
   }, [summaries, queryClient, isScoped])
 
-  const { data: fetchedPrices, isLoading: fetchingPrices, isFetching: byIdsFetching, error: byIdsError } = useQuery({
+  const {
+    data: fetchedPrices,
+    isLoading: fetchingPrices,
+    isFetching: byIdsFetching,
+    isPlaceholderData,
+    error: byIdsError,
+  } = useQuery({
     queryKey: isScoped
       ? [...queryKeys.prices.all, 'byBookIds', bookIds.join(',')]
       : queryKeys.prices.byIds(pricesToFetch),
@@ -119,6 +125,7 @@ export function usePrices(options?: { enabled?: boolean; bookIds?: number[] | un
     data: stablePrices,
     isLoading,
     isFetching,
+    isPlaceholderData,
     error: summariesError || byIdsError,
   }
 }

@@ -3,6 +3,10 @@
  */
 package com.muczynski.library.service;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.AdditionalShippingSource;
 import com.muczynski.library.domain.BookCoverType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -29,6 +33,43 @@ public class AbeBooksListingParser {
     private static final Pattern MONEY = Pattern.compile(
             "(?:US\\s*\\$|\\$)\\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)",
             Pattern.CASE_INSENSITIVE);
+    private static final String MONEY_AMOUNT =
+            "([0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{1,2})?|\\.[0-9]{1,2})";
+    private static final String MONEY_TOKEN = "(?:US\\s*\\$|USD|\\$)\\s*" + MONEY_AMOUNT;
+    private static final String EXTRA_WORD = "(?:additional|extra|add'l|addl\\.?)";
+    private static final String ITEM_WORD =
+            "(?:books|book|items|item|copies|copy|volumes|volume)";
+    /** Prose that states additional books cost nothing on standard shipping. */
+    private static final Pattern MULTI_BOOK_FREE = Pattern.compile(
+            "(?i)(?:"
+                    + "additional\\s+" + ITEM_WORD + "(?:\\s+[\\w']+){0,8}\\s+ship(?:\\s+for)?\\s+(?<!not )free\\b"
+                    + "|each\\s+" + EXTRA_WORD + "(?:\\s+" + ITEM_WORD + ")?(?:\\s+(?!free\\b)[\\w']+){0,6}\\s+(?<!not )free\\b"
+                    + "|no\\s+(?:additional|extra)\\s+charge"
+                    + "|additional\\s+" + ITEM_WORD + "(?:\\s+[\\w']+){0,8}\\s+(?:at\\s+)?no\\s+(?:extra\\s+)?charge"
+                    + "|free\\s+shipping\\s+on\\s+additional\\s+" + ITEM_WORD
+                    + ")");
+    /**
+     * A per-extra-book dollar amount. Groups are mutually exclusive; the first
+     * one that matches is the amount.
+     */
+    private static final Pattern MULTI_BOOK_AMOUNT = Pattern.compile(
+            "(?i)(?:"
+                    + MONEY_TOKEN + "\\s*(?:for\\s+|per\\s+)?each\\s+" + EXTRA_WORD
+                    + "(?:\\s+" + ITEM_WORD + ")?"
+                    + "|"
+                    + MONEY_TOKEN + "\\s*(?:for\\s+|per\\s+)?(?:each\\s+)?" + EXTRA_WORD
+                    + "\\s+" + ITEM_WORD
+                    + "|"
+                    + "(?:each\\s+)?" + EXTRA_WORD + "\\s+" + ITEM_WORD
+                    + "[^$]{0,50}?" + MONEY_TOKEN
+                    + "|"
+                    + "(?:second|2nd)\\s+" + ITEM_WORD + "[^$]{0,30}?" + MONEY_TOKEN
+                    + "|"
+                    + MONEY_TOKEN + "\\s+(?:each\\s+)?thereafter\\b"
+                    + "|thereafter[^$]{0,20}?" + MONEY_TOKEN
+                    + ")");
+    private static final ObjectMapper JSON = new ObjectMapper()
+            .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
     /**
      * Good-or-better listings on the page, cheapest-first is not applied here —
@@ -288,5 +329,471 @@ public class AbeBooksListingParser {
             idx = haystack.indexOf(word, idx + 1);
         }
         return false;
+    }
+
+    /**
+     * Good-or-better offers from the embedded search JSON. Empty when that payload is absent,
+     * so callers can fall back to the visible listing cards.
+     */
+    public List<AbeBooksListing> parseEmbeddedListings(String html) {
+        List<AbeBooksListing> found = new ArrayList<>();
+        String object = searchResultsObject(html);
+        if (object == null) {
+            return found;
+        }
+        try {
+            JsonNode results = JSON.readTree(object).path("searchResultsArray").path("results");
+            if (!results.isArray()) {
+                return found;
+            }
+            for (JsonNode wrapper : results) {
+                AbeBooksListing listing = listingFromJson(wrapper.path("listing"));
+                if (listing != null && isGoodOrBetter(listing.getCondition())) {
+                    found.add(listing);
+                }
+            }
+        } catch (Exception ex) {
+            return List.of();
+        }
+        return found;
+    }
+
+    /**
+     * First-book rates and seller terms from a ShipRates page.
+     * The extra-book amount is parsed from the terms text when the prose states one.
+     */
+    public AbeBooksShipRates parseShipRates(String html) {
+        if (html == null || html.isBlank()) {
+            return AbeBooksShipRates.unknown();
+        }
+        Document doc = Jsoup.parse(html);
+        BigDecimal standard = null;
+        BigDecimal priority = null;
+        for (Element td : doc.select("td")) {
+            String label = td.text().replace('\u00a0', ' ').trim().toLowerCase(Locale.ROOT);
+            if (!label.startsWith("first book")) {
+                continue;
+            }
+            Element row = td.parent();
+            if (row == null) {
+                continue;
+            }
+            Elements cells = row.select("td");
+            List<BigDecimal> prices = new ArrayList<>();
+            for (int i = 1; i < cells.size(); i++) {
+                BigDecimal amount = parseMoney(cells.get(i).text());
+                if (amount != null) {
+                    prices.add(amount);
+                }
+            }
+            if (!prices.isEmpty()) {
+                standard = prices.get(0);
+            }
+            if (prices.size() > 1) {
+                priority = prices.get(1);
+            }
+            break;
+        }
+        String terms = shippingTerms(doc);
+        AdditionalRate extra = parseAdditionalRate(terms);
+        return AbeBooksShipRates.builder()
+                .standardDollars(standard)
+                .priorityDollars(priority)
+                .terms(terms)
+                .additionalDollars(extra.dollars)
+                .additionalSource(extra.source)
+                .build();
+    }
+
+    /**
+     * Standard extra-book rate stated in seller terms.
+     * Unknown when the text does not name one. A rate that applies only to
+     * priority or international shipping is not the standard rate.
+     * When standard or domestic shipping itself is free, additional books are free.
+     */
+    public static AdditionalRate parseAdditionalRate(String terms) {
+        if (terms == null || terms.isBlank()) {
+            return AdditionalRate.UNKNOWN;
+        }
+        String text = terms.replace('\u00a0', ' ').replaceAll("[ \\t\\x0B\\f\\r]+", " ").trim();
+        AdditionalRate explicit = null;
+        boolean standardFree = false;
+        for (String sentence : text.split("(?<![A-Z].)(?<=[.!?])\\s+|\\n+")) {
+            boolean priority = mentionsPriority(sentence);
+            boolean international = mentionsInternational(sentence);
+            for (String clause : sentence.split("\\s*(?:;|,|\\band\\b)\\s*")) {
+                if (clause.isBlank()) {
+                    continue;
+                }
+                boolean domestic = mentionsDomestic(clause);
+                if ((priority || mentionsPriority(clause)) && !domestic) {
+                    continue;
+                }
+                if ((international || mentionsInternational(clause)) && !domestic) {
+                    continue;
+                }
+                if (explicit == null) {
+                    AdditionalRate rate = rateInClause(clause);
+                    if (rate != null) {
+                        explicit = rate;
+                    }
+                }
+                if (standardShippingIsFree(clause)) {
+                    standardFree = true;
+                }
+            }
+        }
+        if (explicit != null) {
+            return explicit;
+        }
+        if (standardFree) {
+            return new AdditionalRate(BigDecimal.ZERO, AdditionalShippingSource.FREE);
+        }
+        return AdditionalRate.UNKNOWN;
+    }
+
+    private static AdditionalRate rateInClause(String clause) {
+        if (MULTI_BOOK_FREE.matcher(clause).find()) {
+            return new AdditionalRate(BigDecimal.ZERO, AdditionalShippingSource.FREE);
+        }
+        Matcher matcher = MULTI_BOOK_AMOUNT.matcher(clause);
+        if (!matcher.find()) {
+            return null;
+        }
+        for (int group = 1; group <= matcher.groupCount(); group++) {
+            String raw = matcher.group(group);
+            if (raw == null) {
+                continue;
+            }
+            return new AdditionalRate(new BigDecimal(raw.replace(",", "")), AdditionalShippingSource.PARSED);
+        }
+        return null;
+    }
+
+    /** AbeBooks' faster column, not the USPS Priority Mail service sellers use for standard parcels. */
+    private static boolean mentionsPriority(String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        return lower.contains("priority shipping")
+                || lower.contains("expedited")
+                || lower.contains("express shipping");
+    }
+
+    private static boolean mentionsInternational(String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        return lower.contains("international")
+                || lower.contains("overseas")
+                || lower.contains("abroad")
+                || lower.contains("outside of the u")
+                || lower.contains("outside of u")
+                || lower.contains("outside the u");
+    }
+
+    private static boolean mentionsDomestic(String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        return lower.contains("domestic")
+                || lower.contains("standard")
+                || lower.contains("within the united states")
+                || lower.contains("inside the united states");
+    }
+
+    private static boolean standardShippingIsFree(String clause) {
+        String lower = clause.toLowerCase(Locale.ROOT);
+        if (!lower.contains("free") || lower.contains("additional") || lower.contains("extra")
+                || lower.contains("add'l") || lower.contains("addl")) {
+            return false;
+        }
+        return lower.matches("(?s).*\\b(standard|domestic)\\b.*\\bshipping\\b.*\\bfree\\b.*")
+                || lower.matches("(?s).*\\bfree\\b.*\\b(standard|domestic)\\b.*\\bshipping\\b.*");
+    }
+
+    private static String shippingTerms(Document doc) {
+        Element strong = null;
+        for (Element el : doc.select("strong")) {
+            if (el.text().toLowerCase(Locale.ROOT).contains("bookseller shipping terms")) {
+                strong = el;
+                break;
+            }
+        }
+        if (strong == null) {
+            return null;
+        }
+        // AbeBooks nests a second <p> inside the terms <p>. Jsoup hoists that
+        // paragraph out, so the prose is the parent's next sibling, not the strong's.
+        String following = textOfFollowingSiblings(strong);
+        if (following == null && strong.parent() != null) {
+            following = textOfFollowingSiblings(strong.parent());
+        }
+        if (following != null) {
+            return following;
+        }
+        return inlineTerms(strong);
+    }
+
+    private static String textOfFollowingSiblings(Element start) {
+        StringBuilder terms = new StringBuilder();
+        for (Element node = start.nextElementSibling(); node != null; node = node.nextElementSibling()) {
+            String tag = node.tagName();
+            if (tag.equals("script") || tag.equals("style")) {
+                break;
+            }
+            String text = node.text().replace('\u00a0', ' ').trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+            if (isShippingDisclaimer(text)) {
+                break;
+            }
+            if (terms.length() > 0) {
+                terms.append('\n');
+            }
+            terms.append(text);
+        }
+        return terms.isEmpty() ? null : terms.toString();
+    }
+
+    private static boolean isShippingDisclaimer(String text) {
+        String lower = text.toLowerCase(Locale.ROOT).replaceFirst("^[^a-z]+", "");
+        return lower.startsWith("shipping speeds are estimates");
+    }
+
+    private static String inlineTerms(Element strong) {
+        Element parent = strong.parent();
+        if (parent == null) {
+            return null;
+        }
+        String text = parent.text().replace('\u00a0', ' ').trim();
+        int idx = text.toLowerCase(Locale.ROOT).indexOf("bookseller shipping terms");
+        if (idx >= 0) {
+            text = text.substring(idx + "bookseller shipping terms".length()).replaceFirst("^[:\\s]+", "").trim();
+        }
+        int disclaimer = text.toLowerCase(Locale.ROOT).indexOf("shipping speeds are estimates");
+        if (disclaimer >= 0) {
+            text = text.substring(0, disclaimer).replaceFirst("[*\\s]+$", "").trim();
+        }
+        return text.isEmpty() ? null : text;
+    }
+
+    static String searchResultsObject(String html) {
+        if (html == null || html.isBlank()) {
+            return null;
+        }
+        int marker = html.indexOf("searchResultsArray");
+        if (marker < 0) {
+            return null;
+        }
+        int push = html.lastIndexOf("push([1,\"", marker);
+        if (push < 0) {
+            return null;
+        }
+        int start = push + "push([1,\"".length();
+        String decoded = unescapeJsString(html, start);
+        if (decoded == null) {
+            return null;
+        }
+        int jsonStart = decoded.indexOf("{\"searchResultsArray\"");
+        if (jsonStart < 0) {
+            jsonStart = decoded.indexOf("{\"searchResultsArray\"");
+        }
+        if (jsonStart < 0) {
+            return null;
+        }
+        return extractObject(decoded, jsonStart);
+    }
+
+    private static String unescapeJsString(String html, int start) {
+        StringBuilder out = new StringBuilder();
+        for (int i = start; i < html.length(); i++) {
+            char c = html.charAt(i);
+            if (c == '\\' && i + 1 < html.length()) {
+                char next = html.charAt(i + 1);
+                if (next == 'u' && i + 5 < html.length()) {
+                    String hex = html.substring(i + 2, i + 6);
+                    try {
+                        out.append((char) Integer.parseInt(hex, 16));
+                        i += 5;
+                        continue;
+                    } catch (NumberFormatException ex) {
+                        out.append(next);
+                        i++;
+                        continue;
+                    }
+                }
+                if (next == 'n') {
+                    out.append('\n');
+                } else if (next == 't') {
+                    out.append('\t');
+                } else {
+                    out.append(next);
+                }
+                i++;
+                continue;
+            }
+            if (c == '"') {
+                return out.toString();
+            }
+            out.append(c);
+        }
+        return null;
+    }
+
+    private static String extractObject(String decoded, int start) {
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = start; i < decoded.length(); i++) {
+            char c = decoded.charAt(i);
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (c == '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return decoded.substring(start, i + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    private AbeBooksListing listingFromJson(JsonNode listing) {
+        if (listing == null || listing.isMissingNode()) {
+            return null;
+        }
+        JsonNode priceNode = listing.path("priceInPurchaseCurrency");
+        if (!usd(priceNode)) {
+            return null;
+        }
+        BigDecimal price = moneyAmount(priceNode);
+        if (price == null) {
+            return null;
+        }
+        JsonNode shippingNode = listing.path("shippingPriceInPurchaseCurrency");
+        if (!shippingNode.isMissingNode() && !shippingNode.isNull() && !usd(shippingNode)) {
+            return null;
+        }
+        BigDecimal shipping = moneyAmount(shippingNode);
+        String vendorCondition = text(listing, "vendorCondition");
+        String conditionCode = text(listing, "condition");
+        String condition = conditionLabel(conditionCode, vendorCondition);
+        if (!isGoodOrBetter(condition)) {
+            return null;
+        }
+        Long listingId = longValue(listing.get("listingId"));
+        Long vendorId = longValue(listing.get("vendorId"));
+        return AbeBooksListing.builder()
+                .priceDollars(price)
+                .shippingDollars(shipping != null ? shipping : BigDecimal.ZERO)
+                .priorityShippingDollars(priorityShipping(listing))
+                .condition(condition)
+                .detailsUrl(absoluteUrl(text(listing, "bdpCanonicalUrl")))
+                .binding(bindingFromLabel(text(listing, "binding")))
+                .listingId(listingId)
+                .listingTitle(text(listing, "title"))
+                .isbn13(text(listing, "isbn13"))
+                .quantity(listing.path("quantity").isNumber() ? listing.path("quantity").asInt() : null)
+                .currency("USD")
+                .sellerId(vendorId)
+                .sellerName(text(listing, "vendorName"))
+                .sellerCity(text(listing, "vendorCity"))
+                .sellerRegion(text(listing, "vendorProvState"))
+                .sellerCountry(text(listing, "vendorCountry"))
+                .sellerStars(listing.path("vendorStarRating").isNumber()
+                        ? listing.path("vendorStarRating").asInt() : null)
+                .sellerStorefrontUrl(absoluteUrl(stripQuery(text(listing, "vendorStorefrontUrl"))))
+                .build();
+    }
+
+    private static BigDecimal priorityShipping(JsonNode listing) {
+        JsonNode rates = listing.path("shippingRates");
+        if (!rates.isArray() || rates.size() < 2) {
+            return null;
+        }
+        JsonNode priority = rates.get(1).path("shippingPriceInPurchaseCurrency");
+        if (!usd(priority)) {
+            return null;
+        }
+        return moneyAmount(priority);
+    }
+
+    private static boolean usd(JsonNode money) {
+        if (money == null || money.isMissingNode() || money.isNull()) {
+            return true;
+        }
+        JsonNode currency = money.get("currency");
+        if (currency == null || currency.isNull() || !currency.isTextual()) {
+            return true;
+        }
+        return "USD".equalsIgnoreCase(currency.asText());
+    }
+
+    private static BigDecimal moneyAmount(JsonNode money) {
+        if (money == null || money.isMissingNode() || money.isNull()) {
+            return null;
+        }
+        JsonNode amount = money.get("amount");
+        if (amount == null || !amount.isNumber()) {
+            return null;
+        }
+        return amount.decimalValue();
+    }
+
+    private static String conditionLabel(String code, String vendorCondition) {
+        if (vendorCondition != null && !vendorCondition.isBlank()) {
+            String value = vendorCondition.trim();
+            if (code != null && code.toUpperCase(Locale.ROOT).startsWith("USED")
+                    && !value.toLowerCase(Locale.ROOT).startsWith("used")) {
+                return "Used - " + value;
+            }
+            return value;
+        }
+        return code;
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull() || !value.isTextual()) {
+            return null;
+        }
+        String text = value.asText().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private static Long longValue(JsonNode node) {
+        if (node == null || node.isNull() || !node.isNumber()) {
+            return null;
+        }
+        return node.asLong();
+    }
+
+    private static String stripQuery(String href) {
+        if (href == null) {
+            return null;
+        }
+        int query = href.indexOf('?');
+        return query >= 0 ? href.substring(0, query) : href;
+    }
+
+    /**
+     * Extra-book rate read from seller terms.
+     */
+    public record AdditionalRate(BigDecimal dollars, AdditionalShippingSource source) {
+        static final AdditionalRate UNKNOWN = new AdditionalRate(null, AdditionalShippingSource.UNKNOWN);
     }
 }

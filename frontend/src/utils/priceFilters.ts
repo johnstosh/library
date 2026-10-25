@@ -90,3 +90,12 @@ export function coverLabel(cover: BookCoverType | string): string {
   if (cover === 'OTHER') return 'Other'
   return 'Unknown'
 }
+
+/** Short cover names for the narrow Prices table column. */
+export function coverAbbrev(cover: BookCoverType | string): string {
+  if (cover === 'HARDCOVER') return 'HC'
+  if (cover === 'SOFTCOVER') return 'SC'
+  if (cover === 'LIBRARY_BINDING') return 'LB'
+  if (cover === 'OTHER') return 'Oth'
+  return 'Unk'
+}

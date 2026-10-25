@@ -3,8 +3,11 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.AbeSeller;
+import com.muczynski.library.domain.AdditionalShippingSource;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
+import com.muczynski.library.domain.BookListing;
 import com.muczynski.library.domain.BookPrice;
 import com.muczynski.library.dto.BookPriceDto;
 import com.muczynski.library.dto.BookPriceLookupResultDto;
@@ -12,6 +15,8 @@ import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.exception.AbeBooksHttpException;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.exception.LibraryException;
+import com.muczynski.library.repository.AbeSellerRepository;
+import com.muczynski.library.repository.BookListingRepository;
 import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.service.BooksFromFeedService;
@@ -33,7 +38,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -47,9 +58,16 @@ public class BookPriceService {
     /** Stored when AbeBooks returned a real SearchResults page with no usable listing. */
     public static final String NO_MATCHING_LISTING = "No matching listing";
 
+    /** Offers kept per book for the savings page. The cheapest per cover still live on book_price. */
+    static final int MAX_LISTINGS_PER_BOOK = 24;
+
+    private static final int SHIP_RATES_STALE_DAYS = 30;
+
     private final BookRepository bookRepository;
     private final BookPriceRepository bookPriceRepository;
     private final AbeBooksClient abeBooksClient;
+    private final AbeSellerRepository sellerRepository;
+    private final BookListingRepository listingRepository;
     private final TransactionTemplate transactionTemplate;
     private final DataSource dataSource;
     private final int rateLimitRetries;
@@ -58,7 +76,7 @@ public class BookPriceService {
     public BookPriceService(BookRepository bookRepository,
                             BookPriceRepository bookPriceRepository,
                             AbeBooksClient abeBooksClient) {
-        this(bookRepository, bookPriceRepository, abeBooksClient, 0, 0, null, null);
+        this(bookRepository, bookPriceRepository, abeBooksClient, 0, 0, null, null, null, null);
     }
 
     public BookPriceService(BookRepository bookRepository,
@@ -66,7 +84,8 @@ public class BookPriceService {
                             AbeBooksClient abeBooksClient,
                             int rateLimitRetries,
                             long rateLimitBackoffMs) {
-        this(bookRepository, bookPriceRepository, abeBooksClient, rateLimitRetries, rateLimitBackoffMs, null, null);
+        this(bookRepository, bookPriceRepository, abeBooksClient, rateLimitRetries, rateLimitBackoffMs,
+                null, null, null, null);
     }
 
     @Autowired
@@ -76,10 +95,14 @@ public class BookPriceService {
                             @Value("${abebooks.rate-limit-retries:2}") int rateLimitRetries,
                             @Value("${abebooks.rate-limit-backoff-ms:4000}") long rateLimitBackoffMs,
                             PlatformTransactionManager transactionManager,
-                            DataSource dataSource) {
+                            DataSource dataSource,
+                            AbeSellerRepository sellerRepository,
+                            BookListingRepository listingRepository) {
         this.bookRepository = bookRepository;
         this.bookPriceRepository = bookPriceRepository;
         this.abeBooksClient = abeBooksClient;
+        this.sellerRepository = sellerRepository;
+        this.listingRepository = listingRepository;
         this.rateLimitRetries = rateLimitRetries;
         this.rateLimitBackoffMs = rateLimitBackoffMs;
         if (transactionManager == null) {
@@ -168,7 +191,9 @@ public class BookPriceService {
             log.info("AbeBooks lookup HTTP finished bookId={} elapsedMs={} merged listings", bookId, elapsedMs);
             logPool("after-http", bookId);
             AbeBooksCoverListings finalMerged = mergedHolder[0] != null ? mergedHolder[0] : AbeBooksCoverListings.builder().build();
-            return inTransaction(() -> saveFoundResult(bookId, finalMerged));
+            PersistedLookup persisted = inTransaction(() -> persistFound(bookId, finalMerged));
+            refreshSellerRates(persisted.sellerIds());
+            return persisted.dto();
         } catch (AbeBooksRateLimitedException ex) {
             long elapsedMs = elapsedMs(started);
             log.warn("AbeBooks lookup rate-limited bookId={} title='{}' elapsedMs={}",
@@ -213,6 +238,14 @@ public class BookPriceService {
         builder.other(primary.getOther() != null ? primary.getOther() : alternate.getOther());
         builder.searchUrl(primary.getSearchUrl() != null ? primary.getSearchUrl() : alternate.getSearchUrl());
         builder.rateLimited(primary.isRateLimited() || alternate.isRateLimited());
+        List<AbeBooksListing> candidates = new ArrayList<>();
+        if (primary.getCandidates() != null) {
+            candidates.addAll(primary.getCandidates());
+        }
+        if (alternate.getCandidates() != null) {
+            candidates.addAll(alternate.getCandidates());
+        }
+        builder.candidates(candidates);
         return builder.build();
     }
 
@@ -243,15 +276,16 @@ public class BookPriceService {
         return new PreparedLookup(primaryTitle, titles, authorName, null);
     }
 
-    private BookPriceLookupResultDto saveFoundResult(Long bookId, AbeBooksCoverListings found) {
+    private PersistedLookup persistFound(Long bookId, AbeBooksCoverListings found) {
         Book book = requireBook(bookId);
+        List<Long> sellerIds = storeCandidates(book, found);
         CoverSaveResult saved = saveFoundCovers(book, found, found.getSearchUrl());
         boolean success = hasListing(saved.hardcover)
                 || hasListing(saved.softcover)
                 || hasListing(saved.libraryBinding)
                 || hasListing(saved.other);
         String error = success ? null : joinErrors(saved.hardcover, saved.softcover);
-        return BookPriceLookupResultDto.builder()
+        BookPriceLookupResultDto dto = BookPriceLookupResultDto.builder()
                 .bookId(book.getId())
                 .bookTitle(book.getTitle())
                 .success(success)
@@ -260,6 +294,240 @@ public class BookPriceService {
                 .libraryBinding(toDto(saved.libraryBinding))
                 .errorMessage(error)
                 .build();
+        return new PersistedLookup(dto, sellerIds);
+    }
+
+    private record PersistedLookup(BookPriceLookupResultDto dto, List<Long> sellerIds) {}
+
+    /**
+     * Stores up to {@link #MAX_LISTINGS_PER_BOOK} offers and returns seller ids whose
+     * shipping terms should be fetched. Null repositories (unit tests) skip this.
+     */
+    private List<Long> storeCandidates(Book book, AbeBooksCoverListings found) {
+        if (sellerRepository == null || listingRepository == null || book.getId() == null) {
+            return List.of();
+        }
+        List<AbeBooksListing> covers = new ArrayList<>();
+        if (found.getHardcover() != null) {
+            covers.add(found.getHardcover());
+        }
+        if (found.getSoftcover() != null) {
+            covers.add(found.getSoftcover());
+        }
+        if (found.getLibraryBinding() != null) {
+            covers.add(found.getLibraryBinding());
+        }
+        if (found.getOther() != null) {
+            covers.add(found.getOther());
+        }
+        List<AbeBooksListing> pool = candidatePool(found, covers);
+        Map<Long, AbeSeller> sellers = new LinkedHashMap<>();
+        for (AbeBooksListing listing : pool) {
+            if (listing.getSellerId() == null) {
+                continue;
+            }
+            sellers.computeIfAbsent(listing.getSellerId(), id -> upsertSeller(listing));
+        }
+        List<AbeBooksListing> kept = capListings(pool, covers);
+        List<Long> abeIds = kept.stream()
+                .map(AbeBooksListing::getListingId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (!abeIds.isEmpty()) {
+            listingRepository.deleteByAbeListingIdIn(abeIds);
+        }
+        listingRepository.deleteByBook_Id(book.getId());
+        listingRepository.flush();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        for (AbeBooksListing listing : kept) {
+            if (listing.getListingId() == null || listing.getSellerId() == null) {
+                continue;
+            }
+            AbeSeller seller = sellers.get(listing.getSellerId());
+            if (seller == null) {
+                continue;
+            }
+            BookListing row = new BookListing();
+            row.setBook(book);
+            row.setSeller(seller);
+            row.setAbeListingId(listing.getListingId());
+            row.setListingTitle(truncateOrNull(listing.getListingTitle(), 500));
+            row.setDetailsUrl(truncateOrNull(listing.getDetailsUrl(), 2000));
+            row.setPriceDollars(listing.getPriceDollars());
+            row.setShippingDollars(listing.getShippingDollars());
+            row.setPriorityShippingDollars(listing.getPriorityShippingDollars());
+            row.setCondition(truncateOrNull(listing.getCondition(), 80));
+            row.setBinding(listing.getBinding());
+            row.setIsbn13(truncateOrNull(listing.getIsbn13(), 20));
+            row.setQuantity(listing.getQuantity());
+            row.setLookedUpAt(now);
+            listingRepository.save(row);
+        }
+        List<Long> refresh = new ArrayList<>();
+        for (AbeSeller seller : sellers.values()) {
+            if (seller.getId() != null && seller.getSampleListingId() != null && ratesStale(seller)) {
+                refresh.add(seller.getId());
+            }
+        }
+        return refresh;
+    }
+
+    private static List<AbeBooksListing> candidatePool(AbeBooksCoverListings found, List<AbeBooksListing> covers) {
+        List<AbeBooksListing> pool = new ArrayList<>();
+        if (found.getCandidates() != null) {
+            pool.addAll(found.getCandidates());
+        }
+        pool.addAll(covers);
+        return pool;
+    }
+
+    /**
+     * One row per AbeBooks listing id, cheapest total first, then the cover winners
+     * even when they sit outside the cap.
+     */
+    static List<AbeBooksListing> capListings(List<AbeBooksListing> pool, List<AbeBooksListing> covers) {
+        Map<Long, AbeBooksListing> byId = new LinkedHashMap<>();
+        for (AbeBooksListing listing : pool) {
+            if (listing == null || listing.getListingId() == null || listing.getSellerId() == null) {
+                continue;
+            }
+            AbeBooksListing existing = byId.get(listing.getListingId());
+            if (existing == null || listing.totalDollars().compareTo(existing.totalDollars()) < 0) {
+                byId.put(listing.getListingId(), listing);
+            }
+        }
+        List<AbeBooksListing> sorted = new ArrayList<>(byId.values());
+        sorted.sort(Comparator.comparing(AbeBooksListing::totalDollars)
+                .thenComparing(AbeBooksListing::getListingId));
+        List<AbeBooksListing> kept = new ArrayList<>();
+        Set<Long> keptIds = new HashSet<>();
+        for (AbeBooksListing listing : sorted) {
+            if (kept.size() >= MAX_LISTINGS_PER_BOOK) {
+                break;
+            }
+            kept.add(listing);
+            keptIds.add(listing.getListingId());
+        }
+        if (covers != null) {
+            for (AbeBooksListing cover : covers) {
+                if (cover == null || cover.getListingId() == null || cover.getSellerId() == null) {
+                    continue;
+                }
+                if (keptIds.contains(cover.getListingId())) {
+                    continue;
+                }
+                AbeBooksListing chosen = byId.get(cover.getListingId());
+                if (chosen == null) {
+                    continue;
+                }
+                kept.add(chosen);
+                keptIds.add(chosen.getListingId());
+            }
+        }
+        return kept;
+    }
+
+    private AbeSeller upsertSeller(AbeBooksListing listing) {
+        AbeSeller seller = sellerRepository.findByVendorId(listing.getSellerId()).orElseGet(AbeSeller::new);
+        seller.setVendorId(listing.getSellerId());
+        if (listing.getSellerName() != null && !listing.getSellerName().isBlank()) {
+            seller.setName(truncate(listing.getSellerName(), 200));
+        }
+        if (listing.getSellerCity() != null && !listing.getSellerCity().isBlank()) {
+            seller.setCity(truncate(listing.getSellerCity(), 120));
+        }
+        if (listing.getSellerRegion() != null && !listing.getSellerRegion().isBlank()) {
+            seller.setRegion(truncate(listing.getSellerRegion(), 80));
+        }
+        if (listing.getSellerCountry() != null && !listing.getSellerCountry().isBlank()) {
+            seller.setCountry(truncate(listing.getSellerCountry(), 80));
+        }
+        if (listing.getSellerStars() != null) {
+            seller.setStarRating(listing.getSellerStars());
+        }
+        if (listing.getSellerStorefrontUrl() != null && !listing.getSellerStorefrontUrl().isBlank()) {
+            seller.setStorefrontUrl(truncate(listing.getSellerStorefrontUrl(), 500));
+        }
+        if (seller.getSampleListingId() == null && listing.getListingId() != null) {
+            seller.setSampleListingId(listing.getListingId());
+        }
+        seller.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
+        if (seller.getAdditionalShippingSource() == null) {
+            seller.setAdditionalShippingSource(AdditionalShippingSource.UNKNOWN);
+        }
+        return sellerRepository.save(seller);
+    }
+
+    private static boolean ratesStale(AbeSeller seller) {
+        if (seller.getRatesLookedUpAt() == null) {
+            return true;
+        }
+        return seller.getRatesLookedUpAt().isBefore(
+                LocalDateTime.now(ZoneOffset.UTC).minusDays(SHIP_RATES_STALE_DAYS));
+    }
+
+    /**
+     * One ShipRates fetch per seller, outside the price-save transaction.
+     * A rate limit stops further fetches and leaves the saved prices in place.
+     */
+    private void refreshSellerRates(List<Long> sellerIds) {
+        if (sellerIds == null || sellerIds.isEmpty() || sellerRepository == null || abeBooksClient == null) {
+            return;
+        }
+        for (Long id : sellerIds) {
+            AbeSeller seller = sellerRepository.findById(id).orElse(null);
+            if (seller == null || seller.getVendorId() == null || seller.getSampleListingId() == null) {
+                continue;
+            }
+            try {
+                AbeBooksShipRates rates = abeBooksClient.fetchShipRates(
+                        seller.getVendorId(), seller.getSampleListingId());
+                inTransaction(() -> {
+                    applyRates(id, rates);
+                    return null;
+                });
+            } catch (AbeBooksRateLimitedException ex) {
+                log.warn("AbeBooks ShipRates rate-limited sellerId={}: {}", id, ex.getMessage());
+                break;
+            } catch (RuntimeException ex) {
+                log.warn("AbeBooks ShipRates failed sellerId={}: {}", id, ex.getMessage());
+            }
+        }
+    }
+
+    private void applyRates(Long sellerId, AbeBooksShipRates rates) {
+        if (rates == null) {
+            return;
+        }
+        AbeSeller seller = sellerRepository.findById(sellerId).orElse(null);
+        if (seller == null) {
+            return;
+        }
+        if (rates.getTerms() != null) {
+            seller.setShippingTerms(rates.getTerms());
+        }
+        if (rates.getStandardDollars() != null) {
+            seller.setSampleStandardShipping(rates.getStandardDollars());
+        }
+        if (rates.getPriorityDollars() != null) {
+            seller.setSamplePriorityShipping(rates.getPriorityDollars());
+        }
+        seller.setRatesLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
+        if (seller.getAdditionalShippingSource() != AdditionalShippingSource.LIBRARIAN) {
+            seller.setAdditionalShippingDollars(rates.getAdditionalDollars());
+            seller.setAdditionalShippingSource(rates.getAdditionalSource() != null
+                    ? rates.getAdditionalSource()
+                    : AdditionalShippingSource.UNKNOWN);
+        }
+        sellerRepository.save(seller);
+    }
+
+    private void deleteListings(Book book) {
+        if (listingRepository == null || book == null || book.getId() == null) {
+            return;
+        }
+        listingRepository.deleteByBook_Id(book.getId());
     }
 
     private BookPriceLookupResultDto saveErrorResult(Long bookId, String message, boolean rateLimited,
@@ -269,6 +537,7 @@ public class BookPriceService {
 
     private BookPriceLookupResultDto saveErrorResult(Book book, String message, boolean rateLimited,
                                                     String searchUrl) {
+        deleteListings(book);
         deleteCover(book, BookCoverType.UNKNOWN);
         BookPrice hardcover = saveError(book, BookCoverType.HARDCOVER, message, searchUrl);
         BookPrice softcover = saveError(book, BookCoverType.SOFTCOVER, message, searchUrl);
@@ -284,6 +553,7 @@ public class BookPriceService {
     }
 
     private BookPriceLookupResultDto createExcerptResult(Book book) {
+        deleteListings(book);
         // Delete all other covers (keep only softcover per spec)
         deleteCover(book, BookCoverType.HARDCOVER);
         deleteCover(book, BookCoverType.LIBRARY_BINDING);
@@ -299,6 +569,7 @@ public class BookPriceService {
         softcover.setCondition(null);
         softcover.setDetailsUrl(null);
         softcover.setLookupError(null);
+        softcover.setSeller(null);
         softcover.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
         bookPriceRepository.save(softcover);
 
@@ -486,6 +757,11 @@ public class BookPriceService {
         row.setDetailsUrl(listing.getDetailsUrl());
         row.setLookupError(null);
         row.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
+        if (sellerRepository != null && listing.getSellerId() != null) {
+            sellerRepository.findByVendorId(listing.getSellerId()).ifPresent(row::setSeller);
+        } else {
+            row.setSeller(null);
+        }
         return bookPriceRepository.save(row);
     }
 
@@ -499,6 +775,7 @@ public class BookPriceService {
         row.setCondition(null);
         row.setDetailsUrl(searchUrl);
         row.setLookupError(error);
+        row.setSeller(null);
         row.setLookedUpAt(LocalDateTime.now(ZoneOffset.UTC));
         return bookPriceRepository.save(row);
     }
@@ -521,6 +798,8 @@ public class BookPriceService {
                 .bookId(book != null ? book.getId() : null)
                 .bookTitle(book != null ? book.getTitle() : null)
                 .author(author)
+                .sellerId(price.getSeller() != null ? price.getSeller().getId() : null)
+                .sellerName(price.getSeller() != null ? price.getSeller().getName() : null)
                 .cover(price.getCover())
                 .priceDollars(price.getPriceDollars())
                 .shippingDollars(price.getShippingDollars())
@@ -561,6 +840,13 @@ public class BookPriceService {
             return value;
         }
         return value.substring(0, max);
+    }
+
+    private static String truncateOrNull(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return truncate(value, max);
     }
 
     private <T> T inTransaction(Supplier<T> work) {

@@ -21,6 +21,8 @@ public class BookPriceDto {
     private Long bookId;
     private String bookTitle;
     private String author;
+    private Long sellerId;
+    private String sellerName;
     private BookCoverType cover;
     private BigDecimal priceDollars;
     private BigDecimal shippingDollars;

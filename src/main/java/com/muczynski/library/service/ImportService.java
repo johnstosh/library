@@ -67,6 +67,8 @@ public class ImportService {
     private final PhotoRepository photoRepository;
     private final FavoriteRepository favoriteRepository;
     private final BookPriceRepository bookPriceRepository;
+    private final AbeSellerRepository sellerRepository;
+    private final BookListingRepository listingRepository;
     private final BranchMapper branchMapper;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
@@ -81,6 +83,8 @@ public class ImportService {
                          PhotoRepository photoRepository,
                          FavoriteRepository favoriteRepository,
                          BookPriceRepository bookPriceRepository,
+                         AbeSellerRepository sellerRepository,
+                         BookListingRepository listingRepository,
                          BranchMapper branchMapper,
                          PasswordEncoder passwordEncoder,
                          ObjectMapper objectMapper,
@@ -94,6 +98,8 @@ public class ImportService {
         this.photoRepository = photoRepository;
         this.favoriteRepository = favoriteRepository;
         this.bookPriceRepository = bookPriceRepository;
+        this.sellerRepository = sellerRepository;
+        this.listingRepository = listingRepository;
         this.branchMapper = branchMapper;
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
@@ -125,7 +131,7 @@ public class ImportService {
     public ImportResponseDto.ImportResult streamImportJson(InputStream inputStream) throws IOException {
         logger.info("Starting streaming JSON import using JsonParser with real 50-item batch transactions inside REQUIRES_NEW");
 
-        ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0));
+        ImportResponseDto.ImportResult result = new ImportResponseDto.ImportResult(new ImportResponseDto.ImportCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
         ImportResponseDto.ImportCounts counts = result.getCounts();
 
         Map<String, Library> branchMap = new HashMap<>();
@@ -173,6 +179,12 @@ public class ImportService {
                     case "prices":
                         processArrayInBatches(parser, "prices", null, counts, (ImportPriceDto dto) -> processPrice(dto, counts));
                         break;
+                    case "sellers":
+                        processArrayInBatches(parser, "sellers", null, counts, (ImportSellerDto dto) -> processSeller(dto));
+                        break;
+                    case "listings":
+                        processArrayInBatches(parser, "listings", null, counts, (ImportListingDto dto) -> processListing(dto));
+                        break;
                     default:
                         parser.skipChildren(); // skip unknown fields
                         break;
@@ -180,9 +192,10 @@ public class ImportService {
             }
         }
 
-        logger.info("Streaming import completed. Counts: branches={}, authors={}, books={}, users={}, loans={}, photos={}, favorites={}, prices={}",
+        logger.info("Streaming import completed. Counts: branches={}, authors={}, books={}, users={}, loans={}, photos={}, favorites={}, prices={}, sellers={}, listings={}",
                 counts.getBranches(), counts.getAuthors(), counts.getBooks(), counts.getUsers(),
-                counts.getLoans(), counts.getPhotos(), counts.getFavorites(), counts.getPrices());
+                counts.getLoans(), counts.getPhotos(), counts.getFavorites(), counts.getPrices(),
+                counts.getSellers(), counts.getListings());
 
         return result;
     }
@@ -253,6 +266,8 @@ public class ImportService {
             case "photos" -> counts.setPhotos(counts.getPhotos() + 1);
             case "favorites" -> counts.setFavorites(counts.getFavorites() + 1);
             case "prices" -> counts.setPrices(counts.getPrices() + 1);
+            case "sellers" -> counts.setSellers(counts.getSellers() + 1);
+            case "listings" -> counts.setListings(counts.getListings() + 1);
         }
     }
 
@@ -327,6 +342,8 @@ public class ImportService {
             case "photos" -> ImportPhotoDto.class;
             case "favorites" -> ImportFavoriteDto.class;
             case "prices" -> ImportPriceDto.class;
+            case "sellers" -> ImportSellerDto.class;
+            case "listings" -> ImportListingDto.class;
             default -> Object.class;
         };
     }
@@ -380,15 +397,32 @@ public class ImportService {
             auth = new Author();
             auth.setName(aDto.getName());
         }
-        // Update fields (merge)
-        auth.setDateOfBirth(aDto.getDateOfBirth());
-        auth.setDateOfDeath(aDto.getDateOfDeath());
-        auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
-        auth.setBirthCountry(aDto.getBirthCountry());
-        auth.setNationality(aDto.getNationality());
-        auth.setBiographicalEssay(aDto.getBriefBiography());
-        auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
-        auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
+        // A null field was omitted or set to null in the JSON. Keep the stored value
+        // so a name-only author entry does not blank dates, biography, or alternate names.
+        if (aDto.getDateOfBirth() != null) {
+            auth.setDateOfBirth(aDto.getDateOfBirth());
+        }
+        if (aDto.getDateOfDeath() != null) {
+            auth.setDateOfDeath(aDto.getDateOfDeath());
+        }
+        if (aDto.getReligiousAffiliation() != null) {
+            auth.setReligiousAffiliation(aDto.getReligiousAffiliation());
+        }
+        if (aDto.getBirthCountry() != null) {
+            auth.setBirthCountry(aDto.getBirthCountry());
+        }
+        if (aDto.getNationality() != null) {
+            auth.setNationality(aDto.getNationality());
+        }
+        if (aDto.getBriefBiography() != null) {
+            auth.setBiographicalEssay(aDto.getBriefBiography());
+        }
+        if (aDto.getGrokipediaUrl() != null) {
+            auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
+        }
+        if (aDto.getAlternateNames() != null) {
+            auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
+        }
         auth = authorRepository.save(auth);
         // Keep map LOB-free so post-clear refresh / heap do not retain essay text
         authorMap.put(aDto.getName(), authorStub(auth.getId(), auth.getName()));
@@ -733,6 +767,67 @@ public class ImportService {
         bookPriceRepository.save(price);
     }
 
+    private void processSeller(ImportSellerDto dto) {
+        if (dto.getVendorId() == null) {
+            logger.warn("Skipping seller with no vendor id");
+            return;
+        }
+        AbeSeller seller = sellerRepository.findByVendorId(dto.getVendorId()).orElseGet(AbeSeller::new);
+        seller.setVendorId(dto.getVendorId());
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            seller.setName(dto.getName());
+        }
+        seller.setCity(dto.getCity());
+        seller.setRegion(dto.getRegion());
+        seller.setCountry(dto.getCountry());
+        seller.setStarRating(dto.getStarRating());
+        seller.setStorefrontUrl(dto.getStorefrontUrl());
+        seller.setSampleListingId(dto.getSampleListingId());
+        seller.setSampleStandardShipping(dto.getSampleStandardShipping());
+        seller.setSamplePriorityShipping(dto.getSamplePriorityShipping());
+        seller.setShippingTerms(dto.getShippingTerms());
+        seller.setAdditionalShippingDollars(dto.getAdditionalShippingDollars());
+        seller.setAdditionalShippingSource(dto.getAdditionalShippingSource() != null
+                ? dto.getAdditionalShippingSource()
+                : AdditionalShippingSource.UNKNOWN);
+        seller.setLookedUpAt(dto.getLookedUpAt());
+        seller.setRatesLookedUpAt(dto.getRatesLookedUpAt());
+        sellerRepository.save(seller);
+    }
+
+    private void processListing(ImportListingDto dto) {
+        if (dto.getAbeListingId() == null || dto.getVendorId() == null || dto.getBookTitle() == null) {
+            logger.warn("Skipping listing with missing reference: listing={}, vendor={}, title={}",
+                    dto.getAbeListingId(), dto.getVendorId(), dto.getBookTitle());
+            return;
+        }
+        AbeSeller seller = sellerRepository.findByVendorId(dto.getVendorId()).orElse(null);
+        if (seller == null) {
+            logger.warn("Seller {} not found for listing {}", dto.getVendorId(), dto.getAbeListingId());
+            return;
+        }
+        List<Book> books = bookRepository.findAllByTitleOrderByIdAsc(dto.getBookTitle());
+        if (books.isEmpty()) {
+            logger.warn("Book not found for listing: {}", dto.getBookTitle());
+            return;
+        }
+        BookListing row = listingRepository.findByAbeListingId(dto.getAbeListingId()).orElseGet(BookListing::new);
+        row.setBook(books.get(0));
+        row.setSeller(seller);
+        row.setAbeListingId(dto.getAbeListingId());
+        row.setListingTitle(dto.getListingTitle());
+        row.setDetailsUrl(dto.getDetailsUrl());
+        row.setPriceDollars(dto.getPriceDollars());
+        row.setShippingDollars(dto.getShippingDollars());
+        row.setPriorityShippingDollars(dto.getPriorityShippingDollars());
+        row.setCondition(dto.getCondition());
+        row.setBinding(dto.getBinding());
+        row.setIsbn13(dto.getIsbn13());
+        row.setQuantity(dto.getQuantity());
+        row.setLookedUpAt(dto.getLookedUpAt());
+        listingRepository.save(row);
+    }
+
     /**
      * Legacy non-streaming export for tests and small catalogs only.
      * The HTTP export path uses the streaming version to avoid OOM.
@@ -894,6 +989,11 @@ public class ImportService {
             priceDtos.add(pDto);
         }
         dto.setPrices(priceDtos);
+        dto.setSellers(sellerRepository.findAll().stream().map(this::mapSellerToDto).toList());
+        dto.setListings(listingRepository.findAllWithRefs().stream()
+                .filter(listing -> listing.getBook() != null && listing.getSeller() != null)
+                .map(this::mapListingToDto)
+                .toList());
 
         return dto;
     }
@@ -1054,6 +1154,23 @@ public class ImportService {
             generator.writeEndArray();
             generator.flush();
 
+            generator.writeArrayFieldStart("sellers");
+            for (AbeSeller seller : sellerRepository.findAll()) {
+                mapper.writeValue(generator, mapSellerToDto(seller));
+            }
+            generator.writeEndArray();
+            generator.flush();
+
+            generator.writeArrayFieldStart("listings");
+            for (BookListing listing : listingRepository.findAllWithRefs()) {
+                if (listing.getBook() == null || listing.getSeller() == null) {
+                    continue;
+                }
+                mapper.writeValue(generator, mapListingToDto(listing));
+            }
+            generator.writeEndArray();
+            generator.flush();
+
             generator.writeEndObject();
             generator.flush();
         }
@@ -1178,6 +1295,47 @@ public class ImportService {
         return pDto;
     }
 
+    private ImportSellerDto mapSellerToDto(AbeSeller seller) {
+        ImportSellerDto dto = new ImportSellerDto();
+        dto.setVendorId(seller.getVendorId());
+        dto.setName(emptyToNull(seller.getName()));
+        dto.setCity(emptyToNull(seller.getCity()));
+        dto.setRegion(emptyToNull(seller.getRegion()));
+        dto.setCountry(emptyToNull(seller.getCountry()));
+        dto.setStarRating(seller.getStarRating());
+        dto.setStorefrontUrl(emptyToNull(seller.getStorefrontUrl()));
+        dto.setSampleListingId(seller.getSampleListingId());
+        dto.setSampleStandardShipping(seller.getSampleStandardShipping());
+        dto.setSamplePriorityShipping(seller.getSamplePriorityShipping());
+        dto.setShippingTerms(emptyToNull(seller.getShippingTerms()));
+        dto.setAdditionalShippingDollars(seller.getAdditionalShippingDollars());
+        dto.setAdditionalShippingSource(seller.getAdditionalShippingSource());
+        dto.setLookedUpAt(seller.getLookedUpAt());
+        dto.setRatesLookedUpAt(seller.getRatesLookedUpAt());
+        return dto;
+    }
+
+    private ImportListingDto mapListingToDto(BookListing listing) {
+        ImportListingDto dto = new ImportListingDto();
+        dto.setBookTitle(listing.getBook().getTitle());
+        if (listing.getBook().getAuthor() != null) {
+            dto.setBookAuthorName(listing.getBook().getAuthor().getName());
+        }
+        dto.setVendorId(listing.getSeller().getVendorId());
+        dto.setAbeListingId(listing.getAbeListingId());
+        dto.setListingTitle(emptyToNull(listing.getListingTitle()));
+        dto.setDetailsUrl(emptyToNull(listing.getDetailsUrl()));
+        dto.setPriceDollars(listing.getPriceDollars());
+        dto.setShippingDollars(listing.getShippingDollars());
+        dto.setPriorityShippingDollars(listing.getPriorityShippingDollars());
+        dto.setCondition(emptyToNull(listing.getCondition()));
+        dto.setBinding(listing.getBinding());
+        dto.setIsbn13(emptyToNull(listing.getIsbn13()));
+        dto.setQuantity(listing.getQuantity());
+        dto.setLookedUpAt(listing.getLookedUpAt());
+        return dto;
+    }
+
     /** Author row for JSON export. Empty alternate-name lists are omitted. */
     private ImportAuthorDto toImportAuthorDto(Author author) {
         ImportAuthorDto aDto = new ImportAuthorDto();
@@ -1225,7 +1383,9 @@ public class ImportService {
                 new ExportChunkPlanDto.SectionPlan("loans", loanRepository.count()),
                 new ExportChunkPlanDto.SectionPlan("photos", photoRepository.countActivePhotos()),
                 new ExportChunkPlanDto.SectionPlan("favorites", favoriteRepository.countExportable()),
-                new ExportChunkPlanDto.SectionPlan("prices", bookPriceRepository.countExportable())
+                new ExportChunkPlanDto.SectionPlan("prices", bookPriceRepository.countExportable()),
+                new ExportChunkPlanDto.SectionPlan("sellers", sellerRepository.count()),
+                new ExportChunkPlanDto.SectionPlan("listings", listingRepository.count())
         );
         long totalItems = sections.stream().mapToLong(ExportChunkPlanDto.SectionPlan::getTotal).sum();
         int pageSize;
@@ -1269,6 +1429,8 @@ public class ImportService {
             case "photos" -> exportPhotosChunk(cursor, pageable, pageLimit);
             case "favorites" -> exportFavoritesChunk(cursor, pageable, pageLimit);
             case "prices" -> exportPricesChunk(cursor, pageable, pageLimit);
+            case "sellers" -> exportSellersChunk(cursor, pageable, pageLimit);
+            case "listings" -> exportListingsChunk(cursor, pageable, pageLimit);
             default -> throw new LibraryException("Unknown export section: " + section);
         };
     }
@@ -1464,6 +1626,50 @@ public class ImportService {
         }
         entityManager.clear();
         return buildChunk("prices", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportSellersChunk(long afterId, Pageable pageable, int limit) {
+        long total = sellerRepository.count();
+        List<Long> ids = sellerRepository.findIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            Map<Long, AbeSeller> byId = sellerRepository.findAllById(ids).stream()
+                    .collect(Collectors.toMap(AbeSeller::getId, seller -> seller, (a, b) -> a));
+            for (Long id : ids) {
+                AbeSeller seller = byId.get(id);
+                if (seller == null) {
+                    continue;
+                }
+                items.add(mapSellerToDto(seller));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("sellers", afterId, limit, nextAfterId, total, items, ids.size());
+    }
+
+    private ExportChunkDto exportListingsChunk(long afterId, Pageable pageable, int limit) {
+        long total = listingRepository.count();
+        List<Long> ids = listingRepository.findIdsAfterId(afterId, pageable);
+        List<Object> items = new ArrayList<>();
+        Long nextAfterId = null;
+        if (!ids.isEmpty()) {
+            nextAfterId = ids.get(ids.size() - 1);
+            Map<Long, BookListing> byId = listingRepository.findByIdsWithRefs(ids).stream()
+                    .collect(Collectors.toMap(BookListing::getId, listing -> listing, (a, b) -> a));
+            for (Long id : ids) {
+                BookListing listing = byId.get(id);
+                if (listing == null || listing.getBook() == null || listing.getSeller() == null) {
+                    continue;
+                }
+                items.add(mapListingToDto(listing));
+                nextAfterId = id;
+            }
+        }
+        entityManager.clear();
+        return buildChunk("listings", afterId, limit, nextAfterId, total, items, ids.size());
     }
 
     private ExportChunkDto buildChunk(String section, long afterId, int limit, Long nextAfterId,

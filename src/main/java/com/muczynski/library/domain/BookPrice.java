@@ -54,6 +54,10 @@ public class BookPrice {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Book book;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    private AbeSeller seller;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private BookCoverType cover;

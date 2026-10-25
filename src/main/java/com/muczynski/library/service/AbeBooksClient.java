@@ -43,6 +43,9 @@ public class AbeBooksClient {
     static final String GOOD_OR_BETTER_COND = "new an fine nf vg good";
     static final int PAGE_SIZE = 30;
     static final int MAX_PAGES = 5;
+    /** Keep reading this many pages after the cheap covers are filled, when a next page exists. */
+    static final int CANDIDATE_PAGES = 3;
+    static final String SHIP_RATES_URL = "https://www.abebooks.com/servlet/ShipRates";
     static final int TITLE_ONLY_MIN_WORDS = 8;
 
     /**
@@ -124,18 +127,35 @@ public class AbeBooksClient {
             if (html == null || html.isBlank()) {
                 break;
             }
-            List<AbeBooksListing> listings = parser.parseGoodOrBetter(html);
+            List<AbeBooksListing> embedded = parser.parseEmbeddedListings(html);
+            List<AbeBooksListing> listings = embedded != null && !embedded.isEmpty()
+                    ? embedded
+                    : parser.parseGoodOrBetter(html);
             for (AbeBooksListing listing : listings) {
                 acc.add(listing);
             }
-            if (acc.hasBothTyped()) {
+            boolean more = parser.hasNextPage(html);
+            if (!more) {
                 break;
             }
-            if (!parser.hasNextPage(html)) {
+            if (page >= CANDIDATE_PAGES - 1 && acc.hasBothTyped()) {
                 break;
             }
         }
         return lastUrl;
+    }
+
+    /**
+     * Seller shipping page for one listing. Uses the same politeness delay as search.
+     */
+    public AbeBooksShipRates fetchShipRates(long vendorId, long listingId) {
+        URI uri = UriComponentsBuilder.fromUriString(SHIP_RATES_URL)
+                .queryParam("vid", vendorId)
+                .queryParam("bi", listingId)
+                .build(true)
+                .toUri();
+        String html = fetch(uri);
+        return parser.parseShipRates(html);
     }
 
     private String fetch(URI uri) {
@@ -355,8 +375,12 @@ public class AbeBooksClient {
         private AbeBooksListing libraryBinding;
         private AbeBooksListing other;
         private AbeBooksListing unknown;
+        private final List<AbeBooksListing> candidates = new ArrayList<>();
 
         void add(AbeBooksListing listing) {
+            if (listing != null) {
+                candidates.add(listing);
+            }
             if (listing == null) {
                 return;
             }
@@ -391,6 +415,7 @@ public class AbeBooksClient {
                     .other(other)
                     .searchUrl(searchUrl)
                     .rateLimited(false)
+                    .candidates(List.copyOf(candidates))
                     .build();
         }
     }

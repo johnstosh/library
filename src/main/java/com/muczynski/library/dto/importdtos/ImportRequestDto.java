@@ -22,4 +22,6 @@ public class ImportRequestDto {
     private List<ImportPhotoDto> photos;
     private List<ImportFavoriteDto> favorites;
     private List<ImportPriceDto> prices;
+    private List<ImportSellerDto> sellers;
+    private List<ImportListingDto> listings;
 }

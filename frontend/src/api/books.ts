@@ -107,11 +107,86 @@ export interface CatalogWindow {
   isLoadingMore: boolean
 }
 
+/**
+ * Matching book ids for a catalog filter. Does not load full book rows.
+ * Prices uses this so opening the page does not pull every book 100 at a time.
+ * pageSize returns that many ids at a time, most recently added first, the same
+ * window as Books. Load more only grows the id list. It does not fetch BookDtos.
+ */
+export function useFilteredBookIds(filters: BookListFilters, options?: { pageSize?: number }) {
+  const pageSize = options?.pageSize
+  const filterQuery = bookListFilterQuery(filters)
+  const endpoint = filterQuery
+    ? `/books/filtered-summaries?${filterQuery}`
+    : '/books/filtered-summaries'
+  const windowKey = pageSize ? endpoint : ''
+  const [loadedCount, setLoadedCount] = useState(pageSize ?? 0)
+  const totalRef = useRef(0)
+  const pendingRef = useRef(false)
+
+  useEffect(() => {
+    if (!pageSize) return
+    pendingRef.current = false
+    setLoadedCount(pageSize)
+  }, [windowKey, pageSize])
+
+  const query = useQuery({
+    queryKey: queryKeys.books.filteredSummaries(filterQuery),
+    queryFn: () => api.get<BookSummaryDto[]>(endpoint),
+    staleTime: 30 * 1000,
+    refetchOnMount: true,
+    placeholderData: keepPreviousData,
+  })
+
+  const summariesReady = query.data !== undefined && !query.isPlaceholderData
+  if (summariesReady && query.data) totalRef.current = query.data.length
+
+  const windowIds = useMemo(() => {
+    if (!summariesReady || !query.data) return []
+    const ordered = pageSize ? orderedBookSummaries(query.data) : query.data
+    const visible = pageSize ? ordered.slice(0, loadedCount) : ordered
+    return visible.map((summary) => summary.id)
+  }, [query.data, summariesReady, pageSize, loadedCount])
+
+  const previousIdsRef = useRef<number[]>([])
+  const settledEmpty =
+    query.data !== undefined && query.data.length === 0 && !query.isFetching && !query.isPlaceholderData
+  useEffect(() => {
+    if (windowIds.length > 0) previousIdsRef.current = windowIds
+    else if (settledEmpty) previousIdsRef.current = []
+  }, [windowIds, settledEmpty])
+
+  const ids = windowIds.length > 0 ? windowIds : settledEmpty ? [] : previousIdsRef.current
+  const matchCount = summariesReady && query.data ? query.data.length : totalRef.current
+  const total = pageSize ? matchCount : (query.data?.length ?? 0)
+  const hasMore = Boolean(pageSize) && summariesReady && loadedCount < matchCount
+  const loadMore = () => {
+    if (!pageSize || !hasMore || query.isFetching || pendingRef.current) return
+    pendingRef.current = true
+    setLoadedCount((count) => count + pageSize)
+  }
+
+  useEffect(() => {
+    pendingRef.current = false
+  }, [loadedCount])
+
+  return {
+    ids,
+    total,
+    hasMore,
+    loadMore,
+    isLoading: query.isLoading && ids.length === 0,
+    isFetching: query.isFetching,
+    error: query.error,
+  }
+}
+
 // Hook to get books with optimized lastModified caching.
-// Pass filters for the Books and Prices pages (GET /books/filtered-summaries).
+// Pass filters for the Books page (GET /books/filtered-summaries).
 // Call with no argument for the unfiltered summary list (GET /books/summaries).
 // pageSize limits full-row loads to that many matching books at a time.
 // Full rows are loaded from /books/by-ids at most 100 ids at a time.
+// Prices must use useFilteredBookIds instead of loading every full row.
 export function useBooks(filters?: BookListFilters, options?: { pageSize?: number }) {
   const queryClient = useQueryClient()
   const pageSize = options?.pageSize

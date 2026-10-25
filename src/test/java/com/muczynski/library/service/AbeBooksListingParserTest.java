@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.AdditionalShippingSource;
 import com.muczynski.library.domain.BookCoverType;
 import org.junit.jupiter.api.Test;
 
@@ -120,6 +121,144 @@ class AbeBooksListingParserTest {
         assertEquals(BookCoverType.OTHER, AbeBooksListingParser.bindingFromLabel("Spiral Bound"));
         assertNull(AbeBooksListingParser.bindingFromLabel("First Edition"));
         assertNull(AbeBooksListingParser.bindingFromLabel(""));
+    }
+
+    @Test
+    void parseEmbeddedListings_readsSellerAndSkipsFair() {
+        String json = "{\"searchResultsArray\":{\"results\":["
+                + "{\"listing\":{"
+                + "\"listingId\":111,\"title\":\"Pride and Prejudice\",\"binding\":\"Hardcover\","
+                + "\"condition\":\"USED_VERYGOOD\",\"vendorCondition\":\"Very Good\","
+                + "\"priceInPurchaseCurrency\":{\"amount\":4.86,\"currency\":\"USD\"},"
+                + "\"shippingPriceInPurchaseCurrency\":{\"amount\":0,\"currency\":\"USD\"},"
+                + "\"shippingRates\":[{\"shippingPriceInPurchaseCurrency\":{\"amount\":0,\"currency\":\"USD\"}},"
+                + "{\"shippingPriceInPurchaseCurrency\":{\"amount\":8.99,\"currency\":\"USD\"}}],"
+                + "\"vendorId\":52274160,\"vendorName\":\"World of Books\","
+                + "\"vendorCity\":\"Montgomery\",\"vendorProvState\":\"IL\",\"vendorCountry\":\"USA\","
+                + "\"vendorStarRating\":5,"
+                + "\"vendorStorefrontUrl\":\"/World-of-Books/52274160/sf?ref_=nav\","
+                + "\"bdpCanonicalUrl\":\"/Pride/111/bd\",\"isbn13\":\"9780141439518\",\"quantity\":1"
+                + "}},"
+                + "{\"listing\":{"
+                + "\"listingId\":222,\"title\":\"York Notes\",\"binding\":\"Paperback\","
+                + "\"condition\":\"USED_FAIR\",\"vendorCondition\":\"Fair\","
+                + "\"priceInPurchaseCurrency\":{\"amount\":1.00,\"currency\":\"USD\"},"
+                + "\"shippingPriceInPurchaseCurrency\":{\"amount\":0,\"currency\":\"USD\"},"
+                + "\"vendorId\":9,\"vendorName\":\"Skip Me\""
+                + "}}"
+                + "]}}";
+        String html = "<script>self.__next_f.push([1,\"" + json.replace("\"", "\\\"") + "\"])</script>";
+
+        List<AbeBooksListing> listings = parser.parseEmbeddedListings(html);
+
+        assertEquals(1, listings.size());
+        AbeBooksListing offer = listings.get(0);
+        assertEquals(111L, offer.getListingId());
+        assertEquals("Pride and Prejudice", offer.getListingTitle());
+        assertEquals(new BigDecimal("4.86"), offer.getPriceDollars());
+        assertEquals(BigDecimal.ZERO, offer.getShippingDollars());
+        assertEquals(new BigDecimal("8.99"), offer.getPriorityShippingDollars());
+        assertEquals("Used - Very Good", offer.getCondition());
+        assertEquals(BookCoverType.HARDCOVER, offer.getBinding());
+        assertEquals(52274160L, offer.getSellerId());
+        assertEquals("World of Books", offer.getSellerName());
+        assertEquals("Montgomery", offer.getSellerCity());
+        assertEquals("https://www.abebooks.com/World-of-Books/52274160/sf", offer.getSellerStorefrontUrl());
+        assertEquals("https://www.abebooks.com/Pride/111/bd", offer.getDetailsUrl());
+        assertEquals("9780141439518", offer.getIsbn13());
+    }
+
+    @Test
+    void parseShipRates_readsFirstBookAndAdditionalAmount() {
+        String html = """
+                <html><body><table>
+                <tr><td>First book:</td><td>US$ 6.00</td><td>US$ 12.00</td></tr>
+                </table>
+                <strong>Bookseller Shipping Terms</strong>
+                <p>Each additional book US$ 1.50</p>
+                <p>Shipping speeds are estimates and are not guaranteed.</p>
+                </body></html>
+                """;
+        AbeBooksShipRates rates = parser.parseShipRates(html);
+        assertEquals(new BigDecimal("6.00"), rates.getStandardDollars());
+        assertEquals(new BigDecimal("12.00"), rates.getPriorityDollars());
+        assertEquals(new BigDecimal("1.50"), rates.getAdditionalDollars());
+        assertEquals(AdditionalShippingSource.PARSED, rates.getAdditionalSource());
+        assertTrue(rates.getTerms().contains("Each additional book"));
+        assertFalse(rates.getTerms().toLowerCase().contains("shipping speeds"));
+    }
+
+    @Test
+    void parseAdditionalRate_freeProseAndUnknownBoilerplate() {
+        AbeBooksListingParser.AdditionalRate free = AbeBooksListingParser.parseAdditionalRate(
+                "Additional books ship free within the United States.");
+        assertEquals(BigDecimal.ZERO, free.dollars());
+        assertEquals(AdditionalShippingSource.FREE, free.source());
+
+        AbeBooksListingParser.AdditionalRate unknown = AbeBooksListingParser.parseAdditionalRate(
+                "* Shipping speeds are estimates. Additional items may vary.");
+        assertNull(unknown.dollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, unknown.source());
+    }
+
+    @Test
+    void parseShipRates_readsLiveNestedTermsAndIgnoresPriorityRate() {
+        String html = """
+                <html><body><table>
+                <tr><td>First book:</td><td>US$ 0.00</td><td>US$ 5.99</td></tr>
+                </table>
+                <p><strong>Bookseller Shipping Terms:</strong> <p>STANDARD DOMESTIC U.S. SHIPPING IS FREE.  Priority Shipping is only $6.99 for first item, $1 each additional. Orders ship within 2 business days. Shipping outside of U.S. is typically between $8-13 and takes between 8-15 business days.  Heavier books may require additional shipping.  Faster Needs Please Inquire.</p></p>
+                <p><span class="required">*</span> Shipping speeds are estimates based on the carriers' delivery times and cannot be guaranteed.</p>
+                </body></html>
+                """;
+        AbeBooksShipRates rates = parser.parseShipRates(html);
+        assertEquals(new BigDecimal("0.00"), rates.getStandardDollars());
+        assertEquals(new BigDecimal("5.99"), rates.getPriorityDollars());
+        assertEquals(BigDecimal.ZERO, rates.getAdditionalDollars());
+        assertEquals(AdditionalShippingSource.FREE, rates.getAdditionalSource());
+        assertTrue(rates.getTerms().contains("STANDARD DOMESTIC"));
+        assertTrue(rates.getTerms().contains("$1 each additional"));
+        assertFalse(rates.getTerms().toLowerCase().contains("shipping speeds"));
+    }
+
+    @Test
+    void parseAdditionalRate_readsStandardMultiBookPhrases() {
+        assertParsed("1.50", "Each additional book US$ 1.50");
+        assertParsed("1.50", "$1.50 for each additional book");
+        assertParsed("1.00", "US$ 1.00 per additional item");
+        assertParsed("2", "each extra book $2");
+        assertParsed("1.25", "First book $4.50, $1.25 thereafter");
+        assertParsed("0.50", "second book $.50");
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "Additional books in the same order ship for FREE via Standard Shipping.").source());
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "No additional charge for extra books.").source());
+    }
+
+    @Test
+    void parseAdditionalRate_skipsPriorityAndInternationalRates() {
+        AbeBooksListingParser.AdditionalRate priorityOnly = AbeBooksListingParser.parseAdditionalRate(
+                "Priority Shipping is only $6.99 for first item, $1 each additional.");
+        assertNull(priorityOnly.dollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, priorityOnly.source());
+
+        AbeBooksListingParser.AdditionalRate abroad = AbeBooksListingParser.parseAdditionalRate(
+                "Outside the U.S. each additional book is $12.");
+        assertNull(abroad.dollars());
+        assertEquals(AdditionalShippingSource.UNKNOWN, abroad.source());
+
+        assertParsed("1.50", "Outside the U.S. each additional book is $8 and within the United States each additional book is $1.50.");
+        assertParsed("1.00", "Priority shipping is $3 each additional and standard is $1 each additional.");
+
+        AbeBooksListingParser.AdditionalRate heavy = AbeBooksListingParser.parseAdditionalRate(
+                "Heavier books may require additional shipping. The bookseller may contact you about extra charges.");
+        assertEquals(AdditionalShippingSource.UNKNOWN, heavy.source());
+    }
+
+    private static void assertParsed(String dollars, String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertEquals(0, new BigDecimal(dollars).compareTo(rate.dollars()), terms);
+        assertEquals(AdditionalShippingSource.PARSED, rate.source(), terms);
     }
 
     private static String listing(String href, String condition, String price, String shipping, String binding) {

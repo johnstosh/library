@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import type { InputHTMLAttributes } from 'react'
 import { clsx } from 'clsx'
 
@@ -9,11 +9,14 @@ export interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, error, className, ...props }, ref) => {
+  ({ label, error, className, id, ...props }, ref) => {
+    const generatedId = useId()
+    const inputId = id ?? (label ? generatedId : undefined)
     return (
       <div className="flex items-center">
         <input
           ref={ref}
+          id={inputId}
           type="checkbox"
           className={clsx(
             'h-4 w-4 rounded border-gray-300 text-primary-600',
@@ -24,7 +27,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {...props}
         />
         {label && (
-          <label className="ml-2 block text-sm text-gray-700">
+          <label htmlFor={inputId} className="ml-2 block text-sm text-gray-700">
             {label}
             {error && <span className="text-red-500 ml-1">{error}</span>}
           </label>

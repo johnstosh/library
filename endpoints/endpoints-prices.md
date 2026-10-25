@@ -54,6 +54,8 @@ Returns every saved price row, including book title and author (legacy; caching 
     "bookId": 42,
     "bookTitle": "Pride and Prejudice",
     "author": "Jane Austen",
+    "sellerId": 7,
+    "sellerName": "World of Books",
     "cover": "HARDCOVER",
     "priceDollars": 4.86,
     "shippingDollars": 0,
@@ -92,5 +94,33 @@ Pauses 8s between AbeBooks HTTP calls (30s on every 10th call). On HTTP 403/429/
 ```
 
 `success` is true when at least one cover found a listing. Temporary photo-intake titles are skipped with `Not Ready - Temporary title`. Titles starting with "Excerpt from " or "Excerpts from " (case-insensitive, trimmed) skip AbeBooks and save $0.01 softcover (success=true).
+
+The same call stores up to 24 candidate listings for the book and, after that save commits, fetches ShipRates for sellers whose terms are missing or older than 30 days. A ShipRates rate limit does not discard the saved prices. `BookPriceDto.sellerId` is this application's seller id.
+
+## GET /api/sellers
+
+Sellers captured during price lookup, ordered by name.
+
+**Authentication:** Librarian
+
+## GET /api/sellers/{id}
+
+One seller, including storefront URL, ShipRates URL, stored terms, extra-book rate, and listing count.
+
+**Authentication:** Librarian
+
+## PUT /api/sellers/{id}/additional-shipping
+
+Sets the extra-book shipping dollars. Send `{"additionalShippingDollars": null}` to clear a librarian amount and re-read the stored terms. No AbeBooks request.
+
+**Authentication:** Librarian
+
+## POST /api/listings/by-book-ids
+
+Candidate listings for the given book ids, with the seller's shipping policy on each row. Empty list returns `[]`. Used by the Savings page.
+
+**Authentication:** Librarian
+
+**Request body:** `[42, 43]`
 
 See also `feature-design-prices.md` and the caching design in `design-caching.md`. The new endpoints keep the existing `listAll` behavior intact.

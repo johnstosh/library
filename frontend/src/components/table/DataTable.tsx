@@ -12,6 +12,9 @@ export interface Column<T> {
   sortable?: boolean
   width?: string
   minWidth?: string
+  /** Replaces the default header padding. Include padding utilities when set. */
+  headerClassName?: string
+  headerTitle?: string
   cellClassName?: string
   hideOnMobile?: boolean
 }
@@ -30,6 +33,8 @@ export interface DataTableProps<T> {
   emptyMessage?: string
   isLoading?: boolean
   className?: string
+  /** Extra classes on the table element. Replaces the default min-w-full. */
+  tableClassName?: string
 }
 
 export function DataTable<T>({
@@ -46,6 +51,7 @@ export function DataTable<T>({
   emptyMessage = 'No data available',
   isLoading = false,
   className,
+  tableClassName,
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
@@ -61,7 +67,10 @@ export function DataTable<T>({
 
   return (
     <div className={clsx('overflow-x-auto -mx-4 sm:mx-0', className)}>
-      <table className="min-w-full table-fixed divide-y divide-gray-200" data-test="data-table">
+      <table
+        className={clsx('w-full table-fixed divide-y divide-gray-200', tableClassName ?? 'min-w-full')}
+        data-test="data-table"
+      >
         <thead className="bg-gray-50">
           <tr>
             {selectable && (
@@ -76,8 +85,10 @@ export function DataTable<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
+                title={column.headerTitle ?? column.header}
                 className={clsx(
-                  'px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                  'text-left font-medium text-gray-500 uppercase',
+                  column.headerClassName ?? 'px-3 sm:px-6 py-3 text-xs tracking-wider',
                   column.hideOnMobile && 'hidden sm:table-cell'
                 )}
                 style={{ width: column.width, minWidth: column.minWidth }}

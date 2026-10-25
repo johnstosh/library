@@ -214,6 +214,7 @@ export function AuthorsPage() {
         <CatalogLoadMore
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
+          shownCount={authors.length}
           onLoadMore={loadMore}
           data-test="authors-load-more"
         />

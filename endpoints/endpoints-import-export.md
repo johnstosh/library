@@ -35,6 +35,7 @@ Imports database from JSON format.
 **Behavior:**
 - Merges data with existing records (doesn't delete existing data)
 - Matches entities by natural keys (e.g., library name, author name, book title+author)
+- On an existing author, a missing or null field stays as stored, including `alternateNames`. Only a value present in the payload replaces that field. An empty `alternateNames` list clears the stored list.
 - Photos in the import file are processed but image bytes are not expected
 
 ---

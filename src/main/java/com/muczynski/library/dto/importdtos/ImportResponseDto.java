@@ -35,6 +35,8 @@ public class ImportResponseDto {
         private int photos;
         private int favorites;
         private int prices;
+        private int sellers;
+        private int listings;
     }
 
     @Data

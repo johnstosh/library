@@ -160,7 +160,7 @@ The export format changed to use lightweight references instead of embedded obje
   - For photos: Matches by `imageChecksum` (SHA-256) first, then `permanentId`, then book/author + photoOrder
 - Matches entities by natural keys:
   - Branches: by name
-  - Authors: by name
+  - Authors: by name. On an existing author, a missing or null field stays as stored, including `alternateNames`. A value present in the payload replaces that field. An empty `alternateNames` list clears the stored list.
   - Books: by title (not title+author; aligns with uk_book_title)
   - Users: by username
   - Loans: by book ID + user ID + loan date

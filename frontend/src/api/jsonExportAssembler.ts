@@ -13,6 +13,8 @@ export const EXPORT_SECTION_KEYS = [
   'photos',
   'favorites',
   'prices',
+  'sellers',
+  'listings',
 ] as const
 
 export type ExportSectionKey = (typeof EXPORT_SECTION_KEYS)[number]
@@ -68,6 +70,8 @@ export function emptyCatalog(): Record<ExportSectionKey, unknown[]> {
     photos: [],
     favorites: [],
     prices: [],
+    sellers: [],
+    listings: [],
   }
 }
 

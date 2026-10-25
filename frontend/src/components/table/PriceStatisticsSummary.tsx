@@ -39,7 +39,7 @@ export function PriceStatisticsSummary({
     >
       <p className="text-sm font-medium text-gray-900">Price statistics</p>
       <p className="text-xs text-gray-500 mt-0.5 mb-3">
-        Cheapest hardcover or softcover total (item + shipping) per book.
+        Cheapest hardcover or softcover total (item + shipping) per book loaded in this table.
       </p>
       <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
         <Stat

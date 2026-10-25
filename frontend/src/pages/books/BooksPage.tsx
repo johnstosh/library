@@ -351,6 +351,7 @@ export function BooksPage() {
         <CatalogLoadMore
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
+          shownCount={books.length}
           onLoadMore={loadMore}
           data-test="books-load-more"
         />

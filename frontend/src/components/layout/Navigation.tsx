@@ -97,6 +97,8 @@ export function Navigation() {
                     <NavLink to="/applications"    className={desktopNavCls} data-test="nav-applications">Applications</NavLink>
                     <NavLink to="/data-management" className={desktopNavCls} data-test="nav-data">Data</NavLink>
                     <NavLink to="/prices" className={desktopNavCls} data-test="nav-prices">Prices</NavLink>
+                    <NavLink to="/sellers" className={desktopNavCls} data-test="nav-sellers">Sellers</NavLink>
+                    <NavLink to="/savings" className={desktopNavCls} data-test="nav-savings">Savings</NavLink>
                     <NavLink to="/photos-management" className={desktopNavCls} data-test="nav-photos">Photos</NavLink>
                     <NavLink to="/global-settings" className={desktopNavCls} data-test="nav-global-settings">Global Settings</NavLink>
                   </>
@@ -218,6 +220,8 @@ export function Navigation() {
                   <NavLink to="/applications"      className={mobileNavCls} data-test="nav-applications-mobile"  onClick={() => close()}>Applications</NavLink>
                   <NavLink to="/data-management"   className={mobileNavCls} data-test="nav-data-mobile"          onClick={() => close()}>Data Management</NavLink>
                   <NavLink to="/prices"            className={mobileNavCls} data-test="nav-prices-mobile"        onClick={() => close()}>Prices</NavLink>
+                  <NavLink to="/sellers"           className={mobileNavCls} data-test="nav-sellers-mobile"       onClick={() => close()}>Sellers</NavLink>
+                  <NavLink to="/savings"           className={mobileNavCls} data-test="nav-savings-mobile"       onClick={() => close()}>Savings</NavLink>
                   <NavLink to="/photos-management" className={mobileNavCls} data-test="nav-photos-mobile"        onClick={() => close()}>Photos</NavLink>
                   <NavLink to="/global-settings"   className={mobileNavCls} data-test="nav-global-settings-mobile" onClick={() => close()}>Global Settings</NavLink>
                 </>

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { BookPriceDto } from '@/types/dtos'
 import {
   applyPriceFilters,
+  coverAbbrev,
   coverLabel,
   defaultPriceChipFilters,
   parseMaxTotal,
@@ -77,6 +78,16 @@ describe('coverLabel', () => {
     expect(coverLabel('LIBRARY_BINDING')).toBe('Library Binding')
     expect(coverLabel('OTHER')).toBe('Other')
     expect(coverLabel('UNKNOWN')).toBe('Unknown')
+  })
+})
+
+describe('coverAbbrev', () => {
+  it('abbreviates covers for the narrow Prices column', () => {
+    expect(coverAbbrev('HARDCOVER')).toBe('HC')
+    expect(coverAbbrev('SOFTCOVER')).toBe('SC')
+    expect(coverAbbrev('LIBRARY_BINDING')).toBe('LB')
+    expect(coverAbbrev('OTHER')).toBe('Oth')
+    expect(coverAbbrev('UNKNOWN')).toBe('Unk')
   })
 })
 
