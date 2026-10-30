@@ -4,6 +4,7 @@
 package com.muczynski.library.ui;
 
 import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.BoundingBox;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.assertions.LocatorAssertions;
@@ -643,6 +644,38 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-binding-1']")).containsText("Unknown");
         // Active status badge is shown in the Status column (exact: not "Not Active Status")
         assertThat(page.getByText("Active", new Page.GetByTextOptions().setExact(true))).isVisible();
+    }
+
+    @Test
+    @DisplayName("Books on a phone use a card list that fits the screen")
+    void testBooksLayoutOnPhone() {
+        page.setViewportSize(375, 667);
+        page.navigate(getBaseUrl() + "/books");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='books-phone-list']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='data-table']")).hasCount(0);
+        assertThat(page.locator("[data-test='book-title-link-1']")).isVisible();
+        assertThat(page.locator("[data-test='book-title-link-1']")).containsText("Initial Book");
+        assertThat(page.locator("[data-test='edit-book-1']")).isVisible();
+        assertThat(page.locator("text=Date Added")).hasCount(0);
+
+        int scrollWidth = ((Number) page.evaluate("document.documentElement.scrollWidth")).intValue();
+        int clientWidth = ((Number) page.evaluate("document.documentElement.clientWidth")).intValue();
+        Assertions.assertTrue(scrollWidth <= clientWidth + 1,
+                "Books page should not scroll sideways on a phone, scrollWidth="
+                        + scrollWidth + " clientWidth=" + clientWidth);
+
+        BoundingBox title = page.locator("[data-test='book-phone-body-1']").boundingBox();
+        BoundingBox edit = page.locator("[data-test='edit-book-1']").boundingBox();
+        Assertions.assertNotNull(title, "Title block should have a bounding box");
+        Assertions.assertNotNull(edit, "Edit action should have a bounding box");
+        Assertions.assertTrue(title.width >= 160,
+                "Title block should keep a readable width on a phone, got " + title.width);
+        Assertions.assertTrue(edit.x >= 0 && edit.x + edit.width <= clientWidth + 1,
+                "Edit action should stay inside the phone viewport, x=" + edit.x
+                        + " right=" + (edit.x + edit.width));
     }
 
     @Test

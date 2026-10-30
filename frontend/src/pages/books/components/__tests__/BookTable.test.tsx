@@ -85,3 +85,27 @@ describe('BookTable title column', () => {
     expect(screen.queryByTestId('book-author-grokipedia-8')).not.toBeInTheDocument()
   })
 })
+
+describe('BookTable on a phone', () => {
+  it('lays each book out as a card instead of a fixed table', () => {
+    const previous = window.matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+
+    renderTable()
+
+    expect(screen.getByTestId('books-phone-list')).toBeInTheDocument()
+    expect(screen.queryByTestId('data-table')).not.toBeInTheDocument()
+    expect(screen.getByTestId('book-title-link-1')).toHaveTextContent('Summa Theologica')
+    expect(screen.getByTestId('book-author-link-1')).toHaveTextContent('Thomas Aquinas')
+    expect(screen.getByTestId('edit-book-1')).toBeInTheDocument()
+    expect(screen.getByTestId('select-checkbox-1')).toBeInTheDocument()
+    expect(screen.queryByText('LOC')).not.toBeInTheDocument()
+    expect(screen.queryByText('Date Added')).not.toBeInTheDocument()
+    window.matchMedia = previous
+  })
+})

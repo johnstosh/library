@@ -818,6 +818,7 @@ Headless UI Dialog with consistent structure:
 ## Key Features
 
 ### 1. Books Management
+- On a phone (under 640px) the list is a card per book, the same shape as a Search result: cover, title, author, status, and wrapping action icons. The wide table stays on larger screens. `data-test="books-phone-list"` marks the phone list.
 - Filter by All, Most Recent Day, Status (including Without LOC), and a bottom Pricing section (Books with Pricing, Books without Pricing; price older than N days, default 90)
 - CRUD operations
 - Bulk delete
