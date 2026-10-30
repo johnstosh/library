@@ -1,5 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
 import { EntityLink } from '@/components/ui/EntityLink'
 import { FilterChip } from '@/components/ui/FilterChip'
 import { PageCard } from '@/components/ui/PageCard'
@@ -11,8 +13,8 @@ import { SelectionToolbar, TableCountPlaceholder } from '@/components/table/Sele
 import { TableSummary } from '@/components/table/TableSummary'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { useBranches } from '@/api/branches'
-import { useSellers } from '@/api/sellers'
-import type { AbeSellerDto, AdditionalShippingSource } from '@/types/dtos'
+import { useReparseSellers, useSellers } from '@/api/sellers'
+import type { AbeSellerDto, AdditionalShippingSource, SellerReparseResult } from '@/types/dtos'
 import { formatUsd } from '@/utils/formatters'
 
 function place(seller: AbeSellerDto): string {
@@ -33,6 +35,26 @@ export function sourceLabel(source: AdditionalShippingSource | null | undefined)
   return 'Not published'
 }
 
+/** Extra-book shipping is cheaper than the stored first-book rate. */
+export function hasMultiBookDiscount(
+  seller: Pick<AbeSellerDto, 'additionalShippingDollars' | 'sampleStandardShipping'>,
+): boolean {
+  const extra = seller.additionalShippingDollars
+  const first = seller.sampleStandardShipping
+  if (extra == null || first == null) return false
+  return extra < first
+}
+
+export function reparseMessage(result: SellerReparseResult): string {
+  const updated = result.updated === 1
+    ? 'Updated 1 seller from the stored terms.'
+    : `Updated ${result.updated} sellers from the stored terms.`
+  const kept = result.keptLibrarian === 1
+    ? '1 rate entered here was kept.'
+    : `${result.keptLibrarian} rates entered here were kept.`
+  return `${updated} ${kept}`
+}
+
 /** True when the Each extra book column shows "Not published". */
 export function isRateNotPublished(
   seller: Pick<AbeSellerDto, 'additionalShippingDollars' | 'additionalShippingSource'>,
@@ -42,11 +64,20 @@ export function isRateNotPublished(
 
 export function SellersPage() {
   const { data: sellers = [], isLoading, error } = useSellers()
+  const reparse = useReparseSellers()
   const { data: branches = [] } = useBranches()
   const firstBranch = branches[0]
+  const [searchParams, setSearchParams] = useSearchParams()
+  const multiBookOnly = searchParams.get('multiBook') === '1'
   const [includeNotPublished, setIncludeNotPublished] = useState(false)
   const [loadedCount, setLoadedCount] = useState(CATALOG_PAGE_SIZE)
-  const filtered = includeNotPublished ? sellers : sellers.filter((seller) => !isRateNotPublished(seller))
+  const [reparseNote, setReparseNote] = useState<string | null>(null)
+  const [reparseError, setReparseError] = useState<string | null>(null)
+  const filtered = sellers.filter((seller) => {
+    if (!includeNotPublished && isRateNotPublished(seller)) return false
+    if (multiBookOnly && !hasMultiBookDiscount(seller)) return false
+    return true
+  })
   const visible = filtered.slice(0, loadedCount)
   const hasMore = loadedCount < filtered.length
   const loadMore = () => {
@@ -56,6 +87,25 @@ export function SellersPage() {
   const toggleNotPublished = () => {
     setIncludeNotPublished((on) => !on)
     setLoadedCount(CATALOG_PAGE_SIZE)
+  }
+
+  const toggleMultiBook = () => {
+    const next = new URLSearchParams(searchParams)
+    if (multiBookOnly) next.delete('multiBook')
+    else next.set('multiBook', '1')
+    setSearchParams(next)
+    setLoadedCount(CATALOG_PAGE_SIZE)
+  }
+
+  async function reparseTerms() {
+    setReparseError(null)
+    try {
+      const result = await reparse.mutateAsync()
+      setReparseNote(reparseMessage(result))
+    } catch (err) {
+      setReparseNote(null)
+      setReparseError(err instanceof Error ? err.message : 'Could not re-parse seller terms')
+    }
   }
 
   const columns: Column<AbeSellerDto>[] = [
@@ -121,7 +171,24 @@ export function SellersPage() {
       <PageHeader
         title="Sellers"
         description="AbeBooks booksellers seen during price lookup. The extra-book shipping rate is edited on each seller."
+        actions={(
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => { void reparseTerms() }}
+            isLoading={reparse.isPending}
+            data-test="reparse-sellers"
+          >
+            Re-parse terms
+          </Button>
+        )}
       />
+      {reparseNote && (
+        <p className="mb-4 text-sm text-gray-700" data-test="reparse-result">{reparseNote}</p>
+      )}
+      {reparseError && (
+        <p className="mb-4 text-sm text-red-700" data-test="reparse-error">{reparseError}</p>
+      )}
       {error && (
         <p className="mb-4 text-sm text-red-700" data-test="sellers-error">
           Could not load sellers.
@@ -136,6 +203,13 @@ export function SellersPage() {
               onClick={toggleNotPublished}
               tooltip="Include sellers whose extra-book rate is not published. Off hides them."
               dataTest="filter-not-published"
+            />
+            <FilterChip
+              label="Multi-book discount"
+              active={multiBookOnly}
+              onClick={toggleMultiBook}
+              tooltip="Sellers whose extra book ships for less than the first book."
+              dataTest="filter-multi-book"
             />
           </div>
         </div>
@@ -157,9 +231,11 @@ export function SellersPage() {
             columns={columns}
             keyExtractor={(seller) => seller.id}
             emptyMessage={
-              sellers.length > 0
-                ? 'No sellers with a published extra-book rate.'
-                : 'No sellers yet. Look up prices to capture AbeBooks sellers.'
+              multiBookOnly
+                ? 'No sellers with a multi-book shipping discount.'
+                : sellers.length > 0
+                  ? 'No sellers with a published extra-book rate.'
+                  : 'No sellers yet. Look up prices to capture AbeBooks sellers.'
             }
             isLoading={isLoading}
           />

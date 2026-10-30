@@ -280,6 +280,13 @@ export function PricesPage() {
           >
             Open in Books
           </Button>
+          <Button
+            variant="outline"
+            to="/sellers?multiBook=1"
+            data-test="find-multi-book-discounts"
+          >
+            Multi-book discounts
+          </Button>
           <BookFilters
             chips={chips}
             onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}

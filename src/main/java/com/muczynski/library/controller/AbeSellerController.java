@@ -6,6 +6,7 @@ package com.muczynski.library.controller;
 import com.muczynski.library.dto.AbeSellerDto;
 import com.muczynski.library.dto.AdditionalShippingUpdateDto;
 import com.muczynski.library.dto.BookListingDto;
+import com.muczynski.library.dto.SellerReparseResultDto;
 import com.muczynski.library.service.AbeSellerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,12 @@ public class AbeSellerController {
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<AbeSellerDto> get(@PathVariable Long id) {
         return ResponseEntity.ok(sellerService.get(id));
+    }
+
+    @PostMapping("/sellers/reparse")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<SellerReparseResultDto> reparseStoredTerms() {
+        return ResponseEntity.ok(sellerService.reparseStoredTerms());
     }
 
     @PutMapping("/sellers/{id}/additional-shipping")

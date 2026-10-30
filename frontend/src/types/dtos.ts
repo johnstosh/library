@@ -168,6 +168,13 @@ export interface BookPriceDto {
 
 export type AdditionalShippingSource = 'PARSED' | 'LIBRARIAN' | 'FREE' | 'UNKNOWN'
 
+export interface SellerReparseResult {
+  examined: number
+  updated: number
+  unchanged: number
+  keptLibrarian: number
+}
+
 export interface AbeSellerDto {
   id: number
   vendorId: number
