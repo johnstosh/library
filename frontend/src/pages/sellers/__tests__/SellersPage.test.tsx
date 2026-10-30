@@ -23,9 +23,14 @@ const sellers: AbeSellerDto[] = [
     listingCount: 0,
   })),
 ]
+sellers[0].sampleStandardShipping = 4.5
+sellers[1].sampleStandardShipping = 1
+
+const reparse = vi.hoisted(() => vi.fn())
 
 vi.mock('@/api/sellers', () => ({
   useSellers: () => ({ data: sellers, isLoading: false, error: null }),
+  useReparseSellers: () => ({ mutateAsync: reparse, isPending: false }),
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -86,5 +91,34 @@ describe('SellersPage', () => {
     expect(screen.getByTestId('seller-additional-131')).toHaveTextContent('Not published')
     expect(screen.getByTestId('table-count')).toHaveTextContent('134 sellers in this table')
     expect(screen.getByText('Showing 134 sellers')).toBeInTheDocument()
+  })
+
+  it('keeps sellers whose extra book is cheaper than the first book', () => {
+    render(
+      <MemoryRouter initialEntries={['/sellers?multiBook=1']}>
+        <SellersPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('filter-multi-book')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Seller 1')).toBeInTheDocument()
+    expect(screen.queryByText('Seller 2')).not.toBeInTheDocument()
+    expect(screen.getByTestId('search-results-count')).toHaveTextContent('1 seller in the search results')
+  })
+
+  it('re-parses stored terms and reports how many rates changed', async () => {
+    reparse.mockResolvedValue({ examined: 134, updated: 12, unchanged: 120, keptLibrarian: 2 })
+    render(
+      <MemoryRouter>
+        <SellersPage />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByTestId('reparse-sellers'))
+
+    expect(await screen.findByTestId('reparse-result')).toHaveTextContent(
+      'Updated 12 sellers from the stored terms. 2 rates entered here were kept.',
+    )
+    expect(reparse).toHaveBeenCalledOnce()
   })
 })

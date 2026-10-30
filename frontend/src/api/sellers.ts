@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
 import { queryKeys } from '@/config/queryClient'
-import type { AbeSellerDto, BookListingDto } from '@/types/dtos'
+import type { AbeSellerDto, BookListingDto, SellerReparseResult } from '@/types/dtos'
 
 export function useSellers() {
   return useQuery({
@@ -27,6 +27,16 @@ export function useUpdateAdditionalShipping() {
     onSuccess: (seller) => {
       queryClient.setQueryData(queryKeys.sellers.detail(seller.id), seller)
       queryClient.invalidateQueries({ queryKey: queryKeys.sellers.list() })
+    },
+  })
+}
+
+export function useReparseSellers() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<SellerReparseResult>('/sellers/reparse'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sellers.all })
     },
   })
 }

@@ -238,6 +238,11 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('prices-search-button')).toHaveTextContent('Search')
   })
 
+  it('links to sellers whose extra book is cheaper than the first book', () => {
+    renderPrices('/prices')
+    expect(screen.getByTestId('find-multi-book-discounts')).toHaveAttribute('href', '/sellers?multiBook=1')
+  })
+
   it('reports books in the table, search results, the library system, and price rows', () => {
     renderPrices('/prices')
     expect(screen.getByTestId('table-count')).toHaveTextContent('4 books in this table')

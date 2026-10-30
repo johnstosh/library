@@ -78,6 +78,14 @@ class AbeBooksListingParserTest {
         assertFalse(parser.isRateLimited(emptyResults, 400));
         assertTrue(parser.isRateLimited("<html>not a search page</html>", 80),
                 "a tiny non-search page that returns too fast is treated as rate limited");
+        String shipRates = """
+                <html><body><table><tr><td>First book:</td><td>US$ 4.00</td></tr></table>
+                <strong>Bookseller Shipping Terms</strong><p>Each additional book US$ 1.50</p>
+                </body></html>
+                """;
+        assertFalse(parser.isBlockedPage(shipRates), "a ShipRates page is not a block page");
+        assertFalse(parser.isRateLimited(shipRates, 40),
+                "a fast ShipRates page is not a rate limit");
     }
 
     @Test
@@ -248,11 +256,63 @@ class AbeBooksListingParserTest {
         assertEquals(AdditionalShippingSource.UNKNOWN, abroad.source());
 
         assertParsed("1.50", "Outside the U.S. each additional book is $8 and within the United States each additional book is $1.50.");
+        assertEquals(AdditionalShippingSource.FREE, AbeBooksListingParser.parseAdditionalRate(
+                "STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Shipping is only $1 each additional.").source());
+        assertEquals(BigDecimal.ZERO, AbeBooksListingParser.parseAdditionalRate(
+                "STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Shipping is only $1 each additional.").dollars());
         assertParsed("1.00", "Priority shipping is $3 each additional and standard is $1 each additional.");
 
         AbeBooksListingParser.AdditionalRate heavy = AbeBooksListingParser.parseAdditionalRate(
                 "Heavier books may require additional shipping. The bookseller may contact you about extra charges.");
         assertEquals(AdditionalShippingSource.UNKNOWN, heavy.source());
+    }
+
+    @Test
+    void parseAdditionalRate_readsLiveSellerWording() {
+        assertUnknown("Insurance is normally provided at no extra charge for orders over 100 USD.");
+        assertUnknown("Books with dustjackets are supplied with archival quality mylar covers at no additional charge. "
+                + "Free Delivery Confirmation and Tracking.");
+        assertUnknown("United States: Priority - $10.00 first book; $6.00 each additional.");
+        assertUnknown("please select Expedited shipping, not Free shipping.");
+        assertUnknown("I almost always offer free shipping, but if the buyer wants special shipping packaging, I will try to accomodate.");
+        assertUnknown("Free Shipping");
+
+        assertParsed("2.00", "SHIPPING: United States: Priority - $10.00 first book; $6.00 each additional. "
+                + "Media Mail/Bookrate $2.99; $2.00 each additional. "
+                + "International: Global Priority only (average price for a single book will be $24.00.)");
+        assertParsed("1.00", "DOMESTIC: Priority $11.50 1st book, $2.25 each additional; "
+                + "Media Mail 5.50 1st book, $1.00 each additional;");
+        assertParsed("2.00", "Media mail postage and handling in the U.S. is $4.00 for the first volume "
+                + "and $2.00 for each additional volume in the same shipment. "
+                + "Priority Mail in the U.S. is $10.00 for the first volume and $2.00 for each additional volume.");
+        assertParsed("2.00", "Domestic orders are shipped via the U.S. Postal Service (Priority Mail) starting at $18.00 "
+                + "for the first book. Media Mail shipping rate is also available: $7.00 for the first book and $2.00 for each additional.");
+        assertParsed("2.00", "Priority Mail in the U.S. is $10.00 for the first volume and $2.00 for each additional volume.");
+        assertParsed("1.00", "Please include $5.00 (US) for media mail within USA, 5-14 days; $1.00 more for each additional item. "
+                + "For INTERNATIONAL PURCHASES, minimum charge of $11.00.");
+        assertParsed("1.00", "Shipping: Standard Shipping: $9.50 first book, $1.00 each other. "
+                + "Expedited $10.00 first book $3.00 each other.");
+
+        assertFree("All books within the US ship free of charge. "
+                + "If your book order is heavy or oversized, we may contact you to let you know extra shipping is required.");
+        assertFree("Free Shipping for All Domestic (US) Standard Orders\n"
+                + "International shipments are tendered to the local postal service.");
+        assertFree("Free Shipping for All Domestic (US) Standard Orders International shipments are tendered "
+                + "to the local postal service.");
+        assertFree("STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Mail is $2.00 for each additional book.");
+        assertFree("We offer free standard shipping to the contiguous US.");
+    }
+
+    private static void assertUnknown(String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertNull(rate.dollars(), terms);
+        assertEquals(AdditionalShippingSource.UNKNOWN, rate.source(), terms);
+    }
+
+    private static void assertFree(String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertEquals(0, BigDecimal.ZERO.compareTo(rate.dollars()), terms);
+        assertEquals(AdditionalShippingSource.FREE, rate.source(), terms);
     }
 
     private static void assertParsed(String dollars, String terms) {

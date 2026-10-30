@@ -9,6 +9,7 @@ import com.muczynski.library.domain.BookListing;
 import com.muczynski.library.dto.AbeSellerDto;
 import com.muczynski.library.dto.AdditionalShippingUpdateDto;
 import com.muczynski.library.dto.BookListingDto;
+import com.muczynski.library.dto.SellerReparseResultDto;
 import com.muczynski.library.exception.ResourceNotFoundException;
 import com.muczynski.library.repository.AbeSellerRepository;
 import com.muczynski.library.repository.BookListingRepository;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,46 @@ public class AbeSellerService {
         }
         sellerRepository.save(seller);
         return toDto(seller, listingCounts().getOrDefault(id, 0));
+    }
+
+    /**
+     * Reads each seller's stored terms again with the current parser.
+     * Does not call AbeBooks. A librarian amount is kept.
+     */
+    @Transactional
+    public SellerReparseResultDto reparseStoredTerms() {
+        int updated = 0;
+        int unchanged = 0;
+        int keptLibrarian = 0;
+        for (AbeSeller seller : sellerRepository.findAllByOrderByNameAscIdAsc()) {
+            if (seller.getAdditionalShippingSource() == AdditionalShippingSource.LIBRARIAN) {
+                keptLibrarian++;
+                continue;
+            }
+            AbeBooksListingParser.AdditionalRate parsed =
+                    AbeBooksListingParser.parseAdditionalRate(seller.getShippingTerms());
+            if (sameRate(seller, parsed)) {
+                unchanged++;
+                continue;
+            }
+            seller.setAdditionalShippingDollars(parsed.dollars());
+            seller.setAdditionalShippingSource(parsed.source());
+            sellerRepository.save(seller);
+            updated++;
+        }
+        return new SellerReparseResultDto(updated + unchanged + keptLibrarian, updated, unchanged, keptLibrarian);
+    }
+
+    private static boolean sameRate(AbeSeller seller, AbeBooksListingParser.AdditionalRate parsed) {
+        if (seller.getAdditionalShippingSource() != parsed.source()) {
+            return false;
+        }
+        BigDecimal current = seller.getAdditionalShippingDollars();
+        BigDecimal next = parsed.dollars();
+        if (current == null || next == null) {
+            return current == next;
+        }
+        return current.compareTo(next) == 0;
     }
 
     @Transactional(readOnly = true)

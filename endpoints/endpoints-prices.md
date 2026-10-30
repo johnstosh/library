@@ -109,6 +109,18 @@ One seller, including storefront URL, ShipRates URL, stored terms, extra-book ra
 
 **Authentication:** Librarian
 
+## POST /api/sellers/reparse
+
+Reads every seller's stored shipping terms again and updates the extra-book rate when the current parser disagrees. Does not call AbeBooks. A rate whose source is `LIBRARIAN` is left unchanged.
+
+**Authentication:** Librarian
+
+**Response:**
+
+```json
+{ "examined": 40, "updated": 12, "unchanged": 25, "keptLibrarian": 3 }
+```
+
 ## PUT /api/sellers/{id}/additional-shipping
 
 Sets the extra-book shipping dollars. Send `{"additionalShippingDollars": null}` to clear a librarian amount and re-read the stored terms. No AbeBooks request.
