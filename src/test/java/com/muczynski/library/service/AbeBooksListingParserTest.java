@@ -267,6 +267,54 @@ class AbeBooksListingParserTest {
         assertEquals(AdditionalShippingSource.UNKNOWN, heavy.source());
     }
 
+    @Test
+    void parseAdditionalRate_readsLiveSellerWording() {
+        assertUnknown("Insurance is normally provided at no extra charge for orders over 100 USD.");
+        assertUnknown("Books with dustjackets are supplied with archival quality mylar covers at no additional charge. "
+                + "Free Delivery Confirmation and Tracking.");
+        assertUnknown("United States: Priority - $10.00 first book; $6.00 each additional.");
+        assertUnknown("please select Expedited shipping, not Free shipping.");
+        assertUnknown("I almost always offer free shipping, but if the buyer wants special shipping packaging, I will try to accomodate.");
+        assertUnknown("Free Shipping");
+
+        assertParsed("2.00", "SHIPPING: United States: Priority - $10.00 first book; $6.00 each additional. "
+                + "Media Mail/Bookrate $2.99; $2.00 each additional. "
+                + "International: Global Priority only (average price for a single book will be $24.00.)");
+        assertParsed("1.00", "DOMESTIC: Priority $11.50 1st book, $2.25 each additional; "
+                + "Media Mail 5.50 1st book, $1.00 each additional;");
+        assertParsed("2.00", "Media mail postage and handling in the U.S. is $4.00 for the first volume "
+                + "and $2.00 for each additional volume in the same shipment. "
+                + "Priority Mail in the U.S. is $10.00 for the first volume and $2.00 for each additional volume.");
+        assertParsed("2.00", "Domestic orders are shipped via the U.S. Postal Service (Priority Mail) starting at $18.00 "
+                + "for the first book. Media Mail shipping rate is also available: $7.00 for the first book and $2.00 for each additional.");
+        assertParsed("2.00", "Priority Mail in the U.S. is $10.00 for the first volume and $2.00 for each additional volume.");
+        assertParsed("1.00", "Please include $5.00 (US) for media mail within USA, 5-14 days; $1.00 more for each additional item. "
+                + "For INTERNATIONAL PURCHASES, minimum charge of $11.00.");
+        assertParsed("1.00", "Shipping: Standard Shipping: $9.50 first book, $1.00 each other. "
+                + "Expedited $10.00 first book $3.00 each other.");
+
+        assertFree("All books within the US ship free of charge. "
+                + "If your book order is heavy or oversized, we may contact you to let you know extra shipping is required.");
+        assertFree("Free Shipping for All Domestic (US) Standard Orders\n"
+                + "International shipments are tendered to the local postal service.");
+        assertFree("Free Shipping for All Domestic (US) Standard Orders International shipments are tendered "
+                + "to the local postal service.");
+        assertFree("STANDARD DOMESTIC U.S. SHIPPING IS FREE. Priority Mail is $2.00 for each additional book.");
+        assertFree("We offer free standard shipping to the contiguous US.");
+    }
+
+    private static void assertUnknown(String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertNull(rate.dollars(), terms);
+        assertEquals(AdditionalShippingSource.UNKNOWN, rate.source(), terms);
+    }
+
+    private static void assertFree(String terms) {
+        AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
+        assertEquals(0, BigDecimal.ZERO.compareTo(rate.dollars()), terms);
+        assertEquals(AdditionalShippingSource.FREE, rate.source(), terms);
+    }
+
     private static void assertParsed(String dollars, String terms) {
         AbeBooksListingParser.AdditionalRate rate = AbeBooksListingParser.parseAdditionalRate(terms);
         assertEquals(0, new BigDecimal(dollars).compareTo(rate.dollars()), terms);

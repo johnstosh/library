@@ -44,13 +44,15 @@ public class AbeBooksListingParser {
             "(?i)(?:"
                     + "additional\\s+" + ITEM_WORD + "(?:\\s+[\\w']+){0,8}\\s+ship(?:\\s+for)?\\s+(?<!not )free\\b"
                     + "|each\\s+" + EXTRA_WORD + "(?:\\s+" + ITEM_WORD + ")?(?:\\s+(?!free\\b)[\\w']+){0,6}\\s+(?<!not )free\\b"
-                    + "|no\\s+(?:additional|extra)\\s+charge"
+                    + "|no\\s+(?:additional|extra)\\s+charge\\s+(?:for\\s+)?(?:extra\\s+|additional\\s+)?"
+                    + ITEM_WORD
                     + "|additional\\s+" + ITEM_WORD + "(?:\\s+[\\w']+){0,8}\\s+(?:at\\s+)?no\\s+(?:extra\\s+)?charge"
                     + "|free\\s+shipping\\s+on\\s+additional\\s+" + ITEM_WORD
                     + ")");
     /**
      * A per-extra-book dollar amount. Groups are mutually exclusive; the first
-     * one that matches is the amount.
+     * one that matches is the amount. "Each other" is the Robinson Street wording,
+     * not a general "other".
      */
     private static final Pattern MULTI_BOOK_AMOUNT = Pattern.compile(
             "(?i)(?:"
@@ -67,7 +69,31 @@ public class AbeBooksListingParser {
                     + "|"
                     + MONEY_TOKEN + "\\s+(?:each\\s+)?thereafter\\b"
                     + "|thereafter[^$]{0,20}?" + MONEY_TOKEN
+                    + "|"
+                    + MONEY_TOKEN + "\\s+more\\s+for\\s+each\\s+" + EXTRA_WORD
+                    + "(?:\\s+" + ITEM_WORD + ")?"
+                    + "|"
+                    + MONEY_TOKEN + "\\s+each\\s+other\\b"
                     + ")");
+    /** Media mail, book rate, or standard. Preferred over Priority Mail. */
+    private static final Pattern STANDARD_SERVICE = Pattern.compile(
+            "(?i)media\\s+mail|book\\s*rate|\\bstandard\\b");
+    /**
+     * AbeBooks' faster column, not the USPS Priority Mail service sellers use
+     * for ordinary parcels. "Priority -" is that column written in prose.
+     */
+    private static final Pattern FASTER_SERVICE = Pattern.compile(
+            "(?i)priority\\s+shipping|\\bexpedited\\b|express\\s+shipping|priority\\s*[-–—]");
+    /** USPS Priority Mail, or a bare "Priority" that is not the faster column. */
+    private static final Pattern PRIORITY_MAIL_SERVICE = Pattern.compile(
+            "(?i)priority\\s+mail|\\bpriority\\b");
+    private static final Pattern SHIPS_FREE = Pattern.compile(
+            "(?i)\\bship(?:ping|s)?\\b.*?\\b(?<!not )free\\b|\\b(?<!not )free\\b.*?\\bship(?:ping|s)?\\b");
+    private static final Pattern FREE_OF_SHIPPING = Pattern.compile(
+            "(?i)\\bfree\\s+shipping\\b|\\bship(?:ping|s)?\\s+(?:for\\s+)?(?<!not )free\\b");
+    private static final Pattern WITHIN_US = Pattern.compile(
+            "(?i)(?:within|inside)\\s+the\\s+u\\.?s\\b|contiguous\\s+us\\b");
+    private static final Pattern USA_WORD = Pattern.compile("(?i)\\busa\\b");
     private static final ObjectMapper JSON = new ObjectMapper()
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
 
@@ -419,37 +445,50 @@ public class AbeBooksListingParser {
 
     /**
      * Standard extra-book rate stated in seller terms.
-     * Unknown when the text does not name one. A rate that applies only to
-     * priority or international shipping is not the standard rate.
-     * When standard or domestic shipping itself is free, additional books are free.
+     * Unknown when the text does not name one.
+     * Media mail, book rate, and standard shipping win over USPS Priority Mail.
+     * Priority Mail is kept only when the terms state no media, book-rate, or
+     * standard extra, and standard shipping is not itself free.
+     * AbeBooks priority shipping, expedited, express, and "Priority -" are ignored,
+     * as is a rate that applies only to international shipping.
+     * When standard or domestic shipping to the US is free, additional books are free.
+     * A service named before a comma or semicolon still applies to the next amount,
+     * so "Priority $2.25 each additional; Media Mail $1.00 each additional" is $1.00.
      */
     public static AdditionalRate parseAdditionalRate(String terms) {
         if (terms == null || terms.isBlank()) {
             return AdditionalRate.UNKNOWN;
         }
         String text = terms.replace('\u00a0', ' ').replaceAll("[ \\t\\x0B\\f\\r]+", " ").trim();
-        AdditionalRate explicit = null;
+        AdditionalRate best = null;
+        int bestRank = 0;
         boolean standardFree = false;
         // Split on a sentence end. A single capital before the period, as in "U.S.",
         // is an abbreviation. "FREE. Priority" is a new sentence.
         for (String sentence : text.split("(?<![^A-Za-z][A-Za-z][.!?])(?<=[.!?])\\s+(?=[A-Z])|\\n+")) {
-            boolean priority = mentionsPriority(sentence);
+            ShippingClass mode = ShippingClass.UNSPECIFIED;
             boolean international = mentionsInternational(sentence);
             for (String clause : sentence.split("\\s*(?:;|,|\\band\\b)\\s*")) {
                 if (clause.isBlank()) {
                     continue;
                 }
-                boolean domestic = mentionsDomestic(clause);
-                if ((priority || mentionsPriority(clause)) && !domestic) {
-                    continue;
+                ShippingClass named = classInClause(clause);
+                if (named != ShippingClass.UNSPECIFIED) {
+                    mode = named;
                 }
+                boolean domestic = mentionsDomestic(clause) || mentionsWithinUs(clause) || mentionsUsa(clause);
                 if ((international || mentionsInternational(clause)) && !domestic) {
                     continue;
                 }
-                if (explicit == null) {
+                if (mode == ShippingClass.FASTER) {
+                    continue;
+                }
+                int rank = rank(mode);
+                if (rank > bestRank) {
                     AdditionalRate rate = rateInClause(clause);
                     if (rate != null) {
-                        explicit = rate;
+                        best = rate;
+                        bestRank = rank;
                     }
                 }
                 if (standardShippingIsFree(clause)) {
@@ -457,13 +496,48 @@ public class AbeBooksListingParser {
                 }
             }
         }
-        if (explicit != null) {
-            return explicit;
+        // A named standard or unspecified extra-book price beats "shipping is free".
+        // Free standard shipping beats a Priority Mail upcharge.
+        if (best != null && bestRank >= rank(ShippingClass.UNSPECIFIED)) {
+            return best;
         }
         if (standardFree) {
             return new AdditionalRate(BigDecimal.ZERO, AdditionalShippingSource.FREE);
         }
+        if (best != null) {
+            return best;
+        }
         return AdditionalRate.UNKNOWN;
+    }
+
+    /** Service class named in one clause. Unspecified means the clause names none. */
+    private enum ShippingClass {
+        FASTER,
+        PRIORITY_MAIL,
+        UNSPECIFIED,
+        STANDARD
+    }
+
+    private static int rank(ShippingClass shippingClass) {
+        return switch (shippingClass) {
+            case STANDARD -> 3;
+            case UNSPECIFIED -> 2;
+            case PRIORITY_MAIL -> 1;
+            case FASTER -> 0;
+        };
+    }
+
+    private static ShippingClass classInClause(String clause) {
+        if (STANDARD_SERVICE.matcher(clause).find()) {
+            return ShippingClass.STANDARD;
+        }
+        if (FASTER_SERVICE.matcher(clause).find()) {
+            return ShippingClass.FASTER;
+        }
+        if (PRIORITY_MAIL_SERVICE.matcher(clause).find()) {
+            return ShippingClass.PRIORITY_MAIL;
+        }
+        return ShippingClass.UNSPECIFIED;
     }
 
     private static AdditionalRate rateInClause(String clause) {
@@ -482,14 +556,6 @@ public class AbeBooksListingParser {
             return new AdditionalRate(new BigDecimal(raw.replace(",", "")), AdditionalShippingSource.PARSED);
         }
         return null;
-    }
-
-    /** AbeBooks' faster column, not the USPS Priority Mail service sellers use for standard parcels. */
-    private static boolean mentionsPriority(String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        return lower.contains("priority shipping")
-                || lower.contains("expedited")
-                || lower.contains("express shipping");
     }
 
     private static boolean mentionsInternational(String text) {
@@ -512,12 +578,31 @@ public class AbeBooksListingParser {
 
     private static boolean standardShippingIsFree(String clause) {
         String lower = clause.toLowerCase(Locale.ROOT);
-        if (!lower.contains("free") || lower.contains("additional") || lower.contains("extra")
+        if (!lower.contains("free") || lower.contains("not free")
+                || lower.contains("additional") || lower.contains("extra")
                 || lower.contains("add'l") || lower.contains("addl")) {
             return false;
         }
-        return lower.matches("(?s).*\\b(standard|domestic)\\b.*\\bshipping\\b.*\\bfree\\b.*")
-                || lower.matches("(?s).*\\bfree\\b.*\\b(standard|domestic)\\b.*\\bshipping\\b.*");
+        if (!SHIPS_FREE.matcher(lower).find()) {
+            return false;
+        }
+        // "Free Delivery Confirmation" is tracking, not a free shipment.
+        if (lower.contains("free delivery") && !FREE_OF_SHIPPING.matcher(lower).find()) {
+            return false;
+        }
+        boolean domestic = mentionsDomestic(lower) || mentionsWithinUs(lower);
+        if (mentionsInternational(lower) && !domestic) {
+            return false;
+        }
+        return domestic || mentionsUsa(lower);
+    }
+
+    private static boolean mentionsWithinUs(String text) {
+        return WITHIN_US.matcher(text).find();
+    }
+
+    private static boolean mentionsUsa(String text) {
+        return USA_WORD.matcher(text).find();
     }
 
     private static String shippingTerms(Document doc) {
