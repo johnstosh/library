@@ -149,7 +149,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
 - `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook` (boolean, optional) - Discovery chips
 - `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library, electronic-resource, and without-loc are Active-only; without-loc additionally excludes electronic resources). Selecting every key leaves status unconstrained. Legacy `inLib`/`elec`/`withoutLoc`/`requestedStatus`/`notActiveStatus` still read. See issue #337.
-- `labels` (string, optional) - Comma-separated genre tags (AND)
+- `labels` (string, optional) - Comma-separated genre tags (AND). `read-aloud` is books meant to be read aloud to children. `childrens` is books a child reads on their own.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
