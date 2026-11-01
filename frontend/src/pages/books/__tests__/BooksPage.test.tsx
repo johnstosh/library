@@ -6,7 +6,7 @@ import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
 import { BooksPage } from '../BooksPage'
 import type { BookDto } from '@/types/dtos'
 
-const { catalog, librarianState, filterCatalog } = vi.hoisted(() => {
+const { catalog, librarianState, filterCatalog, favoriteState, lastBookFilters } = vi.hoisted(() => {
   const catalog: BookDto[] = [
     {
       id: 1,
@@ -27,11 +27,19 @@ const { catalog, librarianState, filterCatalog } = vi.hoisted(() => {
       dateAddedToLibrary: '2026-08-30T00:00:00',
     },
   ]
+  const favoriteState = {
+    current: { lists: [] as { listName: string; bookIds: number[]; authorIds: number[] }[] },
+  }
+  const lastBookFilters = {
+    current: null as { favoriteLists?: readonly string[] } | null,
+  }
   function filterCatalog(filters?: {
     q?: string
     readingDifficulties?: readonly string[]
     bindings?: readonly string[]
+    favoriteLists?: readonly string[]
   }) {
+    lastBookFilters.current = filters ?? null
     if (!filters) return catalog
     const q = (filters.q ?? '').trim().toLowerCase()
     const difficulties = filters.readingDifficulties ?? []
@@ -55,7 +63,7 @@ const { catalog, librarianState, filterCatalog } = vi.hoisted(() => {
       return true
     })
   }
-  return { catalog, librarianState: { current: true }, filterCatalog }
+  return { catalog, librarianState: { current: true }, filterCatalog, favoriteState, lastBookFilters }
 })
 
 vi.mock('@/stores/authStore', () => ({
@@ -102,10 +110,22 @@ vi.mock('@/api/prices', () => ({
 }))
 
 vi.mock('@/api/favorites', () => ({
-  useFavoriteSummary: () => ({ data: { lists: [] } }),
-  favoriteListChips: () => [],
+  useFavoriteSummary: () => ({ data: favoriteState.current }),
+  favoriteListChips: (
+    lists: { listName: string; bookIds: number[] }[] | undefined,
+    mode: string,
+  ) => {
+    if (!lists) return []
+    return lists
+      .map((list) => ({
+        listName: list.listName,
+        count: mode === 'books' ? list.bookIds.length : 0,
+      }))
+      .filter((list) => list.count > 0)
+  },
   favoriteItemIdsForLists: () => new Set(),
-  listNameToTestId: (name: string) => name,
+  listNameToTestId: (listName: string) =>
+    listName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
 }))
 
 function UrlQuery() {
@@ -259,5 +279,25 @@ describe('BooksPage status filter', () => {
     renderBooksPage('/books?mostRecent=false')
     fireEvent.click(screen.getByTestId('status-filter-requested'))
     expect(screen.getByTestId('url-status')).toHaveTextContent('requested')
+  })
+})
+
+describe('BooksPage favorite list filter', () => {
+  it('lights up a list whose name contains a comma and sends that name', () => {
+    favoriteState.current = {
+      lists: [{ listName: 'ACLA, read in Pittsburgh', bookIds: [1], authorIds: [] }],
+    }
+    renderBooksPage('/books?mostRecent=false')
+    const chip = screen.getByTestId('favorite-filter-acla-read-in-pittsburgh')
+    expect(chip).toHaveTextContent('1 ACLA, read in Pittsburgh')
+    expect(chip.className).not.toContain('border-primary-500')
+
+    fireEvent.click(chip)
+
+    expect(screen.getByTestId('favorite-filter-acla-read-in-pittsburgh').className).toContain('border-primary-500')
+    expect(lastBookFilters.current?.favoriteLists).toEqual(['ACLA, read in Pittsburgh'])
+    const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1])
+    expect(params.get('favoriteLists')).toBe(`~${encodeURIComponent('ACLA, read in Pittsburgh')}`)
+    favoriteState.current = { lists: [] }
   })
 })

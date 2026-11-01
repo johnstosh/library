@@ -6,6 +6,7 @@ import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
+import { joinFavoriteLists } from '@/utils/favoriteListParams'
 import type { AuthorAvailabilityDto, AuthorDto, AuthorEnrichmentResultDto, AuthorNameNormalizationResultDto, AuthorSummaryDto, BookDto, BulkDeleteResultDto } from '@/types/dtos'
 
 const AUTHOR_FILTER_KEYS: (keyof AuthorChipFilters)[] = [
@@ -56,7 +57,7 @@ export function authorListFilterQuery(filters: AuthorListFilters): string {
     if (filters.chips[key]) params.set(key, 'true')
   }
   if (filters.favoriteLists && filters.favoriteLists.length > 0) {
-    params.set('favoriteLists', filters.favoriteLists.join(','))
+    params.set('favoriteLists', joinFavoriteLists(filters.favoriteLists))
   }
   return params.toString()
 }

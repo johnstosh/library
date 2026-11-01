@@ -36,7 +36,7 @@ Returns search results for books and authors matching the query.
 
 Audio, Book, and Ebook OR within one public library (YDL, EMU, or ACLA) and AND across libraries. Without chips AND with that group. Search authors are authors of titles that match.
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
-- `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
+- `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. A name that contains a comma is `~` plus a percent-encoded name. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values
 - `status` (string, optional) - Comma-separated status-filter keys (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`); book must match ANY of them. `in-library`/`electronic-resource`/`without-loc` are Active-only (`without-loc` also requires no LOC and not electronicResource). When omitted, WITHDRAWN and REQUESTED stay hidden. When every key is selected, status is unconstrained. See issue #337.
 

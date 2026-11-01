@@ -7,6 +7,7 @@ import com.muczynski.library.domain.BookStatusFilter;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.SearchResponseDto;
 import com.muczynski.library.service.SearchService;
+import com.muczynski.library.util.FavoriteListParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,12 +91,8 @@ public class SearchController {
             if (readingDifficultyList.isEmpty()) {
                 readingDifficultyList = null;
             }
-            List<String> favoriteList = (favoriteLists == null || favoriteLists.isBlank())
-                    ? null
-                    : Arrays.stream(favoriteLists.split(","))
-                            .map(String::trim)
-                            .filter(s -> !s.isEmpty())
-                            .collect(Collectors.toList());
+            List<String> parsedFavorites = FavoriteListParams.split(favoriteLists);
+            List<String> favoriteList = parsedFavorites.isEmpty() ? null : parsedFavorites;
             Long userId = null;
             if (principal != null && principal.getName() != null) {
                 try {

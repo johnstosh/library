@@ -29,6 +29,7 @@ import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.CheckoutMatchService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.util.FavoriteListParams;
 import com.muczynski.library.util.SecurityUtils;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
@@ -570,7 +571,7 @@ public class BookController {
             filter.statuses = BookStatusFilter.parseFilterValues(status);
             filter.readingDifficulties = ReadingDifficulty.parseFilterValues(readingDifficulty);
             filter.bindings = parseBindings(binding);
-            filter.favoriteLists = splitCsv(favoriteLists);
+            filter.favoriteLists = FavoriteListParams.split(favoriteLists);
             applyDesire(filter, desireToPurchase);
             filter.priceOlderDays = priceOlderDays;
             filter.freeText = freeText;

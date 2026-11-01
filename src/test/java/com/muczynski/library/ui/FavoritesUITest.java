@@ -12,6 +12,7 @@ import com.microsoft.playwright.options.LoadState;
 import com.muczynski.library.LibraryApplication;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -120,5 +121,32 @@ public class FavoritesUITest {
         page.click("[data-test='favorite-filter-have-read']");
         page.waitForURL(url -> url.contains("favoriteLists="),
                 new Page.WaitForURLOptions().setTimeout(10000L));
+    }
+
+    @Test
+    @DisplayName("A favorite list whose name contains a comma stays selected")
+    void testFavoriteListWithCommaFilters() {
+        page.waitForSelector("[data-test='favorite-star-book-1']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("[data-test='favorite-star-book-1']");
+        page.waitForSelector("[data-test='favorite-modal']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.fill("[data-test='favorite-add-list-name']", "ACLA, read in Pittsburgh");
+        page.click("[data-test='favorite-add-list']");
+        assertThat(page.locator("[data-test='favorite-list-acla-read-in-pittsburgh']")).isChecked();
+        page.click("[data-test='modal-close']");
+
+        page.waitForSelector("[data-test='favorite-filter-acla-read-in-pittsburgh']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("[data-test='favorite-filter-acla-read-in-pittsburgh']");
+        page.waitForURL(url -> url.contains("favoriteLists="),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+
+        String className = page.locator("[data-test='favorite-filter-acla-read-in-pittsburgh']").getAttribute("class");
+        Assertions.assertNotNull(className);
+        Assertions.assertTrue(className.contains("border-primary-500"));
+        Object selected = page.evaluate("() => new URLSearchParams(location.search).get('favoriteLists')");
+        Assertions.assertEquals("~ACLA%2C%20read%20in%20Pittsburgh", selected);
     }
 }

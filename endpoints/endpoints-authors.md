@@ -31,7 +31,7 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 - `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, an editor or translator credit, a `[from old catalog]` note, or a name in all capitals or all lowercase). A comma inside a phrase is not an inversion. Blank names are not flagged.
 - Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag. Within one library the selected flags OR.
 - Without availability: `withoutYdlBook`, `withoutYdlEbook`, `withoutYdlAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutEmuAudio`, `withoutAclaBook`, `withoutAclaEbook`, `withoutAclaAudio` — the author has no book with that flag true. An unset flag is not a holding. These chips AND.
-- `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
+- `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one author
 
 **Response:** Array of AuthorSummaryDto
 

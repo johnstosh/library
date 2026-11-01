@@ -212,6 +212,52 @@ describe('BookFormPage title and author from photo', () => {
   })
 })
 
+describe('BookFormPage availability checkboxes', () => {
+  it('sends false when a checked EMU, YDL, or ACLA box is cleared', async () => {
+    mocks.updateBook.mockResolvedValue(editedBook)
+    renderForm({
+      book: {
+        ...editedBook,
+        alternateTitle: 'Confessiones',
+        ydlAudioAvailable: true,
+        ydlPaperAvailable: true,
+        ydlEbookAvailable: true,
+        emuAudioAvailable: true,
+        emuPaperAvailable: true,
+        emuEbookAvailable: true,
+        aclaAudioAvailable: true,
+        aclaPaperAvailable: true,
+        aclaEbookAvailable: true,
+      },
+    })
+
+    fireEvent.click(screen.getByTestId('book-emu-paper-available'))
+    fireEvent.click(screen.getByTestId('book-ydl-audio-available'))
+    fireEvent.click(screen.getByTestId('book-acla-ebook-available'))
+    fireEvent.click(screen.getByTestId('book-form-submit'))
+
+    await waitFor(() => {
+      expect(mocks.updateBook).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 1,
+          book: expect.objectContaining({
+            alternateTitle: 'Confessiones',
+            ydlAudioAvailable: false,
+            ydlPaperAvailable: true,
+            ydlEbookAvailable: true,
+            emuAudioAvailable: true,
+            emuPaperAvailable: false,
+            emuEbookAvailable: true,
+            aclaAudioAvailable: true,
+            aclaPaperAvailable: true,
+            aclaEbookAvailable: false,
+          }),
+        }),
+      )
+    })
+  })
+})
+
 describe('BookFormPage catalog links', () => {
   it('labels the YDL and EMU catalog links as Go to, not Check', () => {
     renderForm({ book: editedBook })

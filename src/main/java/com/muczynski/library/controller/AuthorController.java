@@ -23,6 +23,7 @@ import com.muczynski.library.service.CatalogFilterService;
 import com.muczynski.library.service.CatalogNameNormalizationService;
 import com.muczynski.library.service.GrokipediaLookupService;
 import com.muczynski.library.service.PhotoService;
+import com.muczynski.library.util.FavoriteListParams;
 import com.muczynski.library.util.SecurityUtils;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import jakarta.validation.Valid;
@@ -38,7 +39,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -187,7 +187,7 @@ public class AuthorController {
             filter.withoutAclaBook = withoutAclaBook;
             filter.withoutAclaEbook = withoutAclaEbook;
             filter.withoutAclaAudio = withoutAclaAudio;
-            filter.favoriteLists = splitCsv(favoriteLists);
+            filter.favoriteLists = FavoriteListParams.split(favoriteLists);
             return ResponseEntity.ok(catalogFilterService.authorSummaries(filter, userId(principal)));
         } catch (Exception e) {
             logger.warn("Failed to retrieve filtered author summaries: {}", e.getMessage(), e);
@@ -298,20 +298,6 @@ public class AuthorController {
             logger.warn("Failed to retrieve books for author ID {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
-
-    private static List<String> splitCsv(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return List.of();
-        }
-        List<String> values = new ArrayList<>();
-        for (String part : raw.split(",")) {
-            String trimmed = part.trim();
-            if (!trimmed.isEmpty()) {
-                values.add(trimmed);
-            }
-        }
-        return values;
     }
 
     private static Long userId(Principal principal) {
