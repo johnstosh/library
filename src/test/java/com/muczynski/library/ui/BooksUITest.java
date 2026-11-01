@@ -358,6 +358,42 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should save checked and cleared YDL, EMU, and ACLA availability")
+    void testEditBookAvailabilityCheckboxes() {
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.click("[data-test='book-view-edit']");
+        page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForSelector("[data-test='book-emu-paper-available']", new Page.WaitForSelectorOptions().setTimeout(10000L));
+
+        page.locator("[data-test='book-emu-paper-available']").check();
+        page.locator("[data-test='book-ydl-audio-available']").check();
+        page.locator("[data-test='book-acla-ebook-available']").check();
+        page.click("[data-test='book-form-submit']");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='emu-paper-status']")).containsText("Available");
+        assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Available");
+        assertThat(page.locator("[data-test='acla-ebook-status']")).containsText("Available");
+        assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
+
+        page.click("[data-test='book-view-edit']");
+        page.waitForURL("**/books/1/edit", new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='book-emu-paper-available']")).isChecked();
+        page.locator("[data-test='book-emu-paper-available']").uncheck();
+        page.locator("[data-test='book-ydl-audio-available']").uncheck();
+        page.locator("[data-test='book-acla-ebook-available']").uncheck();
+        page.click("[data-test='book-form-submit']");
+        page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        assertThat(page.locator("[data-test='emu-paper-status']")).containsText("Not available");
+        assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Not available");
+        assertThat(page.locator("[data-test='acla-ebook-status']")).containsText("Not available");
+    }
+
+    @Test
     @DisplayName("Should delete a book with confirmation")
     void testDeleteBook() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

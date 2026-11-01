@@ -1620,6 +1620,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               // Re-execute the save with current form data
               const bookData = {
                 title: formData.title,
+                alternateTitle: formData.alternateTitle || undefined,
                 publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
                 publisher: formData.publisher || undefined,
                 plotSummary: formData.plotSummary || undefined,

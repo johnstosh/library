@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -331,6 +332,17 @@ public class BookService {
         book.setLocNumber(bookDto.getLocNumber());
         book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
+        // False is a real edit. Null means the caller did not send the flag.
+        // Last-checked times and lookup errors stay as the lookup services wrote them.
+        copyAvailability(bookDto.getYdlAudioAvailable(), book::setYdlAudioAvailable);
+        copyAvailability(bookDto.getYdlPaperAvailable(), book::setYdlPaperAvailable);
+        copyAvailability(bookDto.getYdlEbookAvailable(), book::setYdlEbookAvailable);
+        copyAvailability(bookDto.getEmuAudioAvailable(), book::setEmuAudioAvailable);
+        copyAvailability(bookDto.getEmuPaperAvailable(), book::setEmuPaperAvailable);
+        copyAvailability(bookDto.getEmuEbookAvailable(), book::setEmuEbookAvailable);
+        copyAvailability(bookDto.getAclaAudioAvailable(), book::setAclaAudioAvailable);
+        copyAvailability(bookDto.getAclaPaperAvailable(), book::setAclaPaperAvailable);
+        copyAvailability(bookDto.getAclaEbookAvailable(), book::setAclaEbookAvailable);
         book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
         book.setBinding(bookDto.getBinding() != null ? bookDto.getBinding() : BookCoverType.UNKNOWN);
         book.setDesireToPurchase(bookDto.getDesireToPurchase());
@@ -355,6 +367,12 @@ public class BookService {
         book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         Book savedBook = bookRepository.save(book);
         return bookMapper.toDto(savedBook);
+    }
+
+    private static void copyAvailability(Boolean value, Consumer<Boolean> setter) {
+        if (value != null) {
+            setter.accept(value);
+        }
     }
 
     @Transactional
