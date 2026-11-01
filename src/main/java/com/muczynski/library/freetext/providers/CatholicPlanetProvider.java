@@ -78,8 +78,9 @@ public class CatholicPlanetProvider implements FreeTextProvider {
                     continue;
                 }
 
-                // Use TitleMatcher for accurate title matching
-                if (TitleMatcher.titleMatches(linkText, title)) {
+                // The index link has no author. Keep the same title only, so a
+                // shorter work buried in a longer title is not accepted.
+                if (TitleMatcher.sameTitle(linkText, title)) {
                     String fullUrl = href;
                     if (!href.startsWith("http")) {
                         fullUrl = INDEX_URL + href;

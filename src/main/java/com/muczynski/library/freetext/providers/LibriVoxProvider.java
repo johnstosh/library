@@ -78,7 +78,8 @@ public class LibriVoxProvider implements FreeTextProvider {
             // Find best title match - only return if title actually matches
             // Do NOT fall back to first result (causes false positives for copyrighted works)
             for (LibriVoxBook book : response.getBooks()) {
-                if (TitleMatcher.titleMatches(book.getTitle(), title)) {
+                if (TitleMatcher.titleMatches(book.getTitle(), title)
+                        && creatorMatches(book, authorName, title)) {
                     log.debug("LibriVox: Found match '{}' -> {}", book.getTitle(), book.getUrlLibrivox());
                     return FreeTextLookupResult.success(getProviderName(), book.getUrlLibrivox());
                 }
@@ -98,15 +99,38 @@ public class LibriVoxProvider implements FreeTextProvider {
         }
     }
 
+    /**
+     * The catalog author must be one of the recording's authors. LibriVox searches
+     * by title only, so a similar title by someone else is otherwise accepted.
+     * A recording that names no author is kept only when the titles are the same
+     * work, not a fuzzy overlap.
+     */
+    private boolean creatorMatches(LibriVoxBook book, String authorName, String targetTitle) {
+        if (authorName == null || authorName.isBlank()) {
+            return true;
+        }
+        if (book.getAuthors() == null || book.getAuthors().isEmpty()) {
+            return TitleMatcher.sameTitle(book.getTitle(), targetTitle);
+        }
+        for (LibriVoxAuthor author : book.getAuthors()) {
+            String name = ((author.getFirstName() == null ? "" : author.getFirstName()) + " "
+                    + (author.getLastName() == null ? "" : author.getLastName())).trim();
+            if (TitleMatcher.authorMatches(name, authorName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LibriVoxResponse {
+    static class LibriVoxResponse {
         private List<LibriVoxBook> books;
     }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LibriVoxBook {
+    static class LibriVoxBook {
         private String id;
         private String title;
         @JsonProperty("url_librivox")
@@ -116,7 +140,7 @@ public class LibriVoxProvider implements FreeTextProvider {
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LibriVoxAuthor {
+    static class LibriVoxAuthor {
         @JsonProperty("first_name")
         private String firstName;
         @JsonProperty("last_name")

@@ -378,6 +378,57 @@ class TitleMatcherTest {
     }
 
     @Test
+    void titleMatches_joinedWorksDoNotMatchEitherWork() {
+        String volume = "Treatise on the Love of God & Treatise on the Priesthood";
+        assertFalse(TitleMatcher.titleMatches("On the Priesthood", volume));
+        assertFalse(TitleMatcher.titleMatches(volume, "On the Priesthood"));
+        assertFalse(TitleMatcher.titleMatches("Treatise on the Love of God", volume));
+        assertFalse(TitleMatcher.titleMatches("Treatise on the Priesthood", volume));
+        assertTrue(TitleMatcher.titleMatches(volume, volume));
+    }
+
+    @Test
+    void titleMatches_continuationIsStillTheSameBook() {
+        assertTrue(TitleMatcher.titleMatches(
+                "The Wisdom of Father Brown",
+                "The Wisdom of Father Brown and Other Stories"));
+        assertTrue(TitleMatcher.titleMatches(
+                "The Complete Works of William Shakespeare",
+                "Complete Works of William Shakespeare Including All Plays"));
+    }
+
+    @Test
+    void accepts_rejectsSimilarTitleByDifferentAuthor() {
+        assertFalse(TitleMatcher.accepts(
+                "On the Priesthood", "John Chrysostom",
+                "Treatise on the Love of God & Treatise on the Priesthood", "John of Avila"));
+        assertFalse(TitleMatcher.accepts(
+                "On the Priesthood", "John Chrysostom",
+                "On the Priesthood", "John of Avila"));
+        assertTrue(TitleMatcher.accepts(
+                "On the Priesthood", "John Chrysostom",
+                "On the Priesthood", "Saint John Chrysostom"));
+    }
+
+    @Test
+    void accepts_withoutCandidateAuthorRequiresSameTitle() {
+        assertFalse(TitleMatcher.accepts(
+                "On the Priesthood", null,
+                "Treatise on the Love of God & Treatise on the Priesthood", "John of Avila"));
+        assertTrue(TitleMatcher.accepts(
+                "Wisdom of Fr. Brown", null,
+                "The Wisdom of Father Brown", "Gilbert Keith Chesterton"));
+    }
+
+    @Test
+    void authorMatchesSlug_usesLastNameInsideSlug() {
+        assertTrue(TitleMatcher.authorMatchesSlug("johnchrysostom", "John Chrysostom"));
+        assertTrue(TitleMatcher.authorMatchesSlug("augustine", "Augustine of Hippo"));
+        assertFalse(TitleMatcher.authorMatchesSlug("chrysostom", "John of Avila"));
+        assertFalse(TitleMatcher.authorMatchesSlug("schaff", "John Chrysostom"));
+    }
+
+    @Test
     void mainTitle_takesTextBeforeColonAndDropsResponsibility() {
         assertEquals("Seven pillars of peace", TitleMatcher.mainTitle("Seven pillars of peace / Fulton J. Sheen"));
         assertEquals("God and Myself", TitleMatcher.mainTitle("God and Myself: An Inquiry into the True Religion"));
