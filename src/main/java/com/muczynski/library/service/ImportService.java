@@ -569,7 +569,14 @@ public class ImportService {
 
         // Update/merge fields from DTO (preserve exact semantics)
         book.setTitle(bDto.getTitle());
-        book.setAlternateTitle(bDto.getAlternateTitle());
+        java.util.List<String> alternateTitles = new java.util.ArrayList<>();
+        if (bDto.getAlternateTitles() != null) {
+            alternateTitles.addAll(bDto.getAlternateTitles());
+        }
+        if (bDto.getAlternateTitle() != null) {
+            alternateTitles.add(bDto.getAlternateTitle());
+        }
+        book.setAlternateTitles(com.muczynski.library.domain.BookTitles.normalize(bDto.getTitle(), alternateTitles));
         book.setPublicationYear(bDto.getPublicationYear());
         book.setPublisher(bDto.getPublisher());
         book.setPlotEssay(bDto.getPlotSummary());
@@ -1181,7 +1188,9 @@ public class ImportService {
     private ImportBookDto mapBookToDto(Book book) {
         ImportBookDto bDto = new ImportBookDto();
         bDto.setTitle(book.getTitle());
-        bDto.setAlternateTitle(emptyToNull(book.getAlternateTitle()));
+        if (book.getAlternateTitles() != null && !book.getAlternateTitles().isEmpty()) {
+            bDto.setAlternateTitles(new java.util.ArrayList<>(book.getAlternateTitles()));
+        }
         bDto.setPublicationYear(book.getPublicationYear());
         bDto.setPublisher(emptyToNull(book.getPublisher()));
         bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));

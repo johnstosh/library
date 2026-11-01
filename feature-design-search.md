@@ -97,7 +97,7 @@ Multiple boolean filters use AND logic: a book must satisfy **all** active filte
 
 `CatalogCriteria` builds these filters (no HQL `@Query` strings). `SearchService` calls:
 
-- `searchBooks` — title and alternate title, chip filters, and every selected label
+- `searchBooks` — title and every alternate title, chip filters, and every selected label
 - `searchAuthorsOfMatchingBooks` — when any book chip, label, or reading difficulty is active
 - `searchAuthorsByIdsAndName` — favorite lists only
 - `searchAuthorsByName` — text query only

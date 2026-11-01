@@ -5,6 +5,7 @@ package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookTitles;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.ReadingDifficulty;
@@ -31,39 +32,7 @@ public class BookMapper {
 
         BookDto bookDto = new BookDto();
         bookDto.setId(book.getId());
-        bookDto.setTitle(book.getTitle());
-        bookDto.setAlternateTitle(book.getAlternateTitle());
-        bookDto.setPublicationYear(book.getPublicationYear());
-        bookDto.setPublisher(book.getPublisher());
-        bookDto.setPlotSummary(book.getPlotEssay());
-        bookDto.setRelatedWorks(book.getRelatedWorks());
-        bookDto.setDetailedDescription(book.getDetailedDescription());
-        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
-        bookDto.setFreeTextUrl(book.getFreeTextUrl());
-        bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
-        bookDto.setLastModified(book.getLastModified());
-        bookDto.setStatus(book.getStatus());
-        bookDto.setLocNumber(book.getLocNumber());
-        bookDto.setElectronicResource(book.getElectronicResource());
-        bookDto.setStatusReason(book.getStatusReason());
-        bookDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
-        bookDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
-        bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
-        bookDto.setYdlLastChecked(book.getYdlLastChecked());
-        bookDto.setYdlLookupError(book.getYdlLookupError());
-        bookDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
-        bookDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
-        bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
-        bookDto.setEmuLastChecked(book.getEmuLastChecked());
-        bookDto.setEmuLookupError(book.getEmuLookupError());
-        bookDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
-        bookDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
-        bookDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
-        bookDto.setAclaLastChecked(book.getAclaLastChecked());
-        bookDto.setAclaLookupError(book.getAclaLookupError());
-        bookDto.setReadingDifficulty(book.getReadingDifficulty());
-        bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
-        bookDto.setDesireToPurchase(book.getDesireToPurchase());
+        copyBookFields(book, bookDto);
         copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
@@ -95,40 +64,7 @@ public class BookMapper {
             return null;
         }
         BookDto bookDto = new BookDto();
-        bookDto.setId(book.getId());
-        bookDto.setTitle(book.getTitle());
-        bookDto.setAlternateTitle(book.getAlternateTitle());
-        bookDto.setPublicationYear(book.getPublicationYear());
-        bookDto.setPublisher(book.getPublisher());
-        bookDto.setPlotSummary(book.getPlotEssay());
-        bookDto.setRelatedWorks(book.getRelatedWorks());
-        bookDto.setDetailedDescription(book.getDetailedDescription());
-        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
-        bookDto.setFreeTextUrl(book.getFreeTextUrl());
-        bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
-        bookDto.setLastModified(book.getLastModified());
-        bookDto.setStatus(book.getStatus());
-        bookDto.setLocNumber(book.getLocNumber());
-        bookDto.setElectronicResource(book.getElectronicResource());
-        bookDto.setStatusReason(book.getStatusReason());
-        bookDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
-        bookDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
-        bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
-        bookDto.setYdlLastChecked(book.getYdlLastChecked());
-        bookDto.setYdlLookupError(book.getYdlLookupError());
-        bookDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
-        bookDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
-        bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
-        bookDto.setEmuLastChecked(book.getEmuLastChecked());
-        bookDto.setEmuLookupError(book.getEmuLookupError());
-        bookDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
-        bookDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
-        bookDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
-        bookDto.setAclaLastChecked(book.getAclaLastChecked());
-        bookDto.setAclaLookupError(book.getAclaLookupError());
-        bookDto.setReadingDifficulty(book.getReadingDifficulty());
-        bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
-        bookDto.setDesireToPurchase(book.getDesireToPurchase());
+        copyBookFields(book, bookDto);
         copyAuthorDisplayFields(book, bookDto);
         if (book.getLibrary() != null) {
             bookDto.setLibraryId(book.getLibrary().getId());
@@ -151,7 +87,7 @@ public class BookMapper {
         Book book = new Book();
         book.setId(bookDto.getId());
         book.setTitle(bookDto.getTitle());
-        book.setAlternateTitle(bookDto.getAlternateTitle());
+        book.setAlternateTitles(BookTitles.normalize(bookDto.getTitle(), bookDto.getAlternateTitles()));
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
         book.setPlotEssay(bookDto.getPlotSummary());
@@ -218,6 +154,47 @@ public class BookMapper {
         summaryDto.setId(book.getId());
         summaryDto.setLastModified(book.getLastModified());
         return summaryDto;
+    }
+
+    private static void copyBookFields(Book book, BookDto bookDto) {
+        bookDto.setId(book.getId());
+        bookDto.setTitle(book.getTitle());
+        if (book.getAlternateTitles() == null || book.getAlternateTitles().isEmpty()) {
+            bookDto.setAlternateTitles(null);
+        } else {
+            bookDto.setAlternateTitles(new java.util.ArrayList<>(book.getAlternateTitles()));
+        }
+        bookDto.setPublicationYear(book.getPublicationYear());
+        bookDto.setPublisher(book.getPublisher());
+        bookDto.setPlotSummary(book.getPlotEssay());
+        bookDto.setRelatedWorks(book.getRelatedWorks());
+        bookDto.setDetailedDescription(book.getDetailedDescription());
+        bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
+        bookDto.setFreeTextUrl(book.getFreeTextUrl());
+        bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
+        bookDto.setLastModified(book.getLastModified());
+        bookDto.setStatus(book.getStatus());
+        bookDto.setLocNumber(book.getLocNumber());
+        bookDto.setElectronicResource(book.getElectronicResource());
+        bookDto.setStatusReason(book.getStatusReason());
+        bookDto.setYdlAudioAvailable(book.getYdlAudioAvailable());
+        bookDto.setYdlPaperAvailable(book.getYdlPaperAvailable());
+        bookDto.setYdlEbookAvailable(book.getYdlEbookAvailable());
+        bookDto.setYdlLastChecked(book.getYdlLastChecked());
+        bookDto.setYdlLookupError(book.getYdlLookupError());
+        bookDto.setEmuAudioAvailable(book.getEmuAudioAvailable());
+        bookDto.setEmuPaperAvailable(book.getEmuPaperAvailable());
+        bookDto.setEmuEbookAvailable(book.getEmuEbookAvailable());
+        bookDto.setEmuLastChecked(book.getEmuLastChecked());
+        bookDto.setEmuLookupError(book.getEmuLookupError());
+        bookDto.setAclaAudioAvailable(book.getAclaAudioAvailable());
+        bookDto.setAclaPaperAvailable(book.getAclaPaperAvailable());
+        bookDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
+        bookDto.setAclaLastChecked(book.getAclaLastChecked());
+        bookDto.setAclaLookupError(book.getAclaLookupError());
+        bookDto.setReadingDifficulty(book.getReadingDifficulty());
+        bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
+        bookDto.setDesireToPurchase(book.getDesireToPurchase());
     }
 
     private void copyAuthorDisplayFields(Book book, BookDto bookDto) {

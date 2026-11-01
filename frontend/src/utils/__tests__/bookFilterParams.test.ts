@@ -359,6 +359,16 @@ describe('matchesBookQuery', () => {
     expect(matchesBookQuery(book, 'narnia')).toBe(false)
     expect(matchesBookQuery(book, '  ')).toBe(true)
   })
+
+  it('matches a later alternate title', () => {
+    const book = {
+      title: 'Unrelated Holding',
+      alternateTitles: ['On Loving God', 'De diligendo Deo'],
+    }
+    expect(matchesBookQuery(book, 'diligendo')).toBe(true)
+    expect(matchesBookQuery(book, 'loving')).toBe(true)
+    expect(matchesBookQuery(book, 'narnia')).toBe(false)
+  })
 })
 
 describe('isBooksIntakeConstrained', () => {

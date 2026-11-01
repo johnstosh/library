@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -19,8 +21,7 @@ import java.util.regex.Pattern;
 @Entity
 @Table(
     indexes = {
-        @Index(name = "idx_book_title", columnList = "title"),
-        @Index(name = "idx_book_alternate_title", columnList = "alternate_title")
+        @Index(name = "idx_book_title", columnList = "title")
     },
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_book_title", columnNames = "title")
@@ -44,7 +45,13 @@ public class Book {
 
     private String title;
 
-    private String alternateTitle;
+    /**
+     * Other wordings of this same work (original language, another English
+     * title, a cover or spine title). PostgreSQL {@code text[]}. Not unique.
+     */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "alternate_titles", columnDefinition = "text[]")
+    private List<String> alternateTitles;
 
     private Integer publicationYear;
 
@@ -182,25 +189,40 @@ public class Book {
     }
 
     /**
-     * Returns list of titles to search: primary (stripped) first, then distinct
-     * non-blank alternateTitle (also stripped). Used for dual-title lookups.
-     * Never includes author-only lookups.
+     * Titles to search: the primary title first, then each distinct alternate.
+     * A trailing {@code ", c. N"} suffix is removed. A case-insensitive repeat
+     * is skipped. Never includes an author-only lookup.
      */
     public static List<String> titlesToSearch(Book book) {
         List<String> titles = new ArrayList<>();
         if (book.getTitle() != null) {
             String primary = stripCopySuffix(book.getTitle());
-            if (!primary.isBlank()) {
+            if (primary != null && !primary.isBlank()) {
                 titles.add(primary);
             }
         }
-        if (book.getAlternateTitle() != null) {
-            String alt = stripCopySuffix(book.getAlternateTitle());
-            if (!alt.isBlank() && !titles.contains(alt)) {
+        if (book.getAlternateTitles() != null) {
+            for (String alternate : book.getAlternateTitles()) {
+                if (alternate == null) {
+                    continue;
+                }
+                String alt = stripCopySuffix(alternate);
+                if (alt == null || alt.isBlank() || containsIgnoreCase(titles, alt)) {
+                    continue;
+                }
                 titles.add(alt);
             }
         }
         return titles;
+    }
+
+    private static boolean containsIgnoreCase(List<String> titles, String candidate) {
+        for (String title : titles) {
+            if (title != null && title.equalsIgnoreCase(candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @PrePersist

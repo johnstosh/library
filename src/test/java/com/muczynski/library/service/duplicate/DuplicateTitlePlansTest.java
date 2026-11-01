@@ -69,7 +69,8 @@ class DuplicateTitlePlansTest {
         assertNull(plan.keeperId());
         assertEquals("Confessions", plan.leftTitle());
         assertEquals("Confession, c. 2", plan.rightTitle());
-        assertEquals("Confession", plan.rightAlternate());
+        assertNull(plan.rightAlternate());
+        assertFalse(plan.summary().contains("alternate titles are set"));
         assertTrue(plan.summary().contains("does not delete either book"));
         assertTrue(plan.summary().contains("BR65"));
         assertTrue(plan.summary().contains("BR65.A"));
@@ -85,10 +86,34 @@ class DuplicateTitlePlansTest {
         assertEquals(2L, plan.keeperId());
         assertEquals(5L, plan.deletedId());
         assertEquals("https://shelf.example/a https://electronic.example/b", plan.keeperFreeTextUrl());
+        assertEquals(List.of("Confessions"), plan.keeperAlternate());
+        assertTrue(plan.summary().contains("\"Confessions\""));
         assertTrue(plan.keeperElectronic());
         assertTrue(plan.summary().contains("Call number \"BR65\" stays on book #2."));
         assertTrue(plan.summary().contains("is marked as an electronic resource."));
         assertFalse(plan.summary().contains("BR65 https"));
+    }
+
+    @Test
+    void fixAppendsADistinctPreviousTitleAndKeepsAnExistingAlternate() {
+        assertNull(DuplicateTitlePlans.alternateAfterTitleChange(
+                null, "Confession", "Confession, c. 2"));
+        assertEquals(
+                List.of("Confessiones", "On Loving God"),
+                DuplicateTitlePlans.alternateAfterTitleChange(
+                        List.of("Confessiones"), "On Loving God", "Traité de l'amour de Dieu"));
+
+        TitlePlan plan = DuplicateTitlePlans.titles(
+                new TitleSide(1, "Confessions", null, "BR65", false, null),
+                new TitleSide(2, "The Confessions", List.of("Confessiones"), "BR65.A", false, null));
+
+        assertEquals("The Confessions", plan.leftTitle());
+        assertEquals(List.of("Confessions"), plan.leftAlternate());
+        assertEquals("The Confessions, c. 2", plan.rightTitle());
+        assertEquals(List.of("Confessiones"), plan.rightAlternate());
+        assertTrue(plan.summary().contains(
+                "Book #1 alternate titles are set to \"Confessions\" so the previous title is kept."));
+        assertFalse(plan.summary().contains("Book #2 alternate"));
     }
 
     @Test

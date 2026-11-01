@@ -477,7 +477,7 @@ class YdlLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Test Book");
-        book.setAlternateTitle("Test Book Alternate");
+        book.setAlternateTitles(List.of("Test Book Alternate"));
         Author author = new Author();
         author.setName("Test Author");
         book.setAuthor(author);

@@ -22,7 +22,7 @@ public class BookDto {
     @NotBlank(message = "Book title is required")
     private String title;
 
-    private String alternateTitle;
+    private List<String> alternateTitles;
 
     private Integer publicationYear;
     private String publisher;

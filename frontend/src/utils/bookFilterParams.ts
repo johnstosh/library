@@ -358,14 +358,17 @@ export function booksPathFromPriceFilters(state: {
 }
 
 export function matchesBookQuery(
-  book: { title?: string | null; alternateTitle?: string | null; author?: string | null },
+  book: { title?: string | null; alternateTitles?: string[] | null; author?: string | null },
   q: string,
 ): boolean {
   const needle = q.trim().toLowerCase()
   if (!needle) return true
+  const alternates = (book.alternateTitles ?? []).some((title) =>
+    (title ?? '').toLowerCase().includes(needle),
+  )
   return (
     (book.title ?? '').toLowerCase().includes(needle) ||
-    (book.alternateTitle ?? '').toLowerCase().includes(needle) ||
+    alternates ||
     (book.author ?? '').toLowerCase().includes(needle)
   )
 }

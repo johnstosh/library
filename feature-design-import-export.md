@@ -118,6 +118,7 @@ The export format changed to use lightweight references instead of embedded obje
 {
   "books": [{
     "title": "Book Title",
+    "alternateTitles": ["On Loving God"],
     "authorName": "Author Name",
     "libraryName": "Library Name",
     "electronicResource": true,
@@ -161,7 +162,7 @@ The export format changed to use lightweight references instead of embedded obje
 - Matches entities by natural keys:
   - Branches: by name
   - Authors: by name. On an existing author, a missing or null field stays as stored, including `alternateNames`. A value present in the payload replaces that field. An empty `alternateNames` list clears the stored list.
-  - Books: by title (not title+author; aligns with uk_book_title)
+  - Books: by title (not title+author; aligns with uk_book_title). Export writes `alternateTitles` and omits it when the list is empty. Import accepts that list and the legacy string `alternateTitle`, and combines them. A missing field, null, or an empty list clears the stored titles. A JSON string in `alternateTitles`, or an array in `alternateTitle`, is rejected.
   - Users: by username
   - Loans: by book ID + user ID + loan date
   - Photos: by imageChecksum, permanentId, or book/author + photoOrder

@@ -307,13 +307,13 @@ function samplePair(overrides: Record<string, unknown> = {}) {
     score: 0.950123,
     bookAId: 1,
     bookATitle: 'Confessions',
-    bookAAlternateTitle: null,
+    bookAAlternateTitles: null,
     bookAAuthorName: 'Augustine',
     bookAStatus: 'ACTIVE',
     bookACatalogLabels: ['Without LOC'],
     bookBId: 2,
     bookBTitle: 'Confession',
-    bookBAlternateTitle: null,
+    bookBAlternateTitles: null,
     bookBAuthorName: 'Augustine',
     bookBStatus: 'LOST',
     bookBCatalogLabels: ['Lost'],
@@ -393,6 +393,23 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(linkA).toHaveAttribute('href', '/books/1')
     expect(linkB).toHaveAttribute('href', '/books/2')
     expect(screen.getByTestId('dup-not-duplicate-1-2')).toHaveTextContent('Not a duplicate')
+  })
+
+  it('joins every alternate title on a duplicate row', async () => {
+    duplicateFindResult.pairs = [
+      samplePair({
+        bookAAlternateTitles: ['The Confessions', 'Confessiones'],
+        bookBAlternateTitles: ['Confession'],
+      }),
+    ]
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('find-duplicate-titles'))
+
+    expect(await screen.findByTestId('dup-book-a-alternates')).toHaveTextContent(
+      'Alt: The Confessions · Confessiones',
+    )
+    expect(screen.getByTestId('dup-book-b-alternates')).toHaveTextContent('Alt: Confession')
   })
 
   it('marks a pair as not a duplicate and keeps the row until Find', async () => {

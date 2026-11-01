@@ -524,7 +524,7 @@ class GrokipediaLookupServiceTest {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Primary Title");
-        book.setAlternateTitle("Alternate Title");
+        book.setAlternateTitles(List.of("Alternate Title"));
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         // primary usual fails
@@ -551,11 +551,45 @@ class GrokipediaLookupServiceTest {
     }
 
     @Test
+    void lookupBook_withTwoAlternateTitles_usesTheSecondWhenTheFirstMisses() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Primary Title");
+        book.setAlternateTitles(List.of("First Alternate", "Second Alternate"));
+
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Primary_Title"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/First_Alternate"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(restTemplate.exchange(
+                eq("https://grokipedia.com/page/Second_Alternate"),
+                eq(HttpMethod.HEAD),
+                isNull(),
+                eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://grokipedia.com/page/Second_Alternate", result.getGrokipediaUrl());
+    }
+
+    @Test
     void lookupBook_withAlternateTitle_savesNAOnlyIfBothFail() {
         Book book = new Book();
         book.setId(1L);
         book.setTitle("Primary Title");
-        book.setAlternateTitle("Alternate Title");
+        book.setAlternateTitles(List.of("Alternate Title"));
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))

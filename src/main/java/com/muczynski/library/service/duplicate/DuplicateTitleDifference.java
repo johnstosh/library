@@ -35,11 +35,11 @@ public final class DuplicateTitleDifference {
     }
 
     public static String titles(String matchedA, String matchedB, String fieldA, String fieldB,
-                                 String bookAAlternate, String bookBAlternate) {
+                                 List<String> bookAAlternates, List<String> bookBAlternates) {
         String body = compareTitles(matchedA, matchedB);
         String left = fieldA == null || fieldA.isBlank() ? "title" : fieldA;
         String right = fieldB == null || fieldB.isBlank() ? "title" : fieldB;
-        boolean alternate = notBlank(bookAAlternate) || notBlank(bookBAlternate)
+        boolean alternate = hasAny(bookAAlternates) || hasAny(bookBAlternates)
                 || "alternate title".equals(left) || "alternate title".equals(right);
         if (!alternate) {
             return body;
@@ -364,6 +364,18 @@ public final class DuplicateTitleDifference {
 
     private static boolean notBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private static boolean hasAny(List<String> values) {
+        if (values == null) {
+            return false;
+        }
+        for (String value : values) {
+            if (notBlank(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record Middle(String token, boolean presentOnLeft) {

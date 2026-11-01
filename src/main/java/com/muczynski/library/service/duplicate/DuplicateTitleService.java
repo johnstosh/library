@@ -270,12 +270,12 @@ public class DuplicateTitleService {
                                 .score(round6(best.score))
                                 .bookAId(left.id)
                                 .bookATitle(left.title)
-                                .bookAAlternateTitle(left.alternateTitle)
+                                .bookAAlternateTitles(left.alternateTitles)
                                 .bookAAuthorName(left.authorName)
                                 .bookAStatus(left.statusName())
                                 .bookBId(right.id)
                                 .bookBTitle(right.title)
-                                .bookBAlternateTitle(right.alternateTitle)
+                                .bookBAlternateTitles(right.alternateTitles)
                                 .bookBAuthorName(right.authorName)
                                 .bookBStatus(right.statusName())
                                 .matchedTitleA(best.matchedA)
@@ -445,7 +445,7 @@ public class DuplicateTitleService {
     static final class BookEntry {
         final long id;
         final String title;
-        final String alternateTitle;
+        final List<String> alternateTitles;
         final String authorName;
         final Long authorId;
         final String locNumber;
@@ -453,12 +453,12 @@ public class DuplicateTitleService {
         final BookStatus status;
         final List<TitleVariant> variants;
 
-        BookEntry(long id, String title, String alternateTitle, String authorName, Long authorId,
+        BookEntry(long id, String title, List<String> alternateTitles, String authorName, Long authorId,
                   String locNumber, Boolean electronicResource, BookStatus status,
                   List<TitleVariant> variants) {
             this.id = id;
             this.title = title;
-            this.alternateTitle = alternateTitle;
+            this.alternateTitles = alternateTitles;
             this.authorName = authorName;
             this.authorId = authorId;
             this.locNumber = locNumber;
@@ -468,19 +468,35 @@ public class DuplicateTitleService {
         }
 
         static BookEntry from(BookRepository.DuplicateTitleProjection p) {
-            List<TitleVariant> variants = new ArrayList<>(2);
+            List<TitleVariant> variants = new ArrayList<>();
             addVariant(variants, p.getTitle(), "title");
-            addVariant(variants, p.getAlternateTitle(), "alternate title");
+            List<String> alternates = copyTitles(p.getAlternateTitles());
+            for (String alternate : alternates) {
+                addVariant(variants, alternate, "alternate title");
+            }
             return new BookEntry(
                     p.getId(),
                     p.getTitle(),
-                    p.getAlternateTitle(),
+                    alternates,
                     p.getAuthorName(),
                     p.getAuthorId(),
                     p.getLocNumber(),
                     p.getElectronicResource(),
                     p.getStatus(),
                     variants);
+        }
+
+        private static List<String> copyTitles(List<String> titles) {
+            if (titles == null || titles.isEmpty()) {
+                return List.of();
+            }
+            List<String> copy = new ArrayList<>();
+            for (String title : titles) {
+                if (title != null && !title.isBlank()) {
+                    copy.add(title);
+                }
+            }
+            return List.copyOf(copy);
         }
 
         private static void addVariant(List<TitleVariant> variants, String raw, String fieldLabel) {
@@ -567,14 +583,14 @@ public class DuplicateTitleService {
             pair.setTitleDifference(DuplicateTitleDifference.titles(
                     pair.getMatchedTitleA(), pair.getMatchedTitleB(),
                     pair.getMatchedFieldA(), pair.getMatchedFieldB(),
-                    pair.getBookAAlternateTitle(), pair.getBookBAlternateTitle()));
+                    pair.getBookAAlternateTitles(), pair.getBookBAlternateTitles()));
             pair.setAuthorDifference(DuplicateTitleDifference.authors(
                     pair.getBookAAuthorId(), pair.getBookAAuthorName(), pair.getBookAAuthorAlternateNames(),
                     pair.getBookBAuthorId(), pair.getBookBAuthorName(), pair.getBookBAuthorAlternateNames()));
-            TitleSide leftSide = new TitleSide(pair.getBookAId(), pair.getBookATitle(), pair.getBookAAlternateTitle(),
+            TitleSide leftSide = new TitleSide(pair.getBookAId(), pair.getBookATitle(), pair.getBookAAlternateTitles(),
                     pair.getBookALocNumber(), Boolean.TRUE.equals(pair.getBookAElectronicResource()),
                     urls.get(pair.getBookAId()));
-            TitleSide rightSide = new TitleSide(pair.getBookBId(), pair.getBookBTitle(), pair.getBookBAlternateTitle(),
+            TitleSide rightSide = new TitleSide(pair.getBookBId(), pair.getBookBTitle(), pair.getBookBAlternateTitles(),
                     pair.getBookBLocNumber(), Boolean.TRUE.equals(pair.getBookBElectronicResource()),
                     urls.get(pair.getBookBId()));
             TitlePlan titlePlan = DuplicateTitlePlans.titles(leftSide, rightSide);
@@ -583,14 +599,14 @@ public class DuplicateTitleService {
                 BookService.FixCopyTitles copies = bookService.allocateFixTitles(
                         titlePlan.leftTitle(), titlePlan.leftId(),
                         titlePlan.rightTitle(), titlePlan.rightId());
-                String leftAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
-                        pair.getBookAAlternateTitle(), pair.getBookATitle(), copies.leftTitle());
-                String rightAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
-                        pair.getBookBAlternateTitle(), pair.getBookBTitle(), copies.rightTitle());
+                List<String> leftAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
+                        pair.getBookAAlternateTitles(), pair.getBookATitle(), copies.leftTitle());
+                List<String> rightAlternate = DuplicateTitlePlans.alternateAfterTitleChange(
+                        pair.getBookBAlternateTitles(), pair.getBookBTitle(), copies.rightTitle());
                 pair.setTitleChangeNeeded(!sameText(pair.getBookATitle(), copies.leftTitle())
                         || !sameText(pair.getBookBTitle(), copies.rightTitle())
-                        || !sameText(pair.getBookAAlternateTitle(), leftAlternate)
-                        || !sameText(pair.getBookBAlternateTitle(), rightAlternate));
+                        || !DuplicateTitlePlans.sameTitles(pair.getBookAAlternateTitles(), leftAlternate)
+                        || !DuplicateTitlePlans.sameTitles(pair.getBookBAlternateTitles(), rightAlternate));
                 pair.setTitlePlan(DuplicateTitlePlans.fixSummary(
                         leftSide, rightSide, copies.leftTitle(), copies.rightTitle(),
                         leftAlternate, rightAlternate));

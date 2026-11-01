@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.service.duplicate;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookPrice;
@@ -45,10 +47,12 @@ public final class DuplicateTitleSnapshots {
         private List<FavoriteState> removedFavorites = new ArrayList<>();
         private Long fixBookAId;
         private String fixBookATitle;
-        private String fixBookAAlternate;
+        @JsonDeserialize(using = StringOrListDeserializer.class)
+        private List<String> fixBookAAlternate;
         private Long fixBookBId;
         private String fixBookBTitle;
-        private String fixBookBAlternate;
+        @JsonDeserialize(using = StringOrListDeserializer.class)
+        private List<String> fixBookBAlternate;
     }
 
     @Data
@@ -87,7 +91,9 @@ public final class DuplicateTitleSnapshots {
     public static class BookState {
         private Long id;
         private String title;
-        private String alternateTitle;
+        @JsonDeserialize(using = StringOrListDeserializer.class)
+        @JsonAlias("alternateTitle")
+        private List<String> alternateTitles;
         private Integer publicationYear;
         private String publisher;
         private String plotEssay;
@@ -127,7 +133,8 @@ public final class DuplicateTitleSnapshots {
             BookState state = new BookState();
             state.id = book.getId();
             state.title = book.getTitle();
-            state.alternateTitle = book.getAlternateTitle();
+            state.alternateTitles = book.getAlternateTitles() == null
+                    ? null : new ArrayList<>(book.getAlternateTitles());
             state.publicationYear = book.getPublicationYear();
             state.publisher = book.getPublisher();
             state.plotEssay = book.getPlotEssay();

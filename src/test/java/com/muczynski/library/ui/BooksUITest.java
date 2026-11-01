@@ -344,8 +344,9 @@ public class BooksUITest {
         // Verify we're editing the right book
         assertThat(page.locator("[data-test='book-title']")).hasValue("Initial Book");
 
-        // Update the title
+        // Update the title and two alternate titles
         page.fill("[data-test='book-title']", "Updated Book Title");
+        page.fill("[data-test='book-alternate-titles']", "On Loving God\nDe diligendo Deo");
 
         // Submit the form
         page.click("[data-test='book-form-submit']");
@@ -353,8 +354,10 @@ public class BooksUITest {
         // Should navigate back to /books/1 (view page) after successful edit
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
-        // Verify updated title on view page
+        // Verify updated title and both alternate titles on the view page
         assertThat(page.locator("[data-test='book-title']")).containsText("Updated Book Title");
+        assertThat(page.locator("[data-test='book-alternate-title']")).containsText("On Loving God");
+        assertThat(page.locator("[data-test='book-alternate-title']")).containsText("De diligendo Deo");
     }
 
     @Test

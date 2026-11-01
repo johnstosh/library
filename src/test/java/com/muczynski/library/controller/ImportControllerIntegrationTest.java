@@ -570,6 +570,81 @@ class ImportControllerIntegrationTest {
 
     @Test
     @WithMockUser(authorities = "LIBRARIAN")
+    void alternateTitlesAcceptLegacyStringArrayAndEmptyClear() throws Exception {
+        String header = """
+            {
+                "libraries": [{"branchName": "AltTitle Library", "librarySystemName": "AltTitle System"}],
+                "authors": [{"name": "AltTitle Author"}],
+                "users": [],
+                "loans": [],
+                "books": [
+            """;
+        postImport(header + """
+                    {"title": "AltTitle Legacy", "libraryName": "AltTitle Library", "authorName": "AltTitle Author", "alternateTitle": "On Loving God"}
+                ]}
+            """);
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("On Loving God"), titlesOf("AltTitle Legacy"));
+
+        postImport(header + """
+                    {"title": "AltTitle Array", "libraryName": "AltTitle Library", "authorName": "AltTitle Author", "alternateTitles": ["On Loving God", "De diligendo Deo"]}
+                ]}
+            """);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                List.of("On Loving God", "De diligendo Deo"), titlesOf("AltTitle Array"));
+
+        String exportJson = mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode exported = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(exportJson);
+        com.fasterxml.jackson.databind.JsonNode arrayBook = null;
+        for (com.fasterxml.jackson.databind.JsonNode book : exported.get("books")) {
+            if ("AltTitle Array".equals(book.path("title").asText())) {
+                arrayBook = book;
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertNotNull(arrayBook);
+        org.junit.jupiter.api.Assertions.assertFalse(arrayBook.has("alternateTitle"));
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("On Loving God", "De diligendo Deo"),
+                new com.fasterxml.jackson.databind.ObjectMapper().convertValue(
+                        arrayBook.get("alternateTitles"), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {}));
+
+        postImport(header + """
+                    {"title": "AltTitle Array", "libraryName": "AltTitle Library", "authorName": "AltTitle Author", "alternateTitles": []}
+                ]}
+            """);
+        org.junit.jupiter.api.Assertions.assertEquals(null, titlesOf("AltTitle Array"));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(header + """
+                                {"title": "AltTitle Bad String", "libraryName": "AltTitle Library", "authorName": "AltTitle Author", "alternateTitles": "On Loving God"}
+                            ]}
+                        """))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(header + """
+                                {"title": "AltTitle Bad Array", "libraryName": "AltTitle Library", "authorName": "AltTitle Author", "alternateTitle": ["On Loving God"]}
+                            ]}
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    private void postImport(String json) throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk());
+        entityManager.clear();
+    }
+
+    private List<String> titlesOf(String title) {
+        return bookRepository.findAllByTitleOrderByIdAsc(title).get(0).getAlternateTitles();
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
     void testImportJson_OldFormatLoanWithEmbeddedObjects() throws Exception {
         // Test that old format loans with embedded book/user objects are still supported
         String oldFormatJson = """

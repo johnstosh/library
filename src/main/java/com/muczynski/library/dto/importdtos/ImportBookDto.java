@@ -16,6 +16,14 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class ImportBookDto {
     private String title;
+    /**
+     * Other wordings of this same work. Omitted when empty.
+     */
+    private List<String> alternateTitles;
+    /**
+     * Legacy dumps stored one alternate title under this name.
+     * Import combines it with {@link #alternateTitles}. Export leaves it unset.
+     */
     private String alternateTitle;
     private Integer publicationYear;
     private String publisher;
