@@ -25,6 +25,7 @@ describe('CoverThumbnail', () => {
     const link = screen.getByTestId('book-result-cover-9')
     expect(link).toHaveAttribute('href', '/photos/42')
     expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveClass('h-20')
 
     const img = screen.getByAltText('Cover of Summa')
     expect(img).toHaveAttribute('src', '/api/photos/42/thumbnail?width=70&v=abc')

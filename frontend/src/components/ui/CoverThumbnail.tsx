@@ -36,7 +36,7 @@ export function CoverThumbnail({
       target="_blank"
       rel="noopener noreferrer"
       onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-      className="block shrink-0"
+      className="block h-20 shrink-0"
       style={{ width: '3.5rem', minWidth: '3.5rem' }}
       title="View full-size photo"
       data-test={dataTest}
@@ -45,7 +45,7 @@ export function CoverThumbnail({
         photoId={photoId}
         url={getThumbnailUrl(photoId, 70, checksum)}
         alt={alt}
-        className="w-14 max-h-20 h-auto object-contain rounded hover:opacity-80 transition-opacity cursor-pointer"
+        className="h-full w-14 max-h-20 object-contain rounded hover:opacity-80 transition-opacity cursor-pointer"
       />
     </a>
   )

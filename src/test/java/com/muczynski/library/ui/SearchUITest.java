@@ -450,6 +450,9 @@ public class SearchUITest {
         page.click("[data-test='search-button']");
         page.waitForSelector("[data-test='book-result-1']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
+        // The 720px viewport leaves the first result below the filter card.
+        // Covers start loading when that row enters the viewport.
+        page.locator("[data-test='book-result-1']").scrollIntoViewIfNeeded();
         Locator cover = page.locator("[data-test='book-result-cover-1']");
         assertThat(cover).isVisible();
         assertThat(cover).hasAttribute("href", "/photos/1");
@@ -484,6 +487,7 @@ public class SearchUITest {
         page.click("[data-test='search-button']");
         page.waitForSelector("[data-test='author-result-4']", new Page.WaitForSelectorOptions().setTimeout(10000L));
 
+        page.locator("[data-test='author-result-4']").scrollIntoViewIfNeeded();
         Locator cover = page.locator("[data-test='author-result-cover-4']");
         assertThat(cover).isVisible();
         assertThat(cover).hasAttribute("href", "/photos/3");
