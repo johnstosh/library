@@ -148,7 +148,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
 - `readingDifficulty` — comma-separated OR group; `unset` also matches a null difficulty
 - `binding` — comma-separated OR group (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`); `UNKNOWN` also matches a null binding
-- `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one book
+- `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
 - Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`

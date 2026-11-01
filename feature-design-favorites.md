@@ -62,6 +62,7 @@ Logged-in users see a **Favorites** chip row on Search, Books, and Authors. Each
 - Multiple favorite-list chips **OR** together.
 - Favorite lists **AND** with the other filters on the page.
 - Search **Open in Books** copies selected favorite lists onto `/books?favoriteLists=`.
+- List names are one comma-separated `favoriteLists` value. A name that contains a comma, or that starts with `~`, is written as `~` plus a percent-encoded name so the comma stays inside that name. `Have Read,Saints` stays plain.
 
 ## Data Management
 The top-of-page database statistics include **Favorites**, a raw count of favorite-list membership rows, after Loans and before Prices.

@@ -19,6 +19,7 @@ import { AuthorBulkActionsToolbar } from './components/AuthorBulkActionsToolbar'
 import { useAuthorCount, useFilteredAuthors, type AuthorListFilters } from '@/api/authors'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { favoriteListsFromSearchParams } from '@/utils/bookFilterParams'
+import { joinFavoriteLists } from '@/utils/favoriteListParams'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import { useUiStore, useAuthorsChips, useAuthorsTableSelection } from '@/stores/uiStore'
 import type { AuthorDto } from '@/types/dtos'
@@ -178,7 +179,7 @@ export function AuthorsPage() {
                 ? selectedFavoriteLists.filter((name) => name !== listName)
                 : [...selectedFavoriteLists, listName]
               const nextParams = new URLSearchParams(searchParams)
-              if (next.length > 0) nextParams.set('favoriteLists', next.join(','))
+              if (next.length > 0) nextParams.set('favoriteLists', joinFavoriteLists(next))
               else nextParams.delete('favoriteLists')
               setSearchParams(nextParams)
             }}

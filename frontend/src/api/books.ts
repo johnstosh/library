@@ -6,6 +6,7 @@ import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import { DEFAULT_PRICE_OLDER_DAYS, type BookChipFilters } from '@/utils/bookChipFilters'
+import { joinFavoriteLists } from '@/utils/favoriteListParams'
 import type {
   BookDto,
   BookSummaryDto,
@@ -79,7 +80,9 @@ export function bookListFilterQuery(filters: BookListFilters): string {
   appendList(params, 'status', filters.statuses)
   appendList(params, 'readingDifficulty', filters.readingDifficulties)
   appendList(params, 'binding', filters.bindings)
-  appendList(params, 'favoriteLists', filters.favoriteLists)
+  if (filters.favoriteLists && filters.favoriteLists.length > 0) {
+    params.set('favoriteLists', joinFavoriteLists(filters.favoriteLists))
+  }
   appendList(params, 'desireToPurchase', filters.desireToPurchase)
   for (const key of Object.keys(BOOK_CHIP_API_KEYS) as (keyof BookChipFilters)[]) {
     if (filters.chips[key]) params.set(BOOK_CHIP_API_KEYS[key], 'true')

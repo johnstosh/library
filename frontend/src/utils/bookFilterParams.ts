@@ -8,6 +8,7 @@ import {
 import { bookStatusesFromSearchParams } from '@/utils/bookStatus'
 import type { DesireToPurchaseFilter } from '@/utils/desireToPurchase'
 import { bindingsFromSearchParams } from '@/utils/bookBinding'
+import { splitFavoriteLists, joinFavoriteLists } from '@/utils/favoriteListParams'
 import { readingDifficultiesFromSearchParams } from '@/utils/readingDifficulty'
 
 /** URL query keys for chip state. */
@@ -80,12 +81,7 @@ export function isSearchVisibleChip(chip: keyof BookChipFilters): boolean {
 }
 
 export function favoriteListsFromSearchParams(params: URLSearchParams): string[] {
-  const raw = params.get('favoriteLists')
-  if (!raw) return []
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  return splitFavoriteLists(params.get('favoriteLists'))
 }
 
 export function priceOlderDaysFromSearchParams(params: URLSearchParams): number {
@@ -218,7 +214,7 @@ export function bookFilterParamsForUrl(
     params.status = statuses.join(',')
   }
   const favoriteLists = state.favoriteLists ?? []
-  if (favoriteLists.length > 0) params.favoriteLists = favoriteLists.join(',')
+  if (favoriteLists.length > 0) params.favoriteLists = joinFavoriteLists(favoriteLists)
   const desireToPurchase = state.desireToPurchase ?? []
   if (desireToPurchase.length > 0) {
     params.desireToPurchase = desireToPurchase.join(',')

@@ -6,6 +6,7 @@ import {
   defaultBookChipFilters,
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
+import { joinFavoriteLists } from '@/utils/favoriteListParams'
 
 export interface SearchResponse {
   books: BookDto[]
@@ -78,7 +79,7 @@ export function useSearch(
     : ''
   const hasFavoriteLists = favoriteLists != null && favoriteLists.length > 0
   const favoriteParam = hasFavoriteLists
-    ? `&favoriteLists=${encodeURIComponent((favoriteLists ?? []).join(','))}`
+    ? `&favoriteLists=${encodeURIComponent(joinFavoriteLists(favoriteLists ?? []))}`
     : ''
   const hasStatuses = selectedStatuses != null && selectedStatuses.length > 0
   const statusParam = hasStatuses
