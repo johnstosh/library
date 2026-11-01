@@ -41,7 +41,7 @@ import {
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
-import type { BookChipFilters } from '@/utils/bookChipFilters'
+import { toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
 
 export function BooksPage() {
@@ -156,7 +156,7 @@ export function BooksPage() {
   }
 
   const handleToggleChip = (key: keyof BookChipFilters) => {
-    writeUrl({ chips: { ...chips, [key]: !chips[key] } })
+    writeUrl({ chips: toggleBookChip(chips, key) })
   }
 
   const handleToggleLabel = (label: string) => {

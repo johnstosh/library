@@ -147,9 +147,9 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `bookPage` (number, optional) - Zero-based book results page (omitted when 0)
 - `authorPage` (number, optional) - Zero-based author results page (omitted when 0)
 - `page` (number, optional) - Legacy fallback applied to both lists when the named page params are absent
-- `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook` (boolean, optional) - Discovery chips
+- `freeText`, `audio`, `ydlAudio`, `ydlBook`, `ydlEbook`, `emuAudio`, `emuBook`, `emuEbook`, `aclaAudio`, `aclaBook`, `aclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook` (boolean, optional) - Discovery chips. Audio, Book, and Ebook OR within one public library and AND across libraries. A Without chip matches when that flag is false or unset, and turning it on clears the matching format chip.
 - `status` (string, optional) - Comma-separated status-filter keys (OR with each other; in-library, electronic-resource, and without-loc are Active-only; without-loc additionally excludes electronic resources). Selecting every key leaves status unconstrained. Legacy `inLib`/`elec`/`withoutLoc`/`requestedStatus`/`notActiveStatus` still read. See issue #337.
-- `labels` (string, optional) - Comma-separated genre tags (AND)
+- `labels` (string, optional) - Comma-separated genre tags (AND). `read-aloud` is books meant to be read aloud to children. `childrens` is books a child reads on their own.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
@@ -194,7 +194,7 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 
 | Chip | `data-test` |
 |------|-------------|
-| YDL / EMU / ACLA Audio, Book, Ebook | `filter-has-ydl-*`, `filter-has-emu-*`, `filter-has-acla-*` |
+| YDL / EMU / ACLA Audio, Book, Ebook, Without Audio, Without Book, Without Ebook | `filter-has-ydl-*`, `filter-without-ydl-*`, and the same for `emu` and `acla` |
 | Status (In-library, Electronic resource, Without LOC, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |

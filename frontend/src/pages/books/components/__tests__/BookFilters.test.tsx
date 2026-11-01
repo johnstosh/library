@@ -25,6 +25,16 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-with-grokipedia')).toBeInTheDocument()
   })
 
+  it('shows Without chips in each public library box', () => {
+    render(<BookFilters chips={chips} onToggle={() => {}} showAvailabilityFilters />)
+
+    expect(screen.getByTestId('filter-without-ydl-audio')).toHaveTextContent('Without Audio')
+    expect(screen.getByTestId('filter-without-ydl-book')).toHaveTextContent('Without Book')
+    expect(screen.getByTestId('filter-without-ydl-ebook')).toHaveTextContent('Without Ebook')
+    expect(screen.getByTestId('filter-without-emu-audio')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-without-acla-ebook')).toBeInTheDocument()
+  })
+
   it('hides cataloger chips when showCatalogerFilters is false', () => {
     render(<BookFilters chips={chips} onToggle={() => {}} showCatalogerFilters={false} />)
 

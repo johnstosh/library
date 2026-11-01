@@ -81,6 +81,15 @@ public class SearchService {
      * @param filterAclaAudio limit to books with ACLA audio
      * @param filterAclaBook limit to books with ACLA paper
      * @param filterAclaEbook limit to books with ACLA ebook
+     * @param filterWithoutYdlAudio YDL audio is false or unset
+     * @param filterWithoutYdlBook YDL paper is false or unset
+     * @param filterWithoutYdlEbook YDL ebook is false or unset
+     * @param filterWithoutEmuAudio EMU audio is false or unset
+     * @param filterWithoutEmuBook EMU paper is false or unset
+     * @param filterWithoutEmuEbook EMU ebook is false or unset
+     * @param filterWithoutAclaAudio ACLA audio is false or unset
+     * @param filterWithoutAclaBook ACLA paper is false or unset
+     * @param filterWithoutAclaEbook ACLA ebook is false or unset
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      * @param statusFilters   selected status-filter values; a book matches ANY of them (OR).
      *                        null/empty falls back to the legacy boolean flags, then the default hide.
@@ -99,6 +108,9 @@ public class SearchService {
             boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
             boolean filterAclaAudio, boolean filterAclaBook, boolean filterAclaEbook,
             boolean filterWithGrokipedia,
+            boolean filterWithoutYdlAudio, boolean filterWithoutYdlBook, boolean filterWithoutYdlEbook,
+            boolean filterWithoutEmuAudio, boolean filterWithoutEmuBook, boolean filterWithoutEmuEbook,
+            boolean filterWithoutAclaAudio, boolean filterWithoutAclaBook, boolean filterWithoutAclaEbook,
             List<String> labels,
             List<BookStatusFilter> statusFilters,
             List<ReadingDifficulty> readingDifficulties,
@@ -143,6 +155,15 @@ public class SearchService {
         filter.aclaAudio = filterAclaAudio;
         filter.aclaBook = filterAclaBook;
         filter.aclaEbook = filterAclaEbook;
+        filter.withoutYdlAudio = filterWithoutYdlAudio;
+        filter.withoutYdlBook = filterWithoutYdlBook;
+        filter.withoutYdlEbook = filterWithoutYdlEbook;
+        filter.withoutEmuAudio = filterWithoutEmuAudio;
+        filter.withoutEmuBook = filterWithoutEmuBook;
+        filter.withoutEmuEbook = filterWithoutEmuEbook;
+        filter.withoutAclaAudio = filterWithoutAclaAudio;
+        filter.withoutAclaBook = filterWithoutAclaBook;
+        filter.withoutAclaEbook = filterWithoutAclaEbook;
         filter.labels = hasLabels ? labels : List.of();
         filter.statuses = statuses;
         filter.readingDifficulties = hasReadingDifficulties ? readingDifficulties : List.of();
@@ -171,6 +192,9 @@ public class SearchService {
                 || filterYdlAudio || filterYdlBook || filterYdlEbook
                 || filterEmuAudio || filterEmuBook || filterEmuEbook
                 || filterAclaAudio || filterAclaBook || filterAclaEbook
+                || filterWithoutYdlAudio || filterWithoutYdlBook || filterWithoutYdlEbook
+                || filterWithoutEmuAudio || filterWithoutEmuBook || filterWithoutEmuEbook
+                || filterWithoutAclaAudio || filterWithoutAclaBook || filterWithoutAclaEbook
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {

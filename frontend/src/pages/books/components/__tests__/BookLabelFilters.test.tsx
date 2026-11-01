@@ -10,6 +10,7 @@ import {
 describe('formatBookLabel', () => {
   it('uses title case and special names instead of slugs', () => {
     expect(formatBookLabel('childrens')).toBe("Children's")
+    expect(formatBookLabel('read-aloud')).toBe('Read Aloud')
     expect(formatBookLabel('slice-of-life')).toBe('Slice of Life')
     expect(formatBookLabel('talking-animals')).toBe('Talking Animals')
     expect(formatBookLabel('hagiography')).toBe('Hagiography')
@@ -44,6 +45,7 @@ describe('BookLabelFilters', () => {
     )
 
     expect(screen.getByTestId('label-filter-childrens')).toHaveTextContent("Children's")
+    expect(screen.getByTestId('label-filter-read-aloud')).toHaveTextContent('Read Aloud')
     expect(screen.getByTestId('label-filter-slice-of-life')).toHaveTextContent('Slice of Life')
     expect(screen.getByTestId('label-filter-talking-animals')).toHaveTextContent('Talking Animals')
     expect(screen.getByTestId('label-filter-hagiography')).toHaveTextContent('Hagiography')
@@ -52,9 +54,10 @@ describe('BookLabelFilters', () => {
 
 describe('standardGenresFrom', () => {
   it('keeps only the standard list and drops invented names', () => {
-    expect(standardGenresFrom(['Fiction', 'made-up', 'theology', 'theology'])).toEqual([
+    expect(standardGenresFrom(['Fiction', 'made-up', 'theology', 'theology', 'read-aloud'])).toEqual([
       'fiction',
       'theology',
+      'read-aloud',
     ])
   })
 })
@@ -64,7 +67,7 @@ describe('GenreChips', () => {
     render(
       <GenreChips selected={['fiction']} onToggle={() => {}} dataTest="book-tags" />,
     )
-    expect(screen.getByTestId('book-tags').querySelectorAll('button')).toHaveLength(23)
+    expect(screen.getByTestId('book-tags').querySelectorAll('button')).toHaveLength(24)
     expect(screen.queryByText('made-up')).not.toBeInTheDocument()
   })
 })

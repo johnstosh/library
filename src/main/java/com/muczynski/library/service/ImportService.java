@@ -1713,13 +1713,7 @@ public class ImportService {
      */
     @Transactional(readOnly = true)
     public List<LabelCountDto> getLabelCounts() {
-        List<String> labels = List.of(
-            "fiction", "slice-of-life", "hagiography", "saint", "fantasy", "family",
-            "childrens", "adult", "philosophy", "theology", "discernment", "talking-animals",
-            "biography", "history", "prayer", "classic", "poetry", "science", "music",
-            "mystery", "adventure", "romance", "humor"
-        );
-        return labels.stream()
+        return BookLabels.ALL_LABELS.stream()
             .map(label -> new LabelCountDto(label, bookRepository.countByTag(label)))
             .sorted(Comparator.comparingLong(LabelCountDto::getCount).reversed()
                 .thenComparing(LabelCountDto::getLabel))

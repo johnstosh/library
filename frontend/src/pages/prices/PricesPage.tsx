@@ -27,7 +27,7 @@ import { usePrices } from '@/api/prices'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { useBookCount, useFilteredBookIds, type BookListFilters } from '@/api/books'
 import { useBranches } from '@/api/branches'
-import { isLookupError, type BookChipFilters } from '@/utils/bookChipFilters'
+import { isLookupError, toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   booksPathFromPriceFilters,
@@ -289,7 +289,7 @@ export function PricesPage() {
           </Button>
           <BookFilters
             chips={chips}
-            onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
+            onToggle={(key) => writeUrl({ chips: toggleBookChip(chips, key) })}
             showAvailabilityFilters
             showCatalogerFilters
           />

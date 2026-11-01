@@ -142,7 +142,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 
 **Authentication:** Public (permitAll)
 
-**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined. Send `true` only for chips that are on.
+**Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU and ACLA sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
 - `q` — title, alternate title, or author name
 - `labels` — comma-separated; the book must have every label
 - `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
@@ -151,7 +151,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
-- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
+- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto
 

@@ -11,10 +11,10 @@ export const PROPER_TEXT_MIN_CHARS = 400
 
 /**
  * Independent boolean chip filters shared by the Books and Search pages.
- * All active chips AND together with genre labels — more buttons on = fewer results.
+ * Active chips AND together with genre labels, except Audio, Book, and Ebook
+ * within one public library, which OR. A Without chip matches a false or unset flag.
  *
- * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
- *   hasAclaAudio, hasAclaBook, hasAclaEbook
+ * Row 1: has/without YDL, EMU, and ACLA audio, book, and ebook
  * Row 2: freeText, audio, mostRecent
  * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls,
  *   withoutProperPlotOrDescription, titleNotChicago, authorNotCanonical
@@ -33,6 +33,15 @@ export interface BookChipFilters {
   hasAclaAudio: boolean
   hasAclaBook: boolean
   hasAclaEbook: boolean
+  withoutYdlAudio: boolean
+  withoutYdlBook: boolean
+  withoutYdlEbook: boolean
+  withoutEmuAudio: boolean
+  withoutEmuBook: boolean
+  withoutEmuEbook: boolean
+  withoutAclaAudio: boolean
+  withoutAclaBook: boolean
+  withoutAclaEbook: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
@@ -59,6 +68,15 @@ export const defaultBookChipFilters: BookChipFilters = {
   hasAclaAudio: false,
   hasAclaBook: false,
   hasAclaEbook: false,
+  withoutYdlAudio: false,
+  withoutYdlBook: false,
+  withoutYdlEbook: false,
+  withoutEmuAudio: false,
+  withoutEmuBook: false,
+  withoutEmuEbook: false,
+  withoutAclaAudio: false,
+  withoutAclaBook: false,
+  withoutAclaEbook: false,
   freeText: false,
   audio: false,
   // Shared default is off (Search). The Books page turns mostRecent on when
@@ -90,6 +108,55 @@ export function isOtherBookChipActive(chips: BookChipFilters): boolean {
     .some((key) => chips[key])
 }
 
+const AVAILABILITY_OPPOSITE: Partial<Record<keyof BookChipFilters, keyof BookChipFilters>> = {
+  hasYdlAudio: 'withoutYdlAudio',
+  withoutYdlAudio: 'hasYdlAudio',
+  hasYdlBook: 'withoutYdlBook',
+  withoutYdlBook: 'hasYdlBook',
+  hasYdlEbook: 'withoutYdlEbook',
+  withoutYdlEbook: 'hasYdlEbook',
+  hasEmuAudio: 'withoutEmuAudio',
+  withoutEmuAudio: 'hasEmuAudio',
+  hasEmuBook: 'withoutEmuBook',
+  withoutEmuBook: 'hasEmuBook',
+  hasEmuEbook: 'withoutEmuEbook',
+  withoutEmuEbook: 'hasEmuEbook',
+  hasAclaAudio: 'withoutAclaAudio',
+  withoutAclaAudio: 'hasAclaAudio',
+  hasAclaBook: 'withoutAclaBook',
+  withoutAclaBook: 'hasAclaBook',
+  hasAclaEbook: 'withoutAclaEbook',
+  withoutAclaEbook: 'hasAclaEbook',
+}
+
+/** Turning a format chip on clears its Without pair, and the reverse. */
+export function toggleBookChip(chips: BookChipFilters, chip: keyof BookChipFilters): BookChipFilters {
+  const turningOn = !chips[chip]
+  const next: BookChipFilters = { ...chips, [chip]: turningOn }
+  const opposite = AVAILABILITY_OPPOSITE[chip]
+  if (turningOn && opposite) {
+    next[opposite] = false
+  }
+  return next
+}
+
+function held(value: boolean | null | undefined): boolean {
+  return value === true
+}
+
+/** Selected formats within one library match when any of them is held. */
+function matchesFormatOr(
+  checks: { on: boolean; value: boolean | null | undefined }[],
+): boolean {
+  const selected = checks.filter((check) => check.on)
+  if (selected.length === 0) return true
+  return selected.some((check) => held(check.value))
+}
+
+function matchesWithout(on: boolean, value: boolean | null | undefined): boolean {
+  return !on || !held(value)
+}
+
 function isBlank(value: string | null | undefined): boolean {
   return !value || value.trim() === ''
 }
@@ -106,8 +173,9 @@ export function isProperText(value: string | null | undefined): boolean {
 }
 
 /**
- * Apply all chip filters to a book list (AND logic).
- * A book must satisfy every active chip. Status is applied separately
+ * Apply chip filters to a book list. Chips AND together, except Audio, Book,
+ * and Ebook within one public library, which OR. A Without chip keeps titles
+ * whose flag is false or unset. Status is applied separately
  * by {@code applyBookStatusFilter}.
  * "Recent Arrivals" matches dateAddedToLibrary on the most recent day UTC
  * (cutoff = UTC start of max-1 day) or a temporary date-format title.
@@ -149,15 +217,30 @@ export function applyChipFilters<T extends Pick<
   }
 
   return books.filter((book) => {
-    if (chips.hasYdlAudio && book.ydlAudioAvailable !== true) return false
-    if (chips.hasYdlBook && book.ydlPaperAvailable !== true) return false
-    if (chips.hasYdlEbook && book.ydlEbookAvailable !== true) return false
-    if (chips.hasEmuAudio && book.emuAudioAvailable !== true) return false
-    if (chips.hasEmuBook && book.emuPaperAvailable !== true) return false
-    if (chips.hasEmuEbook && book.emuEbookAvailable !== true) return false
-    if (chips.hasAclaAudio && book.aclaAudioAvailable !== true) return false
-    if (chips.hasAclaBook && book.aclaPaperAvailable !== true) return false
-    if (chips.hasAclaEbook && book.aclaEbookAvailable !== true) return false
+    if (!matchesFormatOr([
+      { on: chips.hasYdlAudio, value: book.ydlAudioAvailable },
+      { on: chips.hasYdlBook, value: book.ydlPaperAvailable },
+      { on: chips.hasYdlEbook, value: book.ydlEbookAvailable },
+    ])) return false
+    if (!matchesWithout(chips.withoutYdlAudio, book.ydlAudioAvailable)) return false
+    if (!matchesWithout(chips.withoutYdlBook, book.ydlPaperAvailable)) return false
+    if (!matchesWithout(chips.withoutYdlEbook, book.ydlEbookAvailable)) return false
+    if (!matchesFormatOr([
+      { on: chips.hasEmuAudio, value: book.emuAudioAvailable },
+      { on: chips.hasEmuBook, value: book.emuPaperAvailable },
+      { on: chips.hasEmuEbook, value: book.emuEbookAvailable },
+    ])) return false
+    if (!matchesWithout(chips.withoutEmuAudio, book.emuAudioAvailable)) return false
+    if (!matchesWithout(chips.withoutEmuBook, book.emuPaperAvailable)) return false
+    if (!matchesWithout(chips.withoutEmuEbook, book.emuEbookAvailable)) return false
+    if (!matchesFormatOr([
+      { on: chips.hasAclaAudio, value: book.aclaAudioAvailable },
+      { on: chips.hasAclaBook, value: book.aclaPaperAvailable },
+      { on: chips.hasAclaEbook, value: book.aclaEbookAvailable },
+    ])) return false
+    if (!matchesWithout(chips.withoutAclaAudio, book.aclaAudioAvailable)) return false
+    if (!matchesWithout(chips.withoutAclaBook, book.aclaPaperAvailable)) return false
+    if (!matchesWithout(chips.withoutAclaEbook, book.aclaEbookAvailable)) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
     if (chips.audio) {
       if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false

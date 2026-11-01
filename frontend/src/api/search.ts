@@ -46,6 +46,15 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.hasAclaAudio ? '&filterAclaAudio=true' : '',
     filters.hasAclaBook ? '&filterAclaBook=true' : '',
     filters.hasAclaEbook ? '&filterAclaEbook=true' : '',
+    filters.withoutYdlAudio ? '&filterWithoutYdlAudio=true' : '',
+    filters.withoutYdlBook ? '&filterWithoutYdlBook=true' : '',
+    filters.withoutYdlEbook ? '&filterWithoutYdlEbook=true' : '',
+    filters.withoutEmuAudio ? '&filterWithoutEmuAudio=true' : '',
+    filters.withoutEmuBook ? '&filterWithoutEmuBook=true' : '',
+    filters.withoutEmuEbook ? '&filterWithoutEmuEbook=true' : '',
+    filters.withoutAclaAudio ? '&filterWithoutAclaAudio=true' : '',
+    filters.withoutAclaBook ? '&filterWithoutAclaBook=true' : '',
+    filters.withoutAclaEbook ? '&filterWithoutAclaEbook=true' : '',
   ].join('')
 }
 

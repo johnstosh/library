@@ -12,7 +12,9 @@ import java.util.Set;
 /**
  * Canonical list of valid book labels used for categorization.
  * Labels are lowercase with only letters, numbers, and dashes.
- * Mirrors the label list used in AskGrok genre lookup prompts.
+ * AskGrok genre lookup and label counts use this list.
+ * {@code read-aloud} is for books read aloud to children; {@code childrens}
+ * is for books a child reads on their own.
  */
 public final class BookLabels {
 
@@ -28,6 +30,7 @@ public final class BookLabels {
             "fantasy",
             "family",
             "childrens",
+            "read-aloud",
             "adult",
             "philosophy",
             "theology",
@@ -82,6 +85,14 @@ public final class BookLabels {
             Map.entry("slice_of_life", "slice-of-life"),
             // Talking animals
             Map.entry("talking animals", "talking-animals"),
+            // Read-aloud. Spaces and underscores become dashes before this lookup,
+            // so "read aloud" and "read_aloud" already match the canonical label.
+            // The joined and plural forms still need an explicit mapping.
+            Map.entry("read aloud", "read-aloud"),
+            Map.entry("read_aloud", "read-aloud"),
+            Map.entry("readaloud", "read-aloud"),
+            Map.entry("read-alouds", "read-aloud"),
+            Map.entry("read alouds", "read-aloud"),
             // Case and separator variants of canonicals (normalized in method)
             Map.entry("sliceoflife", "slice-of-life"),
             Map.entry("talkinganimals", "talking-animals")

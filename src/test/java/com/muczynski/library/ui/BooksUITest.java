@@ -135,6 +135,15 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-ydl-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-ydl-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-ydl-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-emu-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-emu-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-acla-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-acla-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();

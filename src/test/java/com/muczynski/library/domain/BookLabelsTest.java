@@ -40,14 +40,23 @@ class BookLabelsTest {
         assertThat(BookLabels.normalizeTag("children's")).isEqualTo("childrens");
         assertThat(BookLabels.normalizeTag("humour")).isEqualTo("humor");
         assertThat(BookLabels.normalizeTag("slice of life")).isEqualTo("slice-of-life");
+        assertThat(BookLabels.normalizeTag("read aloud")).isEqualTo("read-aloud");
+        assertThat(BookLabels.normalizeTag("read_aloud")).isEqualTo("read-aloud");
+        assertThat(BookLabels.normalizeTag("readaloud")).isEqualTo("read-aloud");
+        assertThat(BookLabels.normalizeTag("read-alouds")).isEqualTo("read-aloud");
+        assertThat(BookLabels.normalizeTag("read alouds")).isEqualTo("read-aloud");
+        assertThat(BookLabels.normalizeTag("Read-Aloud")).isEqualTo("read-aloud");
     }
 
     @Test
     void isValidLabelAndGetCanonicalLabel() {
         assertThat(BookLabels.isValidLabel("fiction")).isTrue();
         assertThat(BookLabels.isValidLabel("histories")).isTrue(); // maps to valid
+        assertThat(BookLabels.isValidLabel("read-aloud")).isTrue();
+        assertThat(BookLabels.isValidLabel("readaloud")).isTrue();
         assertThat(BookLabels.isValidLabel("foobar")).isFalse();
         assertThat(BookLabels.getCanonicalLabel("histories")).isEqualTo("history");
+        assertThat(BookLabels.getCanonicalLabel("read alouds")).isEqualTo("read-aloud");
         assertThat(BookLabels.getCanonicalLabel("invalid-tag")).isNull();
     }
 
@@ -76,6 +85,9 @@ class BookLabelsTest {
     @Test
     void maintenanceCountAndCleanupLogicMatchesSpec() {
         // The service uses these methods; verified via unit tests above
-        assertThat(BookLabels.ALL_LABELS).hasSize(23);
+        assertThat(BookLabels.ALL_LABELS).contains("read-aloud");
+        assertThat(BookLabels.ALL_LABELS).hasSize(24);
+        assertThat(BookLabels.cleanupTags(List.of("read aloud", "read-alouds", "childrens")))
+                .containsExactly("read-aloud", "childrens");
     }
 }

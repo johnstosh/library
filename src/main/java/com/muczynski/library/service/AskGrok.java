@@ -8,6 +8,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.BookLabels;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.dto.UserDto;
 import org.slf4j.Logger;
@@ -471,19 +472,17 @@ public class AskGrok {
      * @return Comma-separated list of suggested genre tags
      */
     public String suggestGenres(String bookJson, String authorJson) {
+        String allowedTags = String.join(", ", BookLabels.ALL_LABELS);
         String prompt = String.format(
                 "Based on the following book and author information from a library card catalog, " +
                 "suggest genre/category tags for this book. " +
-                "Use ONLY these predefined tags where applicable: " +
-                "fiction, slice-of-life, hagiography, saint, fantasy, family, childrens, adult, " +
-                "philosophy, theology, discernment, talking-animals, biography, history, " +
-                "prayer, classic, poetry, science, music, " +
-                "mystery, adventure, romance, humor. " +
+                "Use ONLY these predefined tags where applicable: %s. " +
                 "Note: science-fiction should be categorized under 'fantasy'. " +
                 "Return ONLY a comma-separated list of applicable tags, nothing else. " +
-                "For example: fiction, fantasy, childrens\nIf hagiography is used, don't use saint nor biography nor history. Classic should only be used for classic books as in classic literature. Use discernment for the discernment of spirits in the sense of Ignatius.\n" +
+                "For example: fiction, fantasy, childrens\nIf hagiography is used, don't use saint nor biography nor history. Classic should only be used for classic books as in classic literature. Use discernment for the discernment of spirits in the sense of Ignatius. Use read-aloud for books meant to be read aloud to children, and childrens for books a child reads on their own.\n" +
                 "Book Information:\n%s\n\n" +
                 "%s",
+                allowedTags,
                 bookJson,
                 authorJson != null && !authorJson.isBlank() ? "Author Information:\n" + authorJson : ""
         );

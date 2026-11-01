@@ -213,6 +213,8 @@ public class CatalogCriteria {
     /**
      * Status arms OR. Every status chip on: no status constraint. Every status
      * chip off: hide WITHDRAWN and REQUESTED. Other chips AND, and only when on.
+     * Audio, Book, and Ebook OR within one public library and AND across
+     * libraries. A Without chip requires that flag to be false or unset.
      */
     private Predicate bookChips(HibernateCriteriaBuilder cb, AbstractQuery<?> query, Root<Book> book,
             BookCatalogFilter filter) {
@@ -249,15 +251,18 @@ public class CatalogCriteria {
                     improperText(cb, book.get("plotEssay")),
                     improperText(cb, book.get("detailedDescription"))));
         }
-        trueFlag(cb, book, filter.ydlAudio, "ydlAudioAvailable", parts);
-        trueFlag(cb, book, filter.ydlBook, "ydlPaperAvailable", parts);
-        trueFlag(cb, book, filter.ydlEbook, "ydlEbookAvailable", parts);
-        trueFlag(cb, book, filter.emuAudio, "emuAudioAvailable", parts);
-        trueFlag(cb, book, filter.emuBook, "emuPaperAvailable", parts);
-        trueFlag(cb, book, filter.emuEbook, "emuEbookAvailable", parts);
-        trueFlag(cb, book, filter.aclaAudio, "aclaAudioAvailable", parts);
-        trueFlag(cb, book, filter.aclaBook, "aclaPaperAvailable", parts);
-        trueFlag(cb, book, filter.aclaEbook, "aclaEbookAvailable", parts);
+        addLibraryHoldings(cb, book, parts,
+                filter.ydlAudio, filter.ydlBook, filter.ydlEbook,
+                filter.withoutYdlAudio, filter.withoutYdlBook, filter.withoutYdlEbook,
+                "ydlAudioAvailable", "ydlPaperAvailable", "ydlEbookAvailable");
+        addLibraryHoldings(cb, book, parts,
+                filter.emuAudio, filter.emuBook, filter.emuEbook,
+                filter.withoutEmuAudio, filter.withoutEmuBook, filter.withoutEmuEbook,
+                "emuAudioAvailable", "emuPaperAvailable", "emuEbookAvailable");
+        addLibraryHoldings(cb, book, parts,
+                filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
+                filter.withoutAclaAudio, filter.withoutAclaBook, filter.withoutAclaEbook,
+                "aclaAudioAvailable", "aclaPaperAvailable", "aclaEbookAvailable");
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
@@ -520,23 +525,66 @@ public class CatalogCriteria {
         if (filter.favorites) {
             parts.add(idsIn(cb, author.get("id"), filter.favoriteAuthorIds));
         }
-        authorAvailability(cb, query, author, filter.ydlBook, "ydlPaperAvailable", parts);
-        authorAvailability(cb, query, author, filter.ydlEbook, "ydlEbookAvailable", parts);
-        authorAvailability(cb, query, author, filter.ydlAudio, "ydlAudioAvailable", parts);
-        authorAvailability(cb, query, author, filter.emuBook, "emuPaperAvailable", parts);
-        authorAvailability(cb, query, author, filter.emuEbook, "emuEbookAvailable", parts);
-        authorAvailability(cb, query, author, filter.emuAudio, "emuAudioAvailable", parts);
-        authorAvailability(cb, query, author, filter.aclaBook, "aclaPaperAvailable", parts);
-        authorAvailability(cb, query, author, filter.aclaEbook, "aclaEbookAvailable", parts);
-        authorAvailability(cb, query, author, filter.aclaAudio, "aclaAudioAvailable", parts);
+        addAuthorLibrary(cb, query, author, parts,
+                filter.ydlAudio, filter.ydlBook, filter.ydlEbook,
+                filter.withoutYdlAudio, filter.withoutYdlBook, filter.withoutYdlEbook,
+                "ydlAudioAvailable", "ydlPaperAvailable", "ydlEbookAvailable");
+        addAuthorLibrary(cb, query, author, parts,
+                filter.emuAudio, filter.emuBook, filter.emuEbook,
+                filter.withoutEmuAudio, filter.withoutEmuBook, filter.withoutEmuEbook,
+                "emuAudioAvailable", "emuPaperAvailable", "emuEbookAvailable");
+        addAuthorLibrary(cb, query, author, parts,
+                filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
+                filter.withoutAclaAudio, filter.withoutAclaBook, filter.withoutAclaEbook,
+                "aclaAudioAvailable", "aclaPaperAvailable", "aclaEbookAvailable");
         return and(cb, parts);
     }
 
-    private void authorAvailability(HibernateCriteriaBuilder cb, AbstractQuery<?> query, Root<Author> author,
-            boolean on, String flag, List<Predicate> parts) {
-        if (on) {
-            parts.add(cb.exists(authorBooks(cb, query, author, flag)));
+    /**
+     * Positive Audio, Book, and Ebook chips OR: the author has at least one
+     * book with any selected format. A Without chip means no book has that
+     * flag true. Unset flags are not holdings.
+     */
+    private void addAuthorLibrary(HibernateCriteriaBuilder cb, AbstractQuery<?> query, Root<Author> author,
+            List<Predicate> parts,
+            boolean audio, boolean paper, boolean ebook,
+            boolean withoutAudio, boolean withoutPaper, boolean withoutEbook,
+            String audioAttr, String paperAttr, String ebookAttr) {
+        List<String> held = new ArrayList<>();
+        if (audio) {
+            held.add(audioAttr);
         }
+        if (paper) {
+            held.add(paperAttr);
+        }
+        if (ebook) {
+            held.add(ebookAttr);
+        }
+        if (!held.isEmpty()) {
+            parts.add(cb.exists(authorBooksWithAnyFlag(cb, query, author, held)));
+        }
+        if (withoutAudio) {
+            parts.add(cb.not(cb.exists(authorBooks(cb, query, author, audioAttr))));
+        }
+        if (withoutPaper) {
+            parts.add(cb.not(cb.exists(authorBooks(cb, query, author, paperAttr))));
+        }
+        if (withoutEbook) {
+            parts.add(cb.not(cb.exists(authorBooks(cb, query, author, ebookAttr))));
+        }
+    }
+
+    private Subquery<Integer> authorBooksWithAnyFlag(HibernateCriteriaBuilder cb, AbstractQuery<?> query,
+            Root<Author> author, List<String> trueFlags) {
+        Subquery<Integer> books = query.subquery(Integer.class);
+        Root<Book> book = books.from(Book.class);
+        books.select(cb.literal(1));
+        List<Predicate> arms = new ArrayList<>();
+        for (String flag : trueFlags) {
+            arms.add(cb.isTrue(book.get(flag)));
+        }
+        books.where(cb.equal(book.get("author"), author), or(cb, arms));
+        return books;
     }
 
     private Subquery<Integer> authorBooks(HibernateCriteriaBuilder cb, AbstractQuery<?> query, Root<Author> author,
@@ -613,11 +661,42 @@ public class CatalogCriteria {
         return cb.and(cb.isNotNull(url), cb.notEqual(url, ""), cb.notEqual(url, "-"));
     }
 
-    private void trueFlag(HibernateCriteriaBuilder cb, Root<Book> book, boolean on, String attribute,
-            List<Predicate> parts) {
-        if (on) {
-            parts.add(cb.isTrue(book.get(attribute)));
+    /**
+     * Selected formats OR. Without chips AND, and a null flag matches Without
+     * the same way false does.
+     */
+    private void addLibraryHoldings(HibernateCriteriaBuilder cb, Root<Book> book, List<Predicate> parts,
+            boolean audio, boolean paper, boolean ebook,
+            boolean withoutAudio, boolean withoutPaper, boolean withoutEbook,
+            String audioAttr, String paperAttr, String ebookAttr) {
+        List<Predicate> formats = new ArrayList<>();
+        if (audio) {
+            formats.add(cb.isTrue(book.get(audioAttr)));
         }
+        if (paper) {
+            formats.add(cb.isTrue(book.get(paperAttr)));
+        }
+        if (ebook) {
+            formats.add(cb.isTrue(book.get(ebookAttr)));
+        }
+        if (!formats.isEmpty()) {
+            parts.add(or(cb, formats));
+        }
+        if (withoutAudio) {
+            parts.add(notHeld(cb, book.get(audioAttr)));
+        }
+        if (withoutPaper) {
+            parts.add(notHeld(cb, book.get(paperAttr)));
+        }
+        if (withoutEbook) {
+            parts.add(notHeld(cb, book.get(ebookAttr)));
+        }
+    }
+
+    private Predicate notHeld(HibernateCriteriaBuilder cb, Path<?> flag) {
+        @SuppressWarnings("unchecked")
+        Expression<Boolean> value = (Expression<Boolean>) flag;
+        return cb.or(cb.isNull(value), cb.isFalse(value));
     }
 
     private Predicate idsIn(HibernateCriteriaBuilder cb, Expression<?> id, List<Long> ids) {
