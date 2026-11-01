@@ -6,6 +6,7 @@ package com.muczynski.library.ui;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.LoadState;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+
+import java.util.regex.Pattern;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -137,15 +140,11 @@ public class FavoritesUITest {
         assertThat(page.locator("[data-test='favorite-list-acla-read-in-pittsburgh']")).isChecked();
         page.click("[data-test='modal-close']");
 
-        page.waitForSelector("[data-test='favorite-filter-acla-read-in-pittsburgh']",
-                new Page.WaitForSelectorOptions().setTimeout(10000L));
-        page.click("[data-test='favorite-filter-acla-read-in-pittsburgh']");
-        page.waitForURL(url -> url.contains("favoriteLists="),
-                new Page.WaitForURLOptions().setTimeout(10000L));
-
-        String className = page.locator("[data-test='favorite-filter-acla-read-in-pittsburgh']").getAttribute("class");
-        Assertions.assertNotNull(className);
-        Assertions.assertTrue(className.contains("border-primary-500"));
+        Locator chip = page.locator("[data-test='favorite-filter-acla-read-in-pittsburgh']");
+        chip.waitFor(new Locator.WaitForOptions().setTimeout(10000));
+        chip.click();
+        // The address bar updates before the chip re-renders as selected.
+        assertThat(chip).hasClass(Pattern.compile(".*border-primary-500.*"));
         Object selected = page.evaluate("() => new URLSearchParams(location.search).get('favoriteLists')");
         Assertions.assertEquals("~ACLA%2C%20read%20in%20Pittsburgh", selected);
     }
