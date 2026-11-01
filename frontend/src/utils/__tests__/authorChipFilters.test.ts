@@ -110,5 +110,14 @@ describe('applyAuthorChipFilters', () => {
     expect(
       applyAuthorChipFilters(sample, chips({ hasAclaBook: true }), undefined, availability).map((a) => a.id)
     ).toEqual([1])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasYdlAudio: true, hasYdlEbook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1, 2])
+    expect(
+      applyAuthorChipFilters(sample, chips({ withoutYdlAudio: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([2])
+    expect(
+      applyAuthorChipFilters(sample, chips({ hasYdlAudio: true, withoutYdlEbook: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1])
   })
 })

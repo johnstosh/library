@@ -47,6 +47,31 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
   )
 }
 
+function libraryChips(
+  library: 'Ydl' | 'Emu' | 'Acla',
+  libraryName: string,
+  slug: 'ydl' | 'emu' | 'acla',
+): AvailabilityGroupProps['items'] {
+  const formats = [
+    { label: 'Audio', flag: 'Audio', kind: 'audio', noun: 'an audiobook' },
+    { label: 'Book', flag: 'Book', kind: 'book', noun: 'a physical book' },
+    { label: 'Ebook', flag: 'Ebook', kind: 'ebook', noun: 'an ebook' },
+  ] as const
+  const positive = formats.map((format) => ({
+    chip: `has${library}${format.flag}` as keyof AuthorChipFilters,
+    label: format.label,
+    tooltip: `${libraryName} ${format.label.toLowerCase()} — authors with at least one title that has ${format.noun}. Audio, Book, and Ebook in this box match if any selected format is held.`,
+    dataTest: `filter-has-${slug}-${format.kind}`,
+  }))
+  const without = formats.map((format) => ({
+    chip: `without${library}${format.flag}` as keyof AuthorChipFilters,
+    label: `Without ${format.label}`,
+    tooltip: `Without ${libraryName} ${format.label.toLowerCase()} — no title has that holding. An unset flag counts as not held. Turns off ${format.label}.`,
+    dataTest: `filter-without-${slug}-${format.kind}`,
+  }))
+  return [...positive, ...without]
+}
+
 interface AuthorFiltersProps {
   chips: AuthorChipFilters
   onToggle: (chip: keyof AuthorChipFilters) => void
@@ -63,26 +88,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           dataTest="author-filter-ydl"
           chips={chips}
           onToggle={onToggle}
-          items={[
-            {
-              chip: 'hasYdlAudio',
-              label: 'Audio',
-              tooltip: 'Has YDL audio — only authors with an audiobook held at Ypsilanti District Library',
-              dataTest: 'filter-has-ydl-audio',
-            },
-            {
-              chip: 'hasYdlBook',
-              label: 'Book',
-              tooltip: 'Has YDL book — only authors with a physical book held at Ypsilanti District Library',
-              dataTest: 'filter-has-ydl-book',
-            },
-            {
-              chip: 'hasYdlEbook',
-              label: 'Ebook',
-              tooltip: 'Has YDL ebook — only authors with an ebook held at Ypsilanti District Library',
-              dataTest: 'filter-has-ydl-ebook',
-            },
-          ]}
+          items={libraryChips('Ydl', 'YDL', 'ydl')}
         />
         <AvailabilityGroup
           icon={<EmuIcon />}
@@ -91,26 +97,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           dataTest="author-filter-emu"
           chips={chips}
           onToggle={onToggle}
-          items={[
-            {
-              chip: 'hasEmuAudio',
-              label: 'Audio',
-              tooltip: 'Has EMU audio — only authors with an audiobook held at EMU Halle Library',
-              dataTest: 'filter-has-emu-audio',
-            },
-            {
-              chip: 'hasEmuBook',
-              label: 'Book',
-              tooltip: 'Has EMU book — only authors with a physical book held at EMU Halle Library',
-              dataTest: 'filter-has-emu-book',
-            },
-            {
-              chip: 'hasEmuEbook',
-              label: 'Ebook',
-              tooltip: 'Has EMU ebook — only authors with an ebook held at EMU Halle Library',
-              dataTest: 'filter-has-emu-ebook',
-            },
-          ]}
+          items={libraryChips('Emu', 'EMU', 'emu')}
         />
         <AvailabilityGroup
           icon={<AclaIcon />}
@@ -119,26 +106,7 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           dataTest="author-filter-acla"
           chips={chips}
           onToggle={onToggle}
-          items={[
-            {
-              chip: 'hasAclaAudio',
-              label: 'Audio',
-              tooltip: 'Has ACLA audio — only authors with an audiobook held at Allegheny County Library Association',
-              dataTest: 'filter-has-acla-audio',
-            },
-            {
-              chip: 'hasAclaBook',
-              label: 'Book',
-              tooltip: 'Has ACLA book — only authors with a physical book held at Allegheny County Library Association',
-              dataTest: 'filter-has-acla-book',
-            },
-            {
-              chip: 'hasAclaEbook',
-              label: 'Ebook',
-              tooltip: 'Has ACLA ebook — only authors with an ebook held at Allegheny County Library Association',
-              dataTest: 'filter-has-acla-ebook',
-            },
-          ]}
+          items={libraryChips('Acla', 'ACLA', 'acla')}
         />
       </div>
 

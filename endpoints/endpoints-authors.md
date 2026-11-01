@@ -20,7 +20,7 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 
 **Authentication:** Public (`permitAll()`)
 
-**Query Parameters:** All optional. Boolean chips default to `false` and are AND-combined. `q` is AND-combined with the chips.
+**Query Parameters:** All optional. Boolean chips default to `false`. `q` is AND-combined with the chips. Chips AND together, except Audio, Book, and Ebook within one public library, which OR.
 - `q` — case-insensitive partial match on the author name or an alternate name. Blank matches every author. The Authors page sends this when Search or Enter is used, and keeps it in the page URL.
 - `mostRecent` — authors of books added on the calendar day of the latest `dateAddedToLibrary`
 - `withoutDescription` — biographical essay is null
@@ -29,7 +29,8 @@ Returns author summaries (id, name, and lastModified) after every Authors page f
 - `withoutPhotos` / `withPhotos` — author photos (photos not attached to a book)
 - `withoutBirthDate` / `withoutDeathDate`
 - `notCanonical` — the name is not already given-name then family-name (comma-inverted, appended years, initials with a parenthetical expansion, an editor or translator credit, a `[from old catalog]` note, or a name in all capitals or all lowercase). A comma inside a phrase is not an inversion. Blank names are not flagged.
-- Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag
+- Availability: `hasYdlBook`, `hasYdlEbook`, `hasYdlAudio`, `hasEmuBook`, `hasEmuEbook`, `hasEmuAudio`, `hasAclaBook`, `hasAclaEbook`, `hasAclaAudio` — the author has at least one book with that flag. Within one library the selected flags OR.
+- Without availability: `withoutYdlBook`, `withoutYdlEbook`, `withoutYdlAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutEmuAudio`, `withoutAclaBook`, `withoutAclaEbook`, `withoutAclaAudio` — the author has no book with that flag true. An unset flag is not a holding. These chips AND.
 - `favoriteLists` — comma-separated list names for the signed-in user. Applied only when those lists resolve to at least one author
 
 **Response:** Array of AuthorSummaryDto

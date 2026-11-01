@@ -138,6 +138,9 @@ public class AuthorsUITest {
         assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-ydl-audio']")).containsText("Without Audio");
+        assertThat(page.locator("[data-test='filter-without-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-not-canonical']")).isVisible();

@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   defaultAuthorChipFilters,
+  toggleAuthorChip,
   type AuthorChipFilters,
 } from '@/utils/authorChipFilters'
 import {
@@ -110,7 +111,7 @@ export const useUiStore = create<UiState>((set) => ({
 
   toggleAuthorsChip: (chip) =>
     set((state) => ({
-      authorsChips: { ...state.authorsChips, [chip]: !state.authorsChips[chip] },
+      authorsChips: toggleAuthorChip(state.authorsChips, chip),
     })),
 
   clearAuthorsChips: () => set({ authorsChips: { ...defaultAuthorsChips } }),

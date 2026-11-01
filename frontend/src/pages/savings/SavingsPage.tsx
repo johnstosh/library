@@ -27,7 +27,7 @@ import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
 import type { BookDto, BookListingDto } from '@/types/dtos'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { bindingsFromSearchParams } from '@/utils/bookBinding'
-import type { BookChipFilters } from '@/utils/bookChipFilters'
+import { toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
@@ -302,7 +302,7 @@ export function SavingsPage() {
           </form>
           <BookFilters
             chips={chips}
-            onToggle={(key) => writeUrl({ chips: { ...chips, [key]: !chips[key] } })}
+            onToggle={(key) => writeUrl({ chips: toggleBookChip(chips, key) })}
             showAvailabilityFilters
             showCatalogerFilters
           />

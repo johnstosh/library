@@ -4,6 +4,7 @@ import type { BookDto, BookPriceDto } from '@/types/dtos'
 import {
   applyBookPriceFilters,
   applyChipFilters,
+  toggleBookChip,
   defaultBookChipFilters,
   isAnyChipActive,
   isOtherBookChipActive,
@@ -157,6 +158,20 @@ describe('applyChipFilters', () => {
     expect(applyChipFilters(sample, chips({ hasYdlBook: true })).map((b) => b.id)).toEqual([2])
     expect(applyChipFilters(sample, chips({ hasEmuEbook: true })).map((b) => b.id)).toEqual([3])
     expect(applyChipFilters(sample, chips({ hasAclaBook: true })).map((b) => b.id)).toEqual([4])
+    expect(applyChipFilters(sample, chips({ hasYdlAudio: true, hasYdlBook: true })).map((b) => b.id)).toEqual([1, 2])
+    expect(applyChipFilters(sample, chips({ hasYdlAudio: true, hasEmuEbook: true })).map((b) => b.id)).toEqual([])
+    const unset = book({ id: 6, ydlPaperAvailable: false })
+    expect(applyChipFilters([unset, ydlAudio], chips({ withoutYdlAudio: true })).map((b) => b.id)).toEqual([6])
+    expect(applyChipFilters([unset], chips({ hasYdlAudio: true, withoutYdlBook: true })).map((b) => b.id)).toEqual([])
+    expect(applyChipFilters([ydlAudio], chips({ hasYdlAudio: true, withoutYdlBook: true })).map((b) => b.id)).toEqual([1])
+  })
+
+  it('clears the opposite public-library format chip', () => {
+    const audioOn = toggleBookChip(chips(), 'hasYdlAudio')
+    expect(audioOn.hasYdlAudio).toBe(true)
+    const without = toggleBookChip(audioOn, 'withoutYdlAudio')
+    expect(without.withoutYdlAudio).toBe(true)
+    expect(without.hasYdlAudio).toBe(false)
   })
 
   it('ANDs active chips so conflicting filters yield empty', () => {

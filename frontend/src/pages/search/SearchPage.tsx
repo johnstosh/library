@@ -10,7 +10,7 @@ import { BookFilters } from '@/pages/books/components/BookFilters'
 import { BookLabelFilters } from '@/pages/books/components/BookLabelFilters'
 import { ReadingDifficultyFilters } from '@/pages/books/components/ReadingDifficultyFilters'
 import { StatusFilters } from '@/pages/books/components/StatusFilters'
-import { isAnyChipActive } from '@/utils/bookChipFilters'
+import { isAnyChipActive, toggleBookChip } from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   booksPathFromFilters,
@@ -139,7 +139,7 @@ export function SearchPage() {
   }
 
   const handleFilterToggle = (key: keyof SearchFilters) => {
-    writeUrl({ chips: { ...filters, [key]: !filters[key] } })
+    writeUrl({ chips: toggleBookChip(filters, key) })
   }
 
   const handleToggleLabel = (label: string) => {

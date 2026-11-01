@@ -199,6 +199,16 @@ public class CatalogFilterService {
         public boolean aclaAudio;
         public boolean aclaBook;
         public boolean aclaEbook;
+        /** Within one library the three format chips OR. Null counts as not held. */
+        public boolean withoutYdlAudio;
+        public boolean withoutYdlBook;
+        public boolean withoutYdlEbook;
+        public boolean withoutEmuAudio;
+        public boolean withoutEmuBook;
+        public boolean withoutEmuEbook;
+        public boolean withoutAclaAudio;
+        public boolean withoutAclaBook;
+        public boolean withoutAclaEbook;
         public boolean withPrices;
         public boolean noPrices;
         public boolean priceOlder;
@@ -252,6 +262,16 @@ public class CatalogFilterService {
         public boolean aclaBook;
         public boolean aclaEbook;
         public boolean aclaAudio;
+        /** Positive format chips OR within one library. Without means no book has that flag true. */
+        public boolean withoutYdlBook;
+        public boolean withoutYdlEbook;
+        public boolean withoutYdlAudio;
+        public boolean withoutEmuBook;
+        public boolean withoutEmuEbook;
+        public boolean withoutEmuAudio;
+        public boolean withoutAclaBook;
+        public boolean withoutAclaEbook;
+        public boolean withoutAclaAudio;
         public List<String> favoriteLists = List.of();
         /** Resolved when {@link #mostRecent} is on. Empty matches nothing. */
         public List<Long> mostRecentAuthorIds = List.of();

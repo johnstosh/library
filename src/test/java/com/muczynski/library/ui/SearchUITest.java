@@ -127,6 +127,9 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-has-acla-audio']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-book']")).isVisible();
         assertThat(page.locator("[data-test='filter-has-acla-ebook']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-ydl-audio']")).containsText("Without Audio");
+        assertThat(page.locator("[data-test='filter-without-emu-book']")).isVisible();
+        assertThat(page.locator("[data-test='filter-without-acla-ebook']")).isVisible();
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='status-filters']")).isVisible();
         assertThat(page.locator("[data-test='status-filter-in-library']")).isVisible();

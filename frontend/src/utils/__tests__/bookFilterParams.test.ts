@@ -24,6 +24,8 @@ describe('isSearchVisibleChip', () => {
   it('keeps discovery chips and rejects cataloger chips', () => {
     expect(isSearchVisibleChip('freeText')).toBe(true)
     expect(isSearchVisibleChip('hasYdlAudio')).toBe(true)
+    expect(isSearchVisibleChip('withoutYdlAudio')).toBe(true)
+    expect(isSearchVisibleChip('withoutAclaEbook')).toBe(true)
     expect(isSearchVisibleChip('hasAclaAudio')).toBe(true)
     expect(isSearchVisibleChip('withoutGrokipedia')).toBe(false)
     expect(isSearchVisibleChip('withoutProperPlotOrDescription')).toBe(false)

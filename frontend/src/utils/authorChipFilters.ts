@@ -3,11 +3,11 @@ import type { AuthorDto } from '@/types/dtos'
 import { authorNeedsCanonicalName } from '@/utils/canonicalAuthorName'
 
 /**
- * Independent boolean chip filters for the Authors page.
- * All active chips AND together — more buttons on = fewer results.
+ * Chip filters for the Authors page. Chips AND together, except Audio, Book,
+ * and Ebook within one public library, which OR. A positive chip means at least
+ * one title has that holding. A Without chip means no title has it.
  *
- * Row 1: hasYdlAudio, hasYdlBook, hasYdlEbook, hasEmuAudio, hasEmuBook, hasEmuEbook,
- *   hasAclaAudio, hasAclaBook, hasAclaEbook
+ * Row 1: has/without YDL, EMU, and ACLA audio, book, and ebook
  * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
  *   zeroBooks, notCanonical, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */
@@ -21,6 +21,15 @@ export interface AuthorChipFilters {
   hasAclaBook: boolean
   hasAclaEbook: boolean
   hasAclaAudio: boolean
+  withoutYdlBook: boolean
+  withoutYdlEbook: boolean
+  withoutYdlAudio: boolean
+  withoutEmuBook: boolean
+  withoutEmuEbook: boolean
+  withoutEmuAudio: boolean
+  withoutAclaBook: boolean
+  withoutAclaEbook: boolean
+  withoutAclaAudio: boolean
   mostRecent: boolean
   withoutDescription: boolean
   withoutGrokipedia: boolean
@@ -43,6 +52,15 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   hasAclaBook: false,
   hasAclaEbook: false,
   hasAclaAudio: false,
+  withoutYdlBook: false,
+  withoutYdlEbook: false,
+  withoutYdlAudio: false,
+  withoutEmuBook: false,
+  withoutEmuEbook: false,
+  withoutEmuAudio: false,
+  withoutAclaBook: false,
+  withoutAclaEbook: false,
+  withoutAclaAudio: false,
   // Shared default is off. The Authors page overrides this to true in uiStore
   // so it can use GET /authors/most-recent-day instead of GET /authors/summaries.
   mostRecent: false,
@@ -67,7 +85,53 @@ const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
   'hasAclaBook',
   'hasAclaEbook',
   'hasAclaAudio',
+  'withoutYdlBook',
+  'withoutYdlEbook',
+  'withoutYdlAudio',
+  'withoutEmuBook',
+  'withoutEmuEbook',
+  'withoutEmuAudio',
+  'withoutAclaBook',
+  'withoutAclaEbook',
+  'withoutAclaAudio',
 ]
+
+const AUTHOR_AVAILABILITY_OPPOSITE: Partial<Record<keyof AuthorChipFilters, keyof AuthorChipFilters>> = {
+  hasYdlAudio: 'withoutYdlAudio',
+  withoutYdlAudio: 'hasYdlAudio',
+  hasYdlBook: 'withoutYdlBook',
+  withoutYdlBook: 'hasYdlBook',
+  hasYdlEbook: 'withoutYdlEbook',
+  withoutYdlEbook: 'hasYdlEbook',
+  hasEmuAudio: 'withoutEmuAudio',
+  withoutEmuAudio: 'hasEmuAudio',
+  hasEmuBook: 'withoutEmuBook',
+  withoutEmuBook: 'hasEmuBook',
+  hasEmuEbook: 'withoutEmuEbook',
+  withoutEmuEbook: 'hasEmuEbook',
+  hasAclaAudio: 'withoutAclaAudio',
+  withoutAclaAudio: 'hasAclaAudio',
+  hasAclaBook: 'withoutAclaBook',
+  withoutAclaBook: 'hasAclaBook',
+  hasAclaEbook: 'withoutAclaEbook',
+  withoutAclaEbook: 'hasAclaEbook',
+}
+
+/** Turning a format chip on clears its Without pair, and the reverse. */
+export function toggleAuthorChip(chips: AuthorChipFilters, chip: keyof AuthorChipFilters): AuthorChipFilters {
+  const turningOn = !chips[chip]
+  const next: AuthorChipFilters = { ...chips, [chip]: turningOn }
+  const opposite = AUTHOR_AVAILABILITY_OPPOSITE[chip]
+  if (turningOn && opposite) {
+    next[opposite] = false
+  }
+  return next
+}
+
+function matchesAuthorFormatOr(selected: boolean[], held: Array<boolean | undefined>): boolean {
+  if (!selected.some(Boolean)) return true
+  return selected.some((on, index) => on && held[index] === true)
+}
 
 export function isAvailabilityChipActive(chips: AuthorChipFilters): boolean {
   return AVAILABILITY_CHIPS.some((key) => chips[key])
@@ -112,15 +176,27 @@ export function applyAuthorChipFilters(
       if (!mostRecentIds || !mostRecentIds.has(author.id)) return false
     }
     const availability = availabilityByAuthorId?.get(author.id)
-    if (chips.hasYdlBook && !availability?.hasYdlBook) return false
-    if (chips.hasYdlEbook && !availability?.hasYdlEbook) return false
-    if (chips.hasYdlAudio && !availability?.hasYdlAudio) return false
-    if (chips.hasEmuBook && !availability?.hasEmuBook) return false
-    if (chips.hasEmuEbook && !availability?.hasEmuEbook) return false
-    if (chips.hasEmuAudio && !availability?.hasEmuAudio) return false
-    if (chips.hasAclaBook && !availability?.hasAclaBook) return false
-    if (chips.hasAclaEbook && !availability?.hasAclaEbook) return false
-    if (chips.hasAclaAudio && !availability?.hasAclaAudio) return false
+    if (!matchesAuthorFormatOr(
+      [chips.hasYdlAudio, chips.hasYdlBook, chips.hasYdlEbook],
+      [availability?.hasYdlAudio, availability?.hasYdlBook, availability?.hasYdlEbook],
+    )) return false
+    if (!matchesAuthorFormatOr(
+      [chips.hasEmuAudio, chips.hasEmuBook, chips.hasEmuEbook],
+      [availability?.hasEmuAudio, availability?.hasEmuBook, availability?.hasEmuEbook],
+    )) return false
+    if (!matchesAuthorFormatOr(
+      [chips.hasAclaAudio, chips.hasAclaBook, chips.hasAclaEbook],
+      [availability?.hasAclaAudio, availability?.hasAclaBook, availability?.hasAclaEbook],
+    )) return false
+    if (chips.withoutYdlAudio && availability?.hasYdlAudio) return false
+    if (chips.withoutYdlBook && availability?.hasYdlBook) return false
+    if (chips.withoutYdlEbook && availability?.hasYdlEbook) return false
+    if (chips.withoutEmuAudio && availability?.hasEmuAudio) return false
+    if (chips.withoutEmuBook && availability?.hasEmuBook) return false
+    if (chips.withoutEmuEbook && availability?.hasEmuEbook) return false
+    if (chips.withoutAclaAudio && availability?.hasAclaAudio) return false
+    if (chips.withoutAclaBook && availability?.hasAclaBook) return false
+    if (chips.withoutAclaEbook && availability?.hasAclaEbook) return false
     if (chips.withoutDescription && !isBlank(author.briefBiography)) return false
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(author.grokipediaUrl)) return false

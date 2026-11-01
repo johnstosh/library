@@ -144,6 +144,15 @@ public class AuthorController {
             @RequestParam(defaultValue = "false") boolean hasAclaBook,
             @RequestParam(defaultValue = "false") boolean hasAclaEbook,
             @RequestParam(defaultValue = "false") boolean hasAclaAudio,
+            @RequestParam(defaultValue = "false") boolean withoutYdlBook,
+            @RequestParam(defaultValue = "false") boolean withoutYdlEbook,
+            @RequestParam(defaultValue = "false") boolean withoutYdlAudio,
+            @RequestParam(defaultValue = "false") boolean withoutEmuBook,
+            @RequestParam(defaultValue = "false") boolean withoutEmuEbook,
+            @RequestParam(defaultValue = "false") boolean withoutEmuAudio,
+            @RequestParam(defaultValue = "false") boolean withoutAclaBook,
+            @RequestParam(defaultValue = "false") boolean withoutAclaEbook,
+            @RequestParam(defaultValue = "false") boolean withoutAclaAudio,
             @RequestParam(required = false) String favoriteLists,
             @RequestParam(required = false) String q,
             Principal principal) {
@@ -169,6 +178,15 @@ public class AuthorController {
             filter.aclaBook = hasAclaBook;
             filter.aclaEbook = hasAclaEbook;
             filter.aclaAudio = hasAclaAudio;
+            filter.withoutYdlBook = withoutYdlBook;
+            filter.withoutYdlEbook = withoutYdlEbook;
+            filter.withoutYdlAudio = withoutYdlAudio;
+            filter.withoutEmuBook = withoutEmuBook;
+            filter.withoutEmuEbook = withoutEmuEbook;
+            filter.withoutEmuAudio = withoutEmuAudio;
+            filter.withoutAclaBook = withoutAclaBook;
+            filter.withoutAclaEbook = withoutAclaEbook;
+            filter.withoutAclaAudio = withoutAclaAudio;
             filter.favoriteLists = splitCsv(favoriteLists);
             return ResponseEntity.ok(catalogFilterService.authorSummaries(filter, userId(principal)));
         } catch (Exception e) {
