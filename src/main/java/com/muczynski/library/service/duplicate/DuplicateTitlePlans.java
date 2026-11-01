@@ -5,6 +5,7 @@ package com.muczynski.library.service.duplicate;
 
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.BookTitles;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -47,7 +48,7 @@ public final class DuplicateTitlePlans {
     public record TitleSide(
             long id,
             String title,
-            String alternateTitle,
+            List<String> alternateTitles,
             String locNumber,
             boolean electronic,
             String freeTextUrl) {
@@ -63,11 +64,11 @@ public final class DuplicateTitlePlans {
             long rightId,
             String leftTitle,
             String rightTitle,
-            String leftAlternate,
-            String rightAlternate,
+            List<String> leftAlternate,
+            List<String> rightAlternate,
             String keeperFreeTextUrl,
             boolean keeperElectronic,
-            String keeperAlternate) {
+            List<String> keeperAlternate) {
     }
 
     public static AuthorMergePlan authorMerge(AuthorSide a, AuthorSide b) {
@@ -140,14 +141,9 @@ public final class DuplicateTitlePlans {
         }
         String urls = combineUrls(keeper.freeTextUrl(), dropped.freeTextUrl());
         boolean electronic = keeper.electronic() || dropped.electronic();
-        String alternate = keeper.alternateTitle();
-        String alternateNote = alternateNote(keeper, dropped);
-        if (alternateNote.startsWith("SET:")) {
-            alternate = alternateNote.substring(4);
-            alternateNote = "Alternate title on book #" + keeper.id()
-                    + " is set to \"" + alternate + "\" so that wording is kept.";
-        }
-        String summary = mergeSummary(keeper, dropped, urls, electronic, alternate, alternateNote);
+        List<String> alternate = combinedAlternates(keeper, dropped);
+        String alternateNote = alternateNote(keeper, alternate);
+        String summary = mergeSummary(keeper, dropped, urls, electronic, alternateNote);
         return new TitlePlan(
                 MERGE_TITLES,
                 true,
@@ -158,8 +154,8 @@ public final class DuplicateTitlePlans {
                 right.id(),
                 left.title(),
                 right.title(),
-                left.id() == keeper.id() ? alternate : left.alternateTitle(),
-                right.id() == keeper.id() ? alternate : right.alternateTitle(),
+                left.id() == keeper.id() ? alternate : copyTitles(left.alternateTitles()),
+                right.id() == keeper.id() ? alternate : copyTitles(right.alternateTitles()),
                 urls,
                 electronic,
                 alternate);
@@ -187,14 +183,14 @@ public final class DuplicateTitlePlans {
             int used = Math.max(firstNumber, 1);
             newSecond = withCopy(wordSecond, used + 1);
         }
-        String altFirst = alternateAfterTitleChange(first.alternateTitle(), first.title(), newFirst);
-        String altSecond = alternateAfterTitleChange(second.alternateTitle(), second.title(), newSecond);
+        List<String> altFirst = alternateAfterTitleChange(first.alternateTitles(), first.title(), newFirst);
+        List<String> altSecond = alternateAfterTitleChange(second.alternateTitles(), second.title(), newSecond);
         String leftTitle = left.id() == first.id() ? newFirst : newSecond;
         String rightTitle = right.id() == first.id() ? newFirst : newSecond;
-        String leftAlt = left.id() == first.id() ? altFirst : altSecond;
-        String rightAlt = right.id() == first.id() ? altFirst : altSecond;
+        List<String> leftAlt = left.id() == first.id() ? altFirst : altSecond;
+        List<String> rightAlt = right.id() == first.id() ? altFirst : altSecond;
         boolean changed = !same(left.title(), leftTitle) || !same(right.title(), rightTitle)
-                || !same(left.alternateTitle(), leftAlt) || !same(right.alternateTitle(), rightAlt);
+                || !sameTitles(left.alternateTitles(), leftAlt) || !sameTitles(right.alternateTitles(), rightAlt);
         String summary = fixSummary(left, right, leftTitle, rightTitle, leftAlt, rightAlt);
         return new TitlePlan(
                 FIX_TITLES,
@@ -215,13 +211,13 @@ public final class DuplicateTitlePlans {
 
     public static String fixSummary(TitleSide left, TitleSide right,
                                      String leftTitle, String rightTitle,
-                                     String leftAlternate, String rightAlternate) {
+                                     List<String> leftAlternate, List<String> rightAlternate) {
         StringBuilder text = new StringBuilder();
         text.append("Fix titles does not delete either book. ");
         text.append(titleChange(left.id(), left.title(), leftTitle));
         text.append(titleChange(right.id(), right.title(), rightTitle));
-        text.append(alternateChange(left.id(), left.alternateTitle(), leftAlternate));
-        text.append(alternateChange(right.id(), right.alternateTitle(), rightAlternate));
+        text.append(alternateChange(left.id(), left.alternateTitles(), leftAlternate));
+        text.append(alternateChange(right.id(), right.alternateTitles(), rightAlternate));
         text.append("Call number \"").append(quote(left.locNumber())).append("\" stays on book #")
                 .append(left.id()).append(". Call number \"").append(quote(right.locNumber()))
                 .append("\" stays on book #").append(right.id())
@@ -266,7 +262,7 @@ public final class DuplicateTitlePlans {
     }
 
     private static String mergeSummary(TitleSide keeper, TitleSide dropped, String urls,
-                                        boolean electronic, String alternate, String alternateNote) {
+                                        boolean electronic, String alternateNote) {
         StringBuilder text = new StringBuilder();
         text.append("Merge titles keeps book #").append(keeper.id())
                 .append(" \"").append(quote(keeper.title()))
@@ -292,40 +288,54 @@ public final class DuplicateTitlePlans {
         if (alternateNote.length() > 0 && !alternateNote.endsWith(" ")) {
             text.append(' ');
         }
-        if (notBlank(dropped.title()) && !same(dropped.title(), keeper.title()) && !same(dropped.title(), alternate)) {
-            text.append("The deleted title \"").append(dropped.title().trim())
-                    .append("\" is not stored on the kept book. ");
-        }
         text.append("Loans, photos, prices, and favorites move to book #").append(keeper.id())
                 .append(" when that book does not already have the same one. A colliding price, loan, or favorite is removed with the deleted book and put back on Undo.");
         return text.toString().replaceAll(" +", " ").trim();
     }
 
-    /**
-     * Returns the alternate to store, or a note. A leading {@code SET:} means the
-     * rest of the string is the new alternate title.
-     */
-    private static String alternateNote(TitleSide keeper, TitleSide dropped) {
-        if (!notBlank(keeper.alternateTitle())) {
-            if (notBlank(dropped.title()) && !same(keeper.title(), dropped.title())) {
-                return "SET:" + dropped.title().trim();
+    private static List<String> combinedAlternates(TitleSide keeper, TitleSide dropped) {
+        List<String> raw = new ArrayList<>();
+        if (keeper.alternateTitles() != null) {
+            raw.addAll(keeper.alternateTitles());
+        }
+        if (dropped.alternateTitles() != null) {
+            raw.addAll(dropped.alternateTitles());
+        }
+        if (notBlank(dropped.title())) {
+            raw.add(dropped.title().trim());
+        }
+        return BookTitles.normalize(keeper.title(), raw);
+    }
+
+    private static String alternateNote(TitleSide keeper, List<String> combined) {
+        if (sameTitles(keeper.alternateTitles(), combined)) {
+            if (combined == null || combined.isEmpty()) {
+                return "Alternate titles are unchanged.";
             }
-            if (notBlank(dropped.alternateTitle()) && !same(keeper.title(), dropped.alternateTitle())) {
-                return "SET:" + dropped.alternateTitle().trim();
+            return "Alternate titles stay " + quoted(combined) + ".";
+        }
+        return "Alternate titles on book #" + keeper.id() + " are combined as " + quoted(combined) + ".";
+    }
+
+    private static String quoted(List<String> titles) {
+        if (titles == null || titles.isEmpty()) {
+            return "none";
+        }
+        StringBuilder text = new StringBuilder();
+        for (String title : titles) {
+            if (text.length() > 0) {
+                text.append(", ");
             }
-            return "Alternate title is unchanged.";
+            text.append('"').append(title).append('"');
         }
-        if (notBlank(dropped.alternateTitle())
-                && !same(keeper.alternateTitle(), dropped.alternateTitle())
-                && dropped.alternateTitle().trim().length() > keeper.alternateTitle().trim().length()) {
-            return "SET:" + dropped.alternateTitle().trim();
+        return text.toString();
+    }
+
+    private static List<String> copyTitles(List<String> titles) {
+        if (titles == null || titles.isEmpty()) {
+            return null;
         }
-        if (notBlank(dropped.alternateTitle()) && !same(keeper.alternateTitle(), dropped.alternateTitle())) {
-            return "Alternate title \"" + keeper.alternateTitle().trim()
-                    + "\" stays. The deleted book's alternate title \""
-                    + dropped.alternateTitle().trim() + "\" is not copied.";
-        }
-        return "Alternate title \"" + keeper.alternateTitle().trim() + "\" stays.";
+        return new ArrayList<>(titles);
     }
 
     private static String sharedWording(String baseA, String baseB) {
@@ -369,26 +379,46 @@ public final class DuplicateTitlePlans {
         return "Book #" + id + " title changes from \"" + quote(before) + "\" to \"" + quote(after) + "\". ";
     }
 
-    private static String alternateChange(long id, String before, String after) {
-        if (same(before, after)) {
+    private static String alternateChange(long id, List<String> before, List<String> after) {
+        if (sameTitles(before, after)) {
             return "";
         }
-        if (!notBlank(before) && notBlank(after)) {
-            return "Book #" + id + " alternate title is set to \"" + after.trim()
-                    + "\" so the previous title is kept. ";
+        if ((before == null || before.isEmpty()) && after != null && !after.isEmpty()) {
+            return "Book #" + id + " alternate titles are set to " + quoted(after)
+                    + " so the previous title is kept. ";
         }
-        return "Book #" + id + " alternate title changes from \"" + quote(before)
-                + "\" to \"" + quote(after) + "\". ";
+        return "Book #" + id + " alternate titles change from " + quoted(before)
+                + " to " + quoted(after) + ". ";
     }
 
-    static String alternateAfterTitleChange(String alternate, String oldTitle, String newTitle) {
-        if (same(oldTitle, newTitle)) {
-            return alternate;
+    /**
+     * Keeps the existing alternate titles and, when the primary title changes,
+     * adds the previous wording when {@link com.muczynski.library.domain.BookTitles#normalize}
+     * does not treat it as the same title as the new primary.
+     */
+    public static List<String> alternateAfterTitleChange(List<String> alternate, String oldTitle, String newTitle) {
+        List<String> raw = new ArrayList<>();
+        if (alternate != null) {
+            raw.addAll(alternate);
         }
-        if (!notBlank(alternate)) {
-            return oldTitle == null ? null : oldTitle.trim();
+        if (!same(oldTitle, newTitle) && oldTitle != null && !oldTitle.isBlank()) {
+            raw.add(oldTitle.trim());
         }
-        return alternate;
+        return BookTitles.normalize(newTitle, raw);
+    }
+
+    static boolean sameTitles(List<String> left, List<String> right) {
+        List<String> a = left == null ? List.of() : left;
+        List<String> b = right == null ? List.of() : right;
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            if (!same(a.get(i), b.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static Integer copyNumber(String title) {

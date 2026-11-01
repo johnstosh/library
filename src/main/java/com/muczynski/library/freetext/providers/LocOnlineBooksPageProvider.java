@@ -68,10 +68,14 @@ public class LocOnlineBooksPageProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "No response from search");
             }
 
-            // First, check if this page directly contains our title (author's books page)
-            String bookUrl = findBookOnPage(html, title);
-            if (bookUrl != null) {
-                return FreeTextLookupResult.success(getProviderName(), bookUrl);
+            // A direct hit is one author's book list. A "nearby names" page lists
+            // other people, and a title on that page belongs to someone else.
+            String bookUrl = null;
+            if (!isNearbyAuthorPage(html)) {
+                bookUrl = findBookOnPage(html, title);
+                if (bookUrl != null) {
+                    return FreeTextLookupResult.success(getProviderName(), bookUrl);
+                }
             }
 
             // If not, this might be a list of matching authors
@@ -125,6 +129,20 @@ public class LocOnlineBooksPageProvider implements FreeTextProvider {
             log.warn("Online Books Page search failed: {}", rootMessage);
             return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
+    }
+
+    /**
+     * The lookupname page says there is no exact author and lists neighbors.
+     * Book cites on that page are not the author we asked for.
+     */
+    static boolean isNearbyAuthorPage(String html) {
+        if (html == null) {
+            return false;
+        }
+        String lower = html.toLowerCase();
+        return lower.contains("no exact match")
+                || lower.contains("showing nearby names")
+                || lower.contains("browsing authors");
     }
 
     /**

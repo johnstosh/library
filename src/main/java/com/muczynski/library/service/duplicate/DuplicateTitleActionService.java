@@ -132,7 +132,7 @@ public class DuplicateTitleActionService {
         moveBookChildren(keeper, dropped, payload);
         keeper.setFreeTextUrl(plan.keeperFreeTextUrl());
         keeper.setElectronicResource(plan.keeperElectronic());
-        keeper.setAlternateTitle(plan.keeperAlternate());
+        keeper.setAlternateTitles(storedTitles(plan.keeperAlternate()));
         keeper.setTagsList(unionTags(payload.getKeeperBook().getTags(), payload.getDeletedBook().getTags()));
         entityManager.flush();
         if (Hibernate.isInitialized(dropped.getPhotos())) {
@@ -163,26 +163,26 @@ public class DuplicateTitleActionService {
         payload.setKind(DuplicateTitleAction.FIX_TITLES);
         payload.setFixBookAId(bookA.getId());
         payload.setFixBookATitle(bookA.getTitle());
-        payload.setFixBookAAlternate(bookA.getAlternateTitle());
+        payload.setFixBookAAlternate(storedTitles(bookA.getAlternateTitles()));
         payload.setFixBookBId(bookB.getId());
         payload.setFixBookBTitle(bookB.getTitle());
-        payload.setFixBookBAlternate(bookB.getAlternateTitle());
+        payload.setFixBookBAlternate(storedTitles(bookB.getAlternateTitles()));
 
         BookService.FixCopyTitles copies = bookService.allocateFixTitles(
                 plan.leftTitle(), bookA.getId(), plan.rightTitle(), bookB.getId());
         String titleA = copies.leftTitle();
         String titleB = copies.rightTitle();
-        String alternateA = DuplicateTitlePlans.alternateAfterTitleChange(
+        List<String> alternateA = DuplicateTitlePlans.alternateAfterTitleChange(
                 payload.getFixBookAAlternate(), payload.getFixBookATitle(), titleA);
-        String alternateB = DuplicateTitlePlans.alternateAfterTitleChange(
+        List<String> alternateB = DuplicateTitlePlans.alternateAfterTitleChange(
                 payload.getFixBookBAlternate(), payload.getFixBookBTitle(), titleB);
         parkTitle(bookA, titleA);
         parkTitle(bookB, titleB);
         bookRepository.flush();
         bookA.setTitle(titleA);
         bookB.setTitle(titleB);
-        bookA.setAlternateTitle(alternateA);
-        bookB.setAlternateTitle(alternateB);
+        bookA.setAlternateTitles(storedTitles(alternateA));
+        bookB.setAlternateTitles(storedTitles(alternateB));
         bookRepository.flush();
         String summary = DuplicateTitlePlans.fixSummary(
                 side(bookA.getId(), payload.getFixBookATitle(), payload.getFixBookAAlternate(), bookA),
@@ -265,9 +265,9 @@ public class DuplicateTitleActionService {
         parkTitle(bookB, payload.getFixBookBTitle());
         bookRepository.flush();
         bookA.setTitle(payload.getFixBookATitle());
-        bookA.setAlternateTitle(payload.getFixBookAAlternate());
+        bookA.setAlternateTitles(storedTitles(payload.getFixBookAAlternate()));
         bookB.setTitle(payload.getFixBookBTitle());
-        bookB.setAlternateTitle(payload.getFixBookBAlternate());
+        bookB.setAlternateTitles(storedTitles(payload.getFixBookBAlternate()));
         bookRepository.flush();
         String summary = "Undo fix titles puts book #" + bookA.getId()
                 + " title back to \"" + payload.getFixBookATitle()
@@ -334,7 +334,7 @@ public class DuplicateTitleActionService {
     private void applyKeeperBook(Book keeper, BookState before) {
         keeper.setFreeTextUrl(before.getFreeTextUrl());
         keeper.setElectronicResource(before.getElectronicResource());
-        keeper.setAlternateTitle(before.getAlternateTitle());
+        keeper.setAlternateTitles(storedTitles(before.getAlternateTitles()));
         keeper.setTagsList(before.getTags() == null ? new ArrayList<>() : new ArrayList<>(before.getTags()));
     }
 
@@ -416,15 +416,22 @@ public class DuplicateTitleActionService {
         return new TitleSide(
                 book.getId(),
                 book.getTitle(),
-                book.getAlternateTitle(),
+                book.getAlternateTitles(),
                 book.getLocNumber(),
                 Boolean.TRUE.equals(book.getElectronicResource()),
                 book.getFreeTextUrl());
     }
 
-    private static TitleSide side(long id, String title, String alternate, Book book) {
+    private static TitleSide side(long id, String title, List<String> alternate, Book book) {
         return new TitleSide(id, title, alternate, book.getLocNumber(),
                 Boolean.TRUE.equals(book.getElectronicResource()), book.getFreeTextUrl());
+    }
+
+    private static List<String> storedTitles(List<String> titles) {
+        if (titles == null || titles.isEmpty()) {
+            return null;
+        }
+        return new ArrayList<>(titles);
     }
 
     private static List<String> unionTags(List<String> keeper, List<String> dropped) {

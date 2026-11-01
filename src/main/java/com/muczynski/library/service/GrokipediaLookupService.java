@@ -205,9 +205,8 @@ public class GrokipediaLookupService {
             return saveBookUrl(book, primaryTitle, workingUrl);
         }
 
-        // If primary failed and there is alternate, retry slow with alternate
-        if (titles.size() > 1) {
-            String altTitle = titles.get(1);
+        for (int index = 1; index < titles.size(); index++) {
+            String altTitle = titles.get(index);
             try {
                 grokUrls = askGrok.suggestGrokipediaUrlsForBook(altTitle, authorName);
                 workingUrl = firstWorkingUrl(grokUrls);
@@ -215,7 +214,7 @@ public class GrokipediaLookupService {
                     return saveBookUrl(book, primaryTitle, workingUrl);
                 }
             } catch (Exception e) {
-                log.warn("Grok lookup with alternateTitle failed for book {}: {}", book.getId(), e.getMessage());
+                log.warn("Grok lookup with alternate title failed for book {}: {}", book.getId(), e.getMessage());
             }
         }
 

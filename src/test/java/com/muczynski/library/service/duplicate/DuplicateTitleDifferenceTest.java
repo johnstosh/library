@@ -34,7 +34,7 @@ class DuplicateTitleDifferenceTest {
     void titlesSayWhichFieldsWereComparedWhenAnAlternateIsPresent() {
         String text = DuplicateTitleDifference.titles(
                 "The Confessions", "the confessions", "alternate title", "alternate title",
-                "The Confessions", "the confessions");
+                List.of("The Confessions"), List.of("the confessions"));
         assertTrue(text.startsWith("Compared Book A alternate title with Book B alternate title. "));
         assertTrue(text.endsWith("Titles match case-insensitively."));
     }

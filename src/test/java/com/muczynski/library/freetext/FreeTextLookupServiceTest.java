@@ -429,7 +429,7 @@ class FreeTextLookupServiceTest {
     @Test
     void lookupBook_withAlternateTitle_searchesBothAndMergesUrls() {
         Book book = createBook(1L, "Primary Title", "Some Author");
-        book.setAlternateTitle("Alternate Title");
+        book.setAlternateTitles(List.of("Alternate Title"));
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         // primary fails, alternate succeeds
@@ -450,7 +450,7 @@ class FreeTextLookupServiceTest {
     @Test
     void lookupBook_withAlternateTitle_successIfAnyTitleYieldsUrl() {
         Book book = createBook(1L, "Primary Title", "Some Author");
-        book.setAlternateTitle("Alt Title");
+        book.setAlternateTitles(List.of("Alt Title"));
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(mockProvider1.search(eq("Primary Title"), any()))

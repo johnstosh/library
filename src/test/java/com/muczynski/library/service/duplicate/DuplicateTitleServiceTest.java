@@ -197,6 +197,24 @@ class DuplicateTitleServiceTest {
     }
 
     @Test
+    void usesALaterAlternateTitleForMatching() {
+        List<BookRepository.DuplicateTitleProjection> books = List.of(
+                projAlts(1L, "Primary Unique Name XYZ", List.of("Unused Wording", "City of God"),
+                        "Augustine", BookStatus.ACTIVE),
+                proj(2L, "Completely Different Primary", "City of God Treatise", "Augustine", BookStatus.LOST)
+        );
+        when(bookRepository.findAllForDuplicateTitleScan()).thenReturn(books);
+
+        DuplicateTitlesResultDto result = service.findDuplicates();
+
+        assertEquals(1, result.getPairs().size());
+        DuplicateTitlePairDto pair = result.getPairs().get(0);
+        assertEquals(List.of("Unused Wording", "City of God"), pair.getBookAAlternateTitles());
+        assertTrue("alternate title".equals(pair.getMatchedFieldA())
+                || "alternate title".equals(pair.getMatchedFieldB()));
+    }
+
+    @Test
     void resultsSortedByScoreDescendingAndCappedAt100() {
         List<BookRepository.DuplicateTitleProjection> books = new ArrayList<>();
         for (int i = 1; i <= 120; i++) {
@@ -383,6 +401,51 @@ class DuplicateTitleServiceTest {
         return row;
     }
 
+    private static BookRepository.DuplicateTitleProjection projAlts(
+            Long id, String title, List<String> alts, String author, BookStatus status) {
+        return new BookRepository.DuplicateTitleProjection() {
+            @Override
+            public Long getId() {
+                return id;
+            }
+
+            @Override
+            public String getTitle() {
+                return title;
+            }
+
+            @Override
+            public List<String> getAlternateTitles() {
+                return alts == null ? List.of() : alts;
+            }
+
+            @Override
+            public String getAuthorName() {
+                return author;
+            }
+
+            @Override
+            public BookStatus getStatus() {
+                return status;
+            }
+
+            @Override
+            public Long getAuthorId() {
+                return null;
+            }
+
+            @Override
+            public String getLocNumber() {
+                return null;
+            }
+
+            @Override
+            public Boolean getElectronicResource() {
+                return null;
+            }
+        };
+    }
+
     private static BookRepository.DuplicateTitleProjection proj(
             Long id, String title, String alt, String author, BookStatus status) {
         return new BookRepository.DuplicateTitleProjection() {
@@ -397,8 +460,8 @@ class DuplicateTitleServiceTest {
             }
 
             @Override
-            public String getAlternateTitle() {
-                return alt;
+            public List<String> getAlternateTitles() {
+                return alt == null || alt.isBlank() ? List.of() : List.of(alt);
             }
 
             @Override

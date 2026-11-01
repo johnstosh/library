@@ -25,14 +25,16 @@ public class DuplicateTitlePairDto {
 
     private Long bookAId;
     private String bookATitle;
-    private String bookAAlternateTitle;
+    @Builder.Default
+    private List<String> bookAAlternateTitles = new ArrayList<>();
     private String bookAAuthorName;
     /** BookStatus name of a book included in the scan. WITHDRAWN is omitted. */
     private String bookAStatus;
 
     private Long bookBId;
     private String bookBTitle;
-    private String bookBAlternateTitle;
+    @Builder.Default
+    private List<String> bookBAlternateTitles = new ArrayList<>();
     private String bookBAuthorName;
     /** BookStatus name of a book included in the scan. WITHDRAWN is omitted. */
     private String bookBStatus;

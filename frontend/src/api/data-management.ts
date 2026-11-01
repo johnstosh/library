@@ -654,12 +654,12 @@ export interface DuplicateTitlePairDto {
   score: number
   bookAId: number
   bookATitle?: string
-  bookAAlternateTitle?: string
+  bookAAlternateTitles?: string[]
   bookAAuthorName?: string
   bookAStatus?: string
   bookBId: number
   bookBTitle?: string
-  bookBAlternateTitle?: string
+  bookBAlternateTitles?: string[]
   bookBAuthorName?: string
   bookBStatus?: string
   matchedTitleA?: string

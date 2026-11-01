@@ -630,10 +630,10 @@ public class CatalogCriteria {
             boolean matchAuthorName) {
         List<Predicate> parts = new ArrayList<>();
         parts.add(contains(cb, book.get("title"), text));
-        parts.add(contains(cb, cb.coalesce(book.get("alternateTitle"), ""), text));
+        parts.add(contains(cb, cb.coalesce(joinedArray(cb, book, "alternateTitles"), ""), text));
         if (matchAuthorName && author != null) {
             parts.add(contains(cb, cb.coalesce(author.get("name"), ""), text));
-            parts.add(contains(cb, cb.coalesce(alternateNames(cb, author), ""), text));
+            parts.add(contains(cb, cb.coalesce(joinedArray(cb, author, "alternateNames"), ""), text));
         }
         return or(cb, parts);
     }
@@ -641,11 +641,11 @@ public class CatalogCriteria {
     private Predicate nameContains(HibernateCriteriaBuilder cb, Path<?> author, String text) {
         return cb.or(
                 contains(cb, author.get("name"), text),
-                contains(cb, cb.coalesce(alternateNames(cb, author), ""), text));
+                contains(cb, cb.coalesce(joinedArray(cb, author, "alternateNames"), ""), text));
     }
 
-    private Expression<String> alternateNames(HibernateCriteriaBuilder cb, Path<?> owner) {
-        return cb.function("array_to_string", String.class, owner.get("alternateNames"), cb.literal("||"));
+    private Expression<String> joinedArray(HibernateCriteriaBuilder cb, Path<?> owner, String attribute) {
+        return cb.function("array_to_string", String.class, owner.get(attribute), cb.literal("||"));
     }
 
     private Predicate contains(HibernateCriteriaBuilder cb, Expression<String> field, String text) {

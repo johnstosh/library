@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BookFormPage } from '../BookFormPage'
+import { ApiError } from '@/api/client'
 import type { BookDto } from '@/types/dtos'
 
 const { mocks } = vi.hoisted(() => ({
@@ -71,6 +72,21 @@ vi.mock('@/api/acla-lookup', () => ({
 
 vi.mock('@/api/labels', () => ({
   generateLabelsPdf: vi.fn(),
+}))
+
+vi.mock('@/components/ui/TryAgainDialog', () => ({
+  TryAgainDialog: ({
+    isOpen,
+    onTryAgain,
+  }: {
+    isOpen: boolean
+    onTryAgain: () => void
+  }) =>
+    isOpen ? (
+      <button type="button" data-test="try-again-button" onClick={onTryAgain}>
+        Try Again
+      </button>
+    ) : null,
 }))
 
 vi.mock('@/stores/authStore', () => ({
@@ -218,7 +234,7 @@ describe('BookFormPage availability checkboxes', () => {
     renderForm({
       book: {
         ...editedBook,
-        alternateTitle: 'Confessiones',
+        alternateTitles: ['Confessiones', 'De diligendo Deo'],
         ydlAudioAvailable: true,
         ydlPaperAvailable: true,
         ydlEbookAvailable: true,
@@ -241,7 +257,7 @@ describe('BookFormPage availability checkboxes', () => {
         expect.objectContaining({
           id: 1,
           book: expect.objectContaining({
-            alternateTitle: 'Confessiones',
+            alternateTitles: ['Confessiones', 'De diligendo Deo'],
             ydlAudioAvailable: false,
             ydlPaperAvailable: true,
             ydlEbookAvailable: true,
@@ -255,6 +271,31 @@ describe('BookFormPage availability checkboxes', () => {
         }),
       )
     })
+  })
+
+  it('sends both alternate lines again after a transient save failure', async () => {
+    mocks.updateBook
+      .mockRejectedValueOnce(new ApiError('unavailable', 503, 'Service Unavailable'))
+      .mockResolvedValueOnce(editedBook)
+    renderForm({
+      book: {
+        ...editedBook,
+        alternateTitles: ['Confessiones', 'De diligendo Deo'],
+      },
+    })
+
+    expect(screen.getByTestId('book-alternate-titles')).toHaveValue(
+      'Confessiones\nDe diligendo Deo',
+    )
+    fireEvent.click(screen.getByTestId('book-form-submit'))
+    fireEvent.click(await screen.findByTestId('try-again-button'))
+
+    await waitFor(() => {
+      expect(mocks.updateBook).toHaveBeenCalledTimes(2)
+    })
+    for (const call of mocks.updateBook.mock.calls) {
+      expect(call[0].book.alternateTitles).toEqual(['Confessiones', 'De diligendo Deo'])
+    }
   })
 })
 

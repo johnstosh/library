@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -450,7 +451,7 @@ class AclaLookupServiceTest {
     @Test
     void lookupAndUpdateBook_withAlternateTitle_searchesBothAndMergesFlags() {
         Book book = bookWithAuthor("Test Book", "Test Author");
-        book.setAlternateTitle("Test Book Alt");
+        book.setAlternateTitles(List.of("Test Book Alt"));
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         // primary no match, alternate title succeeds with all formats

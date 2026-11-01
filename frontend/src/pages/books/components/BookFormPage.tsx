@@ -36,9 +36,19 @@ import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
 import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
-import { AclaIcon } from '@/components/ui/Icons'
+import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
 import { IconButton } from '@/components/ui/IconButton'
-import { AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+
+function linesToTitles(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+}
+
+function titlesToLines(titles?: string[] | null): string {
+  return (titles ?? []).filter((title) => title && title.trim()).join('\n')
+}
 
 interface BookFormPageProps {
   title: string
@@ -71,7 +81,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
   const [formData, setFormData] = useState({
     title: '',
-    alternateTitle: '',
+    alternateTitles: '',
     publicationYear: '',
     publisher: '',
     plotSummary: '',
@@ -148,7 +158,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       setFormData({
         ...formData,
         title: book.title,
-        alternateTitle: book.alternateTitle || '',
+        alternateTitles: titlesToLines(book.alternateTitles),
         publicationYear: book.publicationYear?.toString() || '',
         publisher: book.publisher || '',
         plotSummary: book.plotSummary || '',
@@ -183,7 +193,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       // arrive after this reset.
       setFormData((prev) => ({
         title: '',
-        alternateTitle: '',
+        alternateTitles: '',
         publicationYear: '',
         publisher: '',
         plotSummary: '',
@@ -208,9 +218,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: false,
         aclaPaperAvailable: false,
         aclaEbookAvailable: false,
-    readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
-    binding: BookCoverType.UNKNOWN as BookCoverType,
-    desireToPurchase: null as number | null,
+        readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
+        binding: BookCoverType.UNKNOWN as BookCoverType,
+        desireToPurchase: null as number | null,
       }))
     }
     // branches is read only if already loaded; the effect below fills branchId later.
@@ -702,7 +712,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     const bookData = {
       title: formData.title,
-      alternateTitle: formData.alternateTitle || undefined,
+      alternateTitles: linesToTitles(formData.alternateTitles),
       publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
       publisher: formData.publisher || undefined,
       plotSummary: formData.plotSummary || undefined,
@@ -993,12 +1003,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           data-test="book-title"
         />
 
-        <Input
-          label="Alternate Title"
-          value={formData.alternateTitle}
-          onChange={(e) => handleFieldChange('alternateTitle', e.target.value)}
-          placeholder="Optional alternate or former title"
-          data-test="book-alternate-title"
+        <Textarea
+          label="Alternate titles"
+          value={formData.alternateTitles}
+          onChange={(e) => handleFieldChange('alternateTitles', e.target.value)}
+          rows={3}
+          placeholder={'On Loving God\nDe diligendo Deo'}
+          helpText="Other titles of this same work, one per line (original language, another English title, a cover or spine title). Search, checkout, and online lookups try every line."
+          data-test="book-alternate-titles"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1620,7 +1632,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               // Re-execute the save with current form data
               const bookData = {
                 title: formData.title,
-                alternateTitle: formData.alternateTitle || undefined,
+                alternateTitles: linesToTitles(formData.alternateTitles),
                 publicationYear: formData.publicationYear ? parseInt(formData.publicationYear) : undefined,
                 publisher: formData.publisher || undefined,
                 plotSummary: formData.plotSummary || undefined,

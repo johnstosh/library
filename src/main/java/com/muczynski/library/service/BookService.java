@@ -164,7 +164,8 @@ public class BookService {
         book.setLibrary(branchRepository.findById(bookDto.getLibraryId())
                 .orElseThrow(() -> new LibraryException("Library not found: " + bookDto.getLibraryId())));
 
-        book.setAlternateTitle(bookDto.getAlternateTitle());
+        book.setAlternateTitles(com.muczynski.library.domain.BookTitles.normalize(
+                bookDto.getTitle(), bookDto.getAlternateTitles()));
 
         // Ensure title uniqueness
         book.setTitle(ensureUniqueTitle(book.getTitle(), null));
@@ -314,7 +315,8 @@ public class BookService {
     public BookDto updateBook(Long id, BookDto bookDto) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new LibraryException("Book not found: " + id));
         book.setTitle(ensureUniqueTitle(bookDto.getTitle(), id));
-        book.setAlternateTitle(bookDto.getAlternateTitle());
+        book.setAlternateTitles(com.muczynski.library.domain.BookTitles.normalize(
+                bookDto.getTitle(), bookDto.getAlternateTitles()));
         book.setPublicationYear(bookDto.getPublicationYear());
         book.setPublisher(bookDto.getPublisher());
         book.setPlotEssay(bookDto.getPlotSummary());

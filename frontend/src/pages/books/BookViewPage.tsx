@@ -164,9 +164,9 @@ export function BookViewPage() {
               <span>{book.title}</span>
               <FavoriteStar itemType="BOOK" itemId={book.id} />
             </h1>
-            {book.alternateTitle && (
+            {book.alternateTitles && book.alternateTitles.length > 0 && (
               <p className="text-gray-600 text-lg -mt-1 pl-0.5" data-test="book-alternate-title">
-                {book.alternateTitle}
+                {book.alternateTitles.join(' · ')}
               </p>
             )}
             {(canCheckout || isLibrarian) && (

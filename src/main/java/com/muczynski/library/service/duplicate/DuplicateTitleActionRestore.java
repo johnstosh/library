@@ -71,7 +71,7 @@ public class DuplicateTitleActionRestore {
         jdbc.execute((ConnectionCallback<Void>) connection -> {
             try (PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO book (
-                        id, title, alternate_title, publication_year, publisher, plot_summary,
+                        id, title, alternate_titles, publication_year, publisher, plot_summary,
                         related_works, detailed_description, grokipedia_url, free_text_url,
                         date_added_to_library, last_modified, status, loc_number, electronic_resource,
                         status_reason, ydl_audio_available, ydl_paper_available, ydl_ebook_available,
@@ -84,7 +84,7 @@ public class DuplicateTitleActionRestore {
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
-                setString(statement, 3, book.getAlternateTitle());
+                setTextArray(connection, statement, 3, book.getAlternateTitles());
                 setInteger(statement, 4, book.getPublicationYear());
                 setString(statement, 5, book.getPublisher());
                 setString(statement, 6, book.getPlotEssay());
@@ -204,6 +204,16 @@ public class DuplicateTitleActionRestore {
         } else {
             statement.setBytes(index, value.getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    private static void setTextArray(java.sql.Connection connection, PreparedStatement statement, int index,
+                                     List<String> values) throws SQLException {
+        if (values == null || values.isEmpty()) {
+            statement.setNull(index, Types.ARRAY);
+            return;
+        }
+        Array array = connection.createArrayOf("text", values.toArray(String[]::new));
+        statement.setArray(index, array);
     }
 
     private static void setString(PreparedStatement statement, int index, String value) throws SQLException {

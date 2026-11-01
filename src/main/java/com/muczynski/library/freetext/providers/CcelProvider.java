@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,15 @@ public class CcelProvider implements FreeTextProvider {
 
     private static final String SEARCH_URL = "https://www.ccel.org/search";
     private static final String BASE_URL = "https://www.ccel.org";
+    private static final Pattern AUTHOR_SLUG = Pattern.compile(
+            "ccel\\.org/ccel/([^/]+)/", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Series editors. Their slug is not the author of the work, so an exact title
+     * may still be that author's text. Any other slug has to be the author.
+     */
+    private static final Set<String> EDITOR_SLUGS = Set.of(
+            "schaff", "roberts", "donaldson", "ccel", "wheaton");
 
     @Autowired
     @Qualifier("providerRestTemplate")
@@ -109,10 +119,15 @@ public class CcelProvider implements FreeTextProvider {
                     String cardTitle = titleMatcher.group(1).trim();
 
                     if (TitleMatcher.titleMatches(cardTitle, title)) {
-                        // Found matching title, get the URL from this card
+                        // Found matching title, get the URL from this card.
+                        // The path is /ccel/{authorSlug}/{work}/. A similar title by
+                        // another author is rejected when that slug is a different person.
                         Matcher urlMatcher = urlPattern.matcher(cardHtml);
                         if (urlMatcher.find()) {
-                            return FreeTextLookupResult.success(getProviderName(), urlMatcher.group(1));
+                            String foundUrl = urlMatcher.group(1);
+                            if (authorAgrees(foundUrl, authorName, cardTitle, title)) {
+                                return FreeTextLookupResult.success(getProviderName(), foundUrl);
+                            }
                         }
                     }
                 }
@@ -130,5 +145,24 @@ public class CcelProvider implements FreeTextProvider {
             log.warn("CCEL search failed: {}", rootMessage);
             return FreeTextLookupResult.error(getProviderName(), "Search error: " + rootMessage);
         }
+    }
+
+    /**
+     * When the catalog names an author, the CCEL author slug must be that person.
+     * A card with no author slug is kept only for an exact title, not a fuzzy one.
+     */
+    private boolean authorAgrees(String url, String authorName, String cardTitle, String targetTitle) {
+        if (authorName == null || authorName.isBlank()) {
+            return true;
+        }
+        Matcher slug = AUTHOR_SLUG.matcher(url);
+        if (!slug.find()) {
+            return TitleMatcher.sameTitle(cardTitle, targetTitle);
+        }
+        String authorSlug = slug.group(1).toLowerCase();
+        if (EDITOR_SLUGS.contains(authorSlug)) {
+            return TitleMatcher.sameTitle(cardTitle, targetTitle);
+        }
+        return TitleMatcher.authorMatchesSlug(authorSlug, authorName);
     }
 }

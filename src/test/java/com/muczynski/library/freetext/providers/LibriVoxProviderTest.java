@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -74,6 +75,38 @@ class LibriVoxProviderTest {
                             && !decoded.contains("title=^wisdom father brown");
                 }),
                 any());
+    }
+
+    @Test
+    void search_rejectsSameTitleByDifferentAuthor() {
+        when(restTemplate.getForObject(anyString(), any())).thenReturn(priesthoodRecording());
+
+        FreeTextLookupResult result = provider.search("On the Priesthood", "John of Avila");
+
+        assertFalse(result.isFound());
+    }
+
+    @Test
+    void search_acceptsSameTitleBySameAuthor() {
+        when(restTemplate.getForObject(anyString(), any())).thenReturn(priesthoodRecording());
+
+        FreeTextLookupResult result = provider.search("On the Priesthood", "Saint John Chrysostom");
+
+        assertTrue(result.isFound());
+        assertEquals("https://librivox.org/on-the-priesthood/", result.getUrl());
+    }
+
+    private static LibriVoxProvider.LibriVoxResponse priesthoodRecording() {
+        LibriVoxProvider.LibriVoxAuthor author = new LibriVoxProvider.LibriVoxAuthor();
+        author.setFirstName("John");
+        author.setLastName("Chrysostom");
+        LibriVoxProvider.LibriVoxBook book = new LibriVoxProvider.LibriVoxBook();
+        book.setTitle("On the Priesthood");
+        book.setUrlLibrivox("https://librivox.org/on-the-priesthood/");
+        book.setAuthors(List.of(author));
+        LibriVoxProvider.LibriVoxResponse response = new LibriVoxProvider.LibriVoxResponse();
+        response.setBooks(List.of(book));
+        return response;
     }
 
     @Test

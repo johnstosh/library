@@ -121,7 +121,7 @@ function ActionChip({
 function DuplicateBookCell({
   bookId,
   title,
-  alternateTitle,
+  alternateTitles,
   authorName,
   authorAlternates,
   kinds,
@@ -129,13 +129,14 @@ function DuplicateBookCell({
 }: {
   bookId: number
   title?: string
-  alternateTitle?: string
+  alternateTitles?: string[]
   authorName?: string
   authorAlternates?: string[]
   kinds: string[]
   side: 'a' | 'b'
 }) {
   const alternates = (authorAlternates ?? []).filter((name) => name && name.trim())
+  const titles = (alternateTitles ?? []).filter((name) => name && name.trim())
   return (
     <td className="px-4 py-3 align-top break-words">
       <Link
@@ -145,8 +146,10 @@ function DuplicateBookCell({
       >
         #{bookId} {title || '(no title)'}
       </Link>
-      {alternateTitle && (
-        <div className="text-xs text-gray-500 mt-0.5">Alt: {alternateTitle}</div>
+      {titles.length > 0 && (
+        <div className="text-xs text-gray-500 mt-0.5" data-test={`dup-book-${side}-alternates`}>
+          Alt: {titles.join(' · ')}
+        </div>
       )}
       {authorName && <div className="text-xs text-gray-600 mt-0.5">{authorName}</div>}
       {alternates.length > 0 && (
@@ -1052,7 +1055,7 @@ export function DataManagementPage() {
                         <DuplicateBookCell
                           bookId={pair.bookAId}
                           title={pair.bookATitle}
-                          alternateTitle={pair.bookAAlternateTitle}
+                          alternateTitles={pair.bookAAlternateTitles}
                           authorName={pair.bookAAuthorName}
                           authorAlternates={pair.bookAAuthorAlternateNames}
                           kinds={pair.bookACatalogLabels ?? []}
@@ -1061,7 +1064,7 @@ export function DataManagementPage() {
                         <DuplicateBookCell
                           bookId={pair.bookBId}
                           title={pair.bookBTitle}
-                          alternateTitle={pair.bookBAlternateTitle}
+                          alternateTitles={pair.bookBAlternateTitles}
                           authorName={pair.bookBAuthorName}
                           authorAlternates={pair.bookBAuthorAlternateNames}
                           kinds={pair.bookBCatalogLabels ?? []}

@@ -4,6 +4,7 @@
 package com.muczynski.library.freetext;
 
 import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -37,6 +38,16 @@ public final class TitleMatcher {
     );
 
     private static final Pattern ABBREVIATION_PATTERN = Pattern.compile("\\b(fr|st)\\b");
+
+    /**
+     * Words that introduce a continuation of the same work ("and other stories",
+     * "and selected writings"), not a second independently titled work.
+     */
+    private static final Set<String> CONTINUATION_WORDS = Set.of(
+            "other", "others", "selected", "selections", "complete", "including",
+            "volume", "vol", "part", "parts", "excerpt", "excerpts", "abridged",
+            "unabridged", "revised", "edition", "supplement", "appendix"
+    );
 
     private TitleMatcher() {
         // Utility class
@@ -164,15 +175,18 @@ public final class TitleMatcher {
             return true;
         }
 
-        // Contains match for longer titles (to handle slight variations)
-        if (normalizedCandidate.length() > 15 && normalizedTarget.length() > 15) {
-            if (normalizedCandidate.contains(normalizedTarget) || normalizedTarget.contains(normalizedCandidate)) {
-                return true;
-            }
+        // "Treatise on the Love of God & Treatise on the Priesthood" is two works.
+        // A prefix, a buried phrase ("on the priesthood"), or a 70% word overlap
+        // must not attach one of those works to the other, or to a different author
+        // who used a similar title.
+        if (isJoinedWorks(candidate) || isJoinedWorks(target)) {
+            return false;
         }
 
         // Prefix match: if one title starts with the other, it's likely the same book
-        // with different subtitle (e.g., "War and Peace" vs "War and Peace: Complete Edition")
+        // with different subtitle (e.g., "War and Peace" vs "War and Peace: Complete Edition").
+        // An interior substring is not a match: "On the Priesthood" sits inside
+        // "Treatise on the Love of God & Treatise on the Priesthood" and is a different book.
         if (normalizedCandidate.startsWith(normalizedTarget) || normalizedTarget.startsWith(normalizedCandidate)) {
             // Only accept if the shorter one has at least 2 significant words
             // to prevent single words from matching everything
@@ -186,6 +200,151 @@ public final class TitleMatcher {
         // Not on main titles alone: "Paradise of the Desert Fathers" would then pass
         // for "The Sayings of the Desert Fathers: The Alphabetical Collection".
         return wordsMatch(normalizedCandidate, normalizedTarget);
+    }
+
+    /**
+     * Same work with no fuzzy overlap: normalized titles are equal, or the main
+     * titles are equal and the subtitles do not name two different books.
+     * Used when a provider cannot see the author of a hit.
+     */
+    public static boolean sameTitle(String candidate, String target) {
+        if (candidate == null || target == null) {
+            return false;
+        }
+        String normalizedCandidate = normalizeForComparison(candidate);
+        String normalizedTarget = normalizeForComparison(target);
+        if (normalizedCandidate.isEmpty() || normalizedTarget.isEmpty()) {
+            return false;
+        }
+        if (normalizedCandidate.equals(normalizedTarget)) {
+            return true;
+        }
+        String candidateSub = normalizeForComparison(subtitle(candidate));
+        String targetSub = normalizeForComparison(subtitle(target));
+        if (!candidateSub.isEmpty() && !targetSub.isEmpty()
+                && !subtitlesCompatible(candidateSub, targetSub)) {
+            return false;
+        }
+        String candidateMain = normalizeForComparison(mainTitle(candidate));
+        String targetMain = normalizeForComparison(mainTitle(target));
+        return !candidateMain.isEmpty() && candidateMain.equals(targetMain);
+    }
+
+    /**
+     * A hit may be kept when the titles are the same work and, if both sides name
+     * an author, the authors are the same person. A provider that cannot see the
+     * hit's author may keep only a {@link #sameTitle} match.
+     */
+    public static boolean accepts(String candidateTitle, String candidateAuthor,
+                                  String targetTitle, String targetAuthor) {
+        if (!titleMatches(candidateTitle, targetTitle)) {
+            return false;
+        }
+        boolean wantAuthor = targetAuthor != null && !targetAuthor.isBlank();
+        boolean haveAuthor = candidateAuthor != null && !candidateAuthor.isBlank();
+        if (wantAuthor && haveAuthor) {
+            return authorMatches(candidateAuthor, targetAuthor);
+        }
+        if (wantAuthor) {
+            return sameTitle(candidateTitle, targetTitle);
+        }
+        return true;
+    }
+
+    /**
+     * Author slug from a URL path, such as CCEL {@code ccel/schaff/npnf109}.
+     * Accepts a last name contained in the slug ({@code chrysostom} in
+     * {@code johnchrysostom}) as well as a normal author match.
+     */
+    public static boolean authorMatchesSlug(String slug, String authorName) {
+        if (slug == null || authorName == null || slug.isBlank() || authorName.isBlank()) {
+            return false;
+        }
+        if (authorMatches(slug, authorName)) {
+            return true;
+        }
+        String slugNorm = stripAccents(slug).toLowerCase().replaceAll("[^a-z]", "");
+        String authorNorm = normalizeAuthor(authorName).replace(" ", "");
+        if (slugNorm.isEmpty() || authorNorm.isEmpty()) {
+            return false;
+        }
+        if (slugNorm.equals(authorNorm)) {
+            return true;
+        }
+        String lastName = getLastName(normalizeAuthor(authorName));
+        return lastName.length() > 2 && slugNorm.contains(lastName);
+    }
+
+    /**
+     * True when a title joins two independently named works, as in
+     * "Treatise on the Love of God &amp; Treatise on the Priesthood".
+     * "War and Peace" is one title. "The Brothers Karamazov and Other Stories"
+     * is a continuation, not a second work.
+     */
+    static boolean isJoinedWorks(String title) {
+        if (title == null || title.isBlank()) {
+            return false;
+        }
+        String clean = title.replaceAll("\\s+/\\s+.*$", "");
+        int colon = clean.indexOf(':');
+        if (colon > 0) {
+            clean = clean.substring(0, colon);
+        }
+        return joinedOnAmpersand(clean) || joinedOnWord(clean, "and");
+    }
+
+    private static boolean joinedOnAmpersand(String title) {
+        String[] parts = title.split("\\s*&\\s*");
+        if (parts.length < 2) {
+            return false;
+        }
+        for (int i = 0; i < parts.length - 1; i++) {
+            String right = parts[i + 1];
+            if (bothSubstantial(parts[i], right) && !continuation(right)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean joinedOnWord(String title, String word) {
+        String[] parts = title.split("(?i)\\s+" + word + "\\s+");
+        if (parts.length < 2) {
+            return false;
+        }
+        for (int i = 0; i < parts.length - 1; i++) {
+            String left = parts[i];
+            String right = String.join(" " + word + " ", Arrays.copyOfRange(parts, i + 1, parts.length));
+            if (bothSubstantial(left, right) && !continuation(right)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean bothSubstantial(String left, String right) {
+        return significantCount(left) >= 2 && significantCount(right) >= 2;
+    }
+
+    private static int significantCount(String text) {
+        String normalized = normalizeForComparison(text);
+        if (normalized.isEmpty()) {
+            return 0;
+        }
+        return countSignificantWords(normalized.split("\\s+"));
+    }
+
+    private static boolean continuation(String right) {
+        String normalized = normalizeForComparison(right);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        for (String word : normalized.split("\\s+")) {
+            if (isSignificantWord(word)) {
+                return CONTINUATION_WORDS.contains(word);
+            }
+        }
+        return false;
     }
 
     /**

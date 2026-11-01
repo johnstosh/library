@@ -67,25 +67,15 @@ public class EwtnLibraryProvider implements FreeTextProvider {
                 return FreeTextLookupResult.error(getProviderName(), "Unable to load EWTN library sitemap");
             }
 
-            String fuzzyMatch = null;
             for (String url : urls) {
                 String slugTitle = slugToTitle(url);
-                if (slugTitle.isBlank() || !TitleMatcher.titleMatches(slugTitle, title)) {
+                // The sitemap has no author. A fuzzy title match would attach a
+                // similar title by someone else, so only the same title is kept.
+                if (slugTitle.isBlank() || !TitleMatcher.sameTitle(slugTitle, title)) {
                     continue;
                 }
-                if (TitleMatcher.normalizeForComparison(slugTitle)
-                        .equals(TitleMatcher.normalizeForComparison(title))) {
-                    log.debug("EWTN: Exact match '{}' -> {}", slugTitle, url);
-                    return FreeTextLookupResult.success(getProviderName(), url);
-                }
-                if (fuzzyMatch == null) {
-                    fuzzyMatch = url;
-                }
-            }
-
-            if (fuzzyMatch != null) {
-                log.debug("EWTN: Fuzzy match -> {}", fuzzyMatch);
-                return FreeTextLookupResult.success(getProviderName(), fuzzyMatch);
+                log.debug("EWTN: Match '{}' -> {}", slugTitle, url);
+                return FreeTextLookupResult.success(getProviderName(), url);
             }
 
             return FreeTextLookupResult.error(getProviderName(), "Not found in EWTN library");

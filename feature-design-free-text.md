@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site. Lookup tries the book's title and alternate title with the author's name and each alternate name.
+This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site. Lookup tries the book's title and every alternate title with the author's name and each alternate name.
 
 ## Architecture
 
@@ -1123,10 +1123,20 @@ Current rules (see `TitleMatcher`):
 - A main-title match is accepted when at most one side has a subtitle, or both subtitles
   agree. Two different subtitles on the same main title do not match
   ("Jesus of Nazareth: The Infancy Narratives" is not "Jesus of Nazareth: Holy Week").
+- A title that joins two works with "&" or "and" ("Treatise on the Love of God &
+  Treatise on the Priesthood") matches only that whole title. It does not match either
+  work alone, and a shorter title buried inside it is not a match. "War and Peace" stays
+  one title. "and other stories" or "including all plays" stays the same book.
+- There is no interior "contains" match. A longer title may still start with a shorter
+  one ("Complete Works of William Shakespeare" and the same title "Including All Plays").
 - Accents are stripped and "&" equals "and".
 - Author names in catalog form ("Sheen, Fulton J. (Fulton John), 1895-1979") are put into
   "first last" order, with fuller-name parentheses and dates removed, before last names
   are compared.
+- A hit is kept only when the authors agree, if both sides name one. LibriVox, CCEL,
+  and the LOC catalog check the author on the result. EWTN, Catholic Planet, and any
+  other hit that does not name an author keep only the same title, not a fuzzy overlap.
+  The Online Books Page does not read titles off a "nearby names" page.
 
 The sketch below is the original design.
 

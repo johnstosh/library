@@ -13,10 +13,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Runs {@link EssayColumnMigration} before Hibernate builds
- * {@code entityManagerFactory}. That build is the schema update, and it casts
- * an {@code oid} essay column to the object id unless the large objects have
- * already been copied.
+ * Runs {@link EssayColumnMigration} and {@link AlternateTitleMigration} before
+ * Hibernate builds {@code entityManagerFactory}. That build is the schema
+ * update. It casts an {@code oid} essay column to the object id unless the
+ * large objects have already been copied, and it does not convert
+ * {@code alternate_title} into {@code text[]}.
  */
 @Configuration
 public class EssayColumnMigrationConfig {
@@ -35,6 +36,9 @@ public class EssayColumnMigrationConfig {
             }
             if (!dependsOn.contains("essayColumnMigration")) {
                 dependsOn.add("essayColumnMigration");
+            }
+            if (!dependsOn.contains("alternateTitleMigration")) {
+                dependsOn.add("alternateTitleMigration");
             }
             entityManagerFactory.setDependsOn(dependsOn.toArray(String[]::new));
         };

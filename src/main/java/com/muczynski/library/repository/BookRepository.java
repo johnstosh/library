@@ -196,7 +196,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         LEFT JOIN author a ON a.id = b.author_id
         WHERE b.status = 'ACTIVE'
           AND (
-            (:useTitle = 1 AND strpos(lower(b.title), :title) > 0)
+            (:useTitle = 1 AND (
+                strpos(lower(b.title), :title) > 0
+                OR EXISTS (
+                    SELECT 1 FROM unnest(b.alternate_titles) AS alt
+                    WHERE alt IS NOT NULL AND strpos(lower(alt), :title) > 0
+                )
+            ))
             OR (:useAuthor = 1 AND (
                 (a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
                 OR EXISTS (
@@ -207,8 +213,20 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             OR (:useLoc = 1 AND strpos(regexp_replace(lower(coalesce(b.loc_number, '')), '\\s+', '', 'g'), :loc) > 0)
           )
         ORDER BY (
-            (CASE WHEN :useTitle = 1 AND strpos(lower(b.title), :title) > 0 THEN 10 ELSE 0 END)
-            + (CASE WHEN :useTitle = 1 AND lower(b.title) = :title THEN 20 ELSE 0 END)
+            (CASE WHEN :useTitle = 1 AND (
+                strpos(lower(b.title), :title) > 0
+                OR EXISTS (
+                    SELECT 1 FROM unnest(b.alternate_titles) AS alt
+                    WHERE alt IS NOT NULL AND strpos(lower(alt), :title) > 0
+                )
+            ) THEN 10 ELSE 0 END)
+            + (CASE WHEN :useTitle = 1 AND (
+                lower(b.title) = :title
+                OR EXISTS (
+                    SELECT 1 FROM unnest(b.alternate_titles) AS alt
+                    WHERE alt IS NOT NULL AND lower(alt) = :title
+                )
+            ) THEN 20 ELSE 0 END)
             + (CASE WHEN :useAuthor = 1 AND (
                 (a.name IS NOT NULL AND strpos(lower(a.name), :author) > 0)
                 OR EXISTS (
@@ -374,7 +392,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     interface DuplicateTitleProjection {
         Long getId();
         String getTitle();
-        String getAlternateTitle();
+        List<String> getAlternateTitles();
         String getAuthorName();
         BookStatus getStatus();
         Long getAuthorId();
@@ -386,7 +404,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * Books for duplicate-title matching, excluding WITHDRAWN.
      * A null status is included. Avoids LOBs and full entities.
      */
-    @Query("SELECT b.id as id, b.title as title, b.alternateTitle as alternateTitle, a.name as authorName, b.status as status, "
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitles as alternateTitles, a.name as authorName, b.status as status, "
             + "a.id as authorId, b.locNumber as locNumber, b.electronicResource as electronicResource "
             + "FROM Book b LEFT JOIN b.author a "
             + "WHERE b.status IS NULL OR b.status <> com.muczynski.library.domain.BookStatus.WITHDRAWN")

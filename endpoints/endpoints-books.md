@@ -143,7 +143,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 **Authentication:** Public (permitAll)
 
 **Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU and ACLA sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
-- `q` — title, alternate title, or author name
+- `q` — title, any alternate title, or author name
 - `labels` — comma-separated; the book must have every label
 - `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
 - `readingDifficulty` — comma-separated OR group; `unset` also matches a null difficulty
@@ -164,7 +164,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - The Books page loads full rows for the first 100 matches, then the next 100 when the user scrolls to the bottom or clicks Load more. Each `/by-ids` request stays at most 100 ids.
 
 ### GET /api/books/checkout-matches
-Active books for the checkout form. Returns at most 10 rows, best match first. A title, author, or call number shorter than 3 characters is ignored. The response is empty when every field is shorter than that. A book matches when any searched field contains the text. A containing match scores 10 and an exact match scores 20 more. Call numbers are compared with whitespace removed. Plot and description are not included.
+Active books for the checkout form. Returns at most 10 rows, best match first. A title, author, or call number shorter than 3 characters is ignored. The response is empty when every field is shorter than that. A book matches when any searched field contains the text. The title field matches the primary title or any alternate title. A containing match scores 10 and an exact match scores 20 more. A hit on the primary title or an alternate title scores once, so both matching does not add the points twice. Call numbers are compared with whitespace removed. Plot and description are not included.
 
 **Authentication:** Public (permitAll)
 

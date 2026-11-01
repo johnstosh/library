@@ -23,6 +23,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.muczynski.library.domain.DuplicateTitleAction;
+
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -112,9 +115,11 @@ class DuplicateTitleActionIntegrationTest {
         shelf.setLocNumber("BR65 .A9");
         shelf.setFreeTextUrl("https://shelf.example/a");
         shelf.setElectronicResource(false);
+        shelf.setAlternateTitles(List.of("The Confessions"));
         Book electronic = book("Confession", BookStatus.ACTIVE, augustine);
         electronic.setElectronicResource(true);
         electronic.setFreeTextUrl("https://electronic.example/b");
+        electronic.setAlternateTitles(List.of("Confessiones"));
         bookRepository.saveAll(java.util.List.of(shelf, electronic));
         bookRepository.flush();
 
@@ -125,6 +130,7 @@ class DuplicateTitleActionIntegrationTest {
         Book kept = bookRepository.findById(shelf.getId()).orElseThrow();
         assertEquals("BR65 .A9", kept.getLocNumber());
         assertEquals("https://shelf.example/a https://electronic.example/b", kept.getFreeTextUrl());
+        assertEquals(List.of("The Confessions", "Confessiones", "Confession"), kept.getAlternateTitles());
         assertTrue(Boolean.TRUE.equals(kept.getElectronicResource()));
         assertTrue(merged.getSummary().contains("Call number"));
 
@@ -137,6 +143,8 @@ class DuplicateTitleActionIntegrationTest {
         Book shelfAgain = bookRepository.findById(shelf.getId()).orElseThrow();
         assertEquals("https://shelf.example/a", shelfAgain.getFreeTextUrl());
         assertEquals("BR65 .A9", shelfAgain.getLocNumber());
+        assertEquals(List.of("The Confessions"), shelfAgain.getAlternateTitles());
+        assertEquals(List.of("Confessiones"), restored.getAlternateTitles());
         assertFalse(Boolean.TRUE.equals(shelfAgain.getElectronicResource()));
     }
 
@@ -161,7 +169,7 @@ class DuplicateTitleActionIntegrationTest {
         Book higher = bookRepository.findById(second.getId()).orElseThrow();
         assertEquals("Confessions", lower.getTitle());
         assertEquals("Confession, c. 2", higher.getTitle());
-        assertEquals("Confession", higher.getAlternateTitle());
+        assertEquals(null, higher.getAlternateTitles());
         assertEquals("BR65", lower.getLocNumber());
         assertEquals("BR65.A", higher.getLocNumber());
         assertTrue(fixed.getSummary().contains("Call number"));
@@ -171,7 +179,37 @@ class DuplicateTitleActionIntegrationTest {
 
         assertEquals("Confessions", bookRepository.findById(first.getId()).orElseThrow().getTitle());
         assertEquals("Confession", bookRepository.findById(second.getId()).orElseThrow().getTitle());
-        assertEquals(null, bookRepository.findById(second.getId()).orElseThrow().getAlternateTitle());
+        assertEquals(null, bookRepository.findById(second.getId()).orElseThrow().getAlternateTitles());
+    }
+
+    @Test
+    void undoFixTitlesReadsAnOldStringAlternate() {
+        Author augustine = author("Francis de Sales");
+        Book first = book("AltArray Snapshot Work", BookStatus.ACTIVE, augustine);
+        first.setLocNumber("BV4817");
+        Book second = book("AltArray Snapshot Work, c. 2", BookStatus.ACTIVE, augustine);
+        second.setLocNumber("BV4817.A");
+        second.setAlternateTitles(List.of("Confession"));
+        bookRepository.saveAll(List.of(first, second));
+        bookRepository.flush();
+
+        DuplicateTitleAction row = new DuplicateTitleAction();
+        row.setActionKind(DuplicateTitleAction.FIX_TITLES);
+        row.setBookAId(first.getId());
+        row.setBookBId(second.getId());
+        row.setSummary("Old snapshot stored one alternate title as a string.");
+        row.setSnapshotJson("""
+                {"kind":"FIX_TITLES","fixBookAId":%d,"fixBookATitle":"AltArray Snapshot Work","fixBookAAlternate":null,"fixBookBId":%d,"fixBookBTitle":"AltArray Snapshot Other","fixBookBAlternate":"On Loving God"}
+                """.formatted(first.getId(), second.getId()));
+        actionRepository.saveAndFlush(row);
+
+        actionService.undoFixTitles(row.getId());
+        refresh();
+
+        assertEquals("AltArray Snapshot Work", bookRepository.findById(first.getId()).orElseThrow().getTitle());
+        Book restored = bookRepository.findById(second.getId()).orElseThrow();
+        assertEquals("AltArray Snapshot Other", restored.getTitle());
+        assertEquals(List.of("On Loving God"), restored.getAlternateTitles());
     }
 
     @Test
@@ -196,7 +234,7 @@ class DuplicateTitleActionIntegrationTest {
 
         assertEquals("Confessions", bookRepository.findById(first.getId()).orElseThrow().getTitle());
         assertEquals("Confessions, c. 5", bookRepository.findById(near.getId()).orElseThrow().getTitle());
-        assertEquals("confessions", bookRepository.findById(near.getId()).orElseThrow().getAlternateTitle());
+        assertEquals(null, bookRepository.findById(near.getId()).orElseThrow().getAlternateTitles());
         assertEquals("Confessions, c. 2", bookRepository.findById(copy2.getId()).orElseThrow().getTitle());
         assertEquals("Confessions, c. 3", bookRepository.findById(copy3.getId()).orElseThrow().getTitle());
         assertEquals("Confessions, c. 4", bookRepository.findById(copy4.getId()).orElseThrow().getTitle());
