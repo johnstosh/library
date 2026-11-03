@@ -45,9 +45,10 @@ import java.util.function.Supplier;
  * after {@link #FINISHED_TTL}, and only the small result DTO / error text is retained (never
  * photo bytes). At most {@link #WORKER_THREADS} jobs run at once with a short queue.</p>
  *
- * <p>Works because prod runs a single Cloud Run instance with CPU always allocated
- * (deploy.sh: --max-instances 1, --no-cpu-throttling). The job's work must not rely on an
- * ambient DB transaction; the service methods it calls open their own short transactions.</p>
+ * <p>Prod runs a single Cloud Run instance (deploy.sh: --max-instances 1). CPU is
+ * allocated only while a request is in progress, so a job advances during polls and
+ * pauses between them. The job's work must not rely on an ambient DB transaction;
+ * the service methods it calls open their own short transactions.</p>
  */
 @Service
 public class GrokJobService {

@@ -323,8 +323,9 @@ Poll every few seconds (frontend: 3s). Authenticated; a job is visible only to t
 
 **Limits (in memory, 512Mi container):** at most 50 jobs kept, 3 run at once with a queue of 20
 (`503 {"code": "GROK_JOBS_BUSY"}` when full); finished jobs expire after 15 minutes. Only the result
-DTO / error text is kept, never photo bytes. Relies on a single Cloud Run instance with CPU always
-allocated (deploy.sh `--max-instances 1 --no-cpu-throttling`); a restart drops running jobs (poll returns 404).
+DTO / error text is kept, never photo bytes. Relies on a single Cloud Run instance
+(deploy.sh `--max-instances 1`). CPU is allocated only while a request is in progress, so the job
+advances during polls and pauses between them. A restart drops running jobs (poll returns 404).
 The Grok call holds no DB transaction: photo/book data is read and results are saved in short transactions.
 
 ---

@@ -7,12 +7,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Sends queued mail after the quiet period. Cloud Run keeps an idle instance
- * for a while after the last request (at most 15 minutes). The service is
- * deployed with CPU allocated while idle so this timer can run during that
- * window. If the instance is stopped first, the row stays in the database and
- * this job sends it the next time the process is up and the quiet period has
- * already passed.
+ * Sends queued mail after the quiet period. CPU is throttled between requests,
+ * so this timer runs when a request wakes the instance. If the instance stopped
+ * first, the row stays in the database and this job sends it the next time the
+ * process is up and the quiet period has already passed.
  */
 @Component
 public class EmailChangeFlushJob {
