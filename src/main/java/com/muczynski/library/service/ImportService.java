@@ -610,6 +610,11 @@ public class ImportService {
         if (bDto.getAclaEbookAvailable() != null) book.setAclaEbookAvailable(bDto.getAclaEbookAvailable());
         if (bDto.getAclaLastChecked() != null) book.setAclaLastChecked(bDto.getAclaLastChecked());
         if (bDto.getAclaLookupError() != null) book.setAclaLookupError(bDto.getAclaLookupError());
+        if (bDto.getWccAudioAvailable() != null) book.setWccAudioAvailable(bDto.getWccAudioAvailable());
+        if (bDto.getWccPaperAvailable() != null) book.setWccPaperAvailable(bDto.getWccPaperAvailable());
+        if (bDto.getWccEbookAvailable() != null) book.setWccEbookAvailable(bDto.getWccEbookAvailable());
+        if (bDto.getWccLastChecked() != null) book.setWccLastChecked(bDto.getWccLastChecked());
+        if (bDto.getWccLookupError() != null) book.setWccLookupError(bDto.getWccLookupError());
 
         book = bookRepository.save(book);
     }
@@ -1227,6 +1232,11 @@ public class ImportService {
         bDto.setAclaEbookAvailable(book.getAclaEbookAvailable());
         bDto.setAclaLastChecked(book.getAclaLastChecked());
         bDto.setAclaLookupError(emptyToNull(book.getAclaLookupError()));
+        bDto.setWccAudioAvailable(book.getWccAudioAvailable());
+        bDto.setWccPaperAvailable(book.getWccPaperAvailable());
+        bDto.setWccEbookAvailable(book.getWccEbookAvailable());
+        bDto.setWccLastChecked(book.getWccLastChecked());
+        bDto.setWccLookupError(emptyToNull(book.getWccLookupError()));
         bDto.setReadingDifficulty(book.getReadingDifficulty());
         bDto.setBinding(book.getBinding());
         bDto.setDesireToPurchase(book.getDesireToPurchase());
@@ -1755,7 +1765,11 @@ public class ImportService {
             bookRepository.countAvailableAtAcla(),
             bookRepository.countByAclaPaperAvailableTrue(),
             bookRepository.countByAclaEbookAvailableTrue(),
-            bookRepository.countByAclaAudioAvailableTrue()
+            bookRepository.countByAclaAudioAvailableTrue(),
+            bookRepository.countAvailableAtWcc(),
+            bookRepository.countByWccPaperAvailableTrue(),
+            bookRepository.countByWccEbookAvailableTrue(),
+            bookRepository.countByWccAudioAvailableTrue()
         );
     }
 }

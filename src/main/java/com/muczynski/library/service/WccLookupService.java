@@ -1,0 +1,382 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
+package com.muczynski.library.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.AuthorNames;
+import com.muczynski.library.domain.Book;
+import com.muczynski.library.dto.WccLookupResultDto;
+import com.muczynski.library.repository.BookRepository;
+import com.muczynski.library.service.BooksFromFeedService;
+import com.muczynski.library.util.LookupErrorMessages;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+/**
+ * Looks up book availability (audio, paper, ebook) at Washtenaw Community College's Bailey Library via the public
+ * search API used by its Ex Libris Primo VE catalog frontend, and stores the result on the
+ * Book entity. Only "local" (context == "L", i.e. actually held/subscribed by WCC) results are
+ * considered — the wider "PC" central-discovery-index results (e.g. journal articles indexed
+ * but not held) are excluded.
+ */
+@Service
+@Slf4j
+@Transactional
+public class WccLookupService {
+
+    private static final String SEARCH_URL = "https://wccnet.primo.exlibrisgroup.com/primaws/rest/pub/pnxs";
+    private static final String INSTITUTION = "01WCCO_INST";
+    private static final String VID = "01WCCO_INST:01WCCO";
+
+    /**
+     * Matches trailing physical-format labels our own titles often carry that WCC's
+     * catalog titles don't have, e.g. " (DVD)", ", Audio CD". Copy-number suffixes
+     * (", c. 2") are stripped separately via {@link Book#stripCopySuffix(String)}.
+     * Applied repeatedly so stacked suffixes (", c. 2, Audio CD") are all stripped
+     * before the title is used to search or match against WCC.
+     */
+    private static final Pattern TRAILING_FORMAT_SUFFIX_PATTERN = Pattern.compile(
+            "(?i)(\\s*\\((?:dvd|cd|vhs|blu-?ray|book on cd|large print|audiobook)\\)"
+                    + "|,\\s*(?:audio\\s*cd|book\\s*on\\s*cd|large\\s*print|dvd|cd|vhs))\\s*$");
+
+    private final BookRepository bookRepository;
+    private final RestTemplate wccRestTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public WccLookupService(BookRepository bookRepository,
+                             @Qualifier("wccRestTemplate") RestTemplate wccRestTemplate) {
+        this.bookRepository = bookRepository;
+        this.wccRestTemplate = wccRestTemplate;
+    }
+
+    /**
+     * Lookup and update Washtenaw Community College availability for a single book.
+     */
+    public WccLookupResultDto lookupAndUpdateBook(Long bookId) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new com.muczynski.library.exception.LibraryException("Book not found: " + bookId));
+
+        return performWccLookup(book);
+    }
+
+    private WccLookupResultDto performWccLookup(Book book) {
+        List<String> titles = Book.titlesToSearch(book);
+        if (titles.isEmpty()) {
+            return WccLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Book has no title")
+                    .build();
+        }
+        // Temporary-title skip on primary only
+        if (BooksFromFeedService.isTemporaryTitle(book.getTitle())) {
+            log.info("Skipping WCC lookup for temporary title: {}", book.getTitle());
+            book.setWccLastChecked(LocalDateTime.now());
+            book.setWccLookupError("Not Ready - Temporary title");
+            bookRepository.save(book);
+            return WccLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage("Not Ready - Temporary title")
+                    .build();
+        }
+
+        String primaryTitle = book.getTitle();
+
+        try {
+            JsonNode matches = objectMapper.createArrayNode();
+            String matchedTitle = null;
+            for (String searchTitle : titles) {
+                String cleaned = cleanTitle(searchTitle);
+                for (String candidateTitle : buildTitleCandidates(cleaned)) {
+                    for (String authorLastName : AuthorNames.lookupLastNames(book.getAuthor())) {
+                        for (String queryAuthor : buildQueryAuthors(authorLastName)) {
+                            JsonNode entries = search(candidateTitle, queryAuthor);
+                            // Verification checks this form of the book's author. Query variants
+                            // only improve WCC's hit rate; they do not relax what counts as a match.
+                            JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
+                            if (!filtered.isEmpty()) {
+                                matches = filtered;
+                                matchedTitle = filtered.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
+                                break;
+                            }
+                        }
+                        if (!matches.isEmpty()) {
+                            break;
+                        }
+                    }
+                    if (!matches.isEmpty()) {
+                        break;
+                    }
+                }
+                if (!matches.isEmpty()) {
+                    break;
+                }
+            }
+
+            if (matches.isEmpty()) {
+                // "Not held" only if both titles empty. On primary exception still try alternate; write merged flags once (do not clear mid-merge).
+                book.setWccAudioAvailable(false);
+                book.setWccPaperAvailable(false);
+                book.setWccEbookAvailable(false);
+                book.setWccLastChecked(LocalDateTime.now());
+                book.setWccLookupError("Not held by Washtenaw Community College");
+                bookRepository.save(book);
+                return WccLookupResultDto.builder()
+                        .bookId(book.getId())
+                        .success(false)
+                        .audioAvailable(false)
+                        .paperAvailable(false)
+                        .ebookAvailable(false)
+                        .errorMessage("Not held by Washtenaw Community College")
+                        .build();
+            }
+
+            boolean audio = false;
+            boolean paper = false;
+            boolean ebook = false;
+            String finalMatchedTitle = matchedTitle != null ? matchedTitle : matches.get(0).path("pnx").path("display").path("title").path(0).asText(primaryTitle != null ? primaryTitle : "");
+
+            for (JsonNode entry : matches) {
+                String category = classifyEntry(entry);
+                if ("audio".equals(category)) {
+                    audio = true;
+                } else if ("ebook".equals(category)) {
+                    ebook = true;
+                } else if ("paper".equals(category)) {
+                    paper = true;
+                }
+            }
+
+            book.setWccAudioAvailable(audio);
+            book.setWccPaperAvailable(paper);
+            book.setWccEbookAvailable(ebook);
+            book.setWccLastChecked(LocalDateTime.now());
+            book.setWccLookupError(null);
+            bookRepository.save(book);
+
+            log.info("WCC lookup for book {} ('{}'): audio={}, paper={}, ebook={}",
+                    book.getId(), book.getTitle(), audio, paper, ebook);
+
+            return WccLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(true)
+                    .audioAvailable(audio)
+                    .paperAvailable(paper)
+                    .ebookAvailable(ebook)
+                    .matchedTitle(finalMatchedTitle)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error during WCC lookup for book {}: {}", book.getId(), e.getMessage());
+            String lookupError = LookupErrorMessages.fromException(e);
+            // On primary exception still try alternate; write merged flags once (do not clear mid-merge).
+            book.setWccLastChecked(LocalDateTime.now());
+            book.setWccLookupError(lookupError);
+            bookRepository.save(book);
+            return WccLookupResultDto.builder()
+                    .bookId(book.getId())
+                    .success(false)
+                    .errorMessage(lookupError)
+                    .build();
+        }
+    }
+
+    /**
+     * Builds the ordered list of title candidates to search for: the cleaned title, then, if
+     * it has a colon-delimited subtitle, the truncated core title too - handling cases where
+     * our catalog's title includes a subtitle WCC's doesn't carry (or vice versa). Each
+     * candidate must still be an exact match (after normalization) against an WCC result to
+     * count - this only widens what we search for, not what counts as a match.
+     */
+    private List<String> buildTitleCandidates(String cleanedTitle) {
+        List<String> candidates = new ArrayList<>();
+        candidates.add(cleanedTitle);
+
+        int colonIndex = cleanedTitle.indexOf(':');
+        if (colonIndex > 0) {
+            String truncated = cleanedTitle.substring(0, colonIndex).trim();
+            if (!truncated.isEmpty() && !truncated.equalsIgnoreCase(cleanedTitle)) {
+                candidates.add(truncated);
+            }
+        }
+        return candidates;
+    }
+
+    /**
+     * Builds the ordered list of author values to include in the WCC search text itself
+     * (title + author search first, since it's more likely to rank the real match at the top;
+     * title-only as a fallback). This only affects what we search for - {@link #filterMatches}
+     * always verifies against the book's real author regardless of which query found the
+     * result.
+     */
+    private List<String> buildQueryAuthors(String authorLastName) {
+        List<String> queryAuthors = new ArrayList<>();
+        if (authorLastName != null) {
+            queryAuthors.add(authorLastName);
+        }
+        queryAuthors.add(null);
+        return queryAuthors;
+    }
+
+    /**
+     * Strips trailing catalog noise (copy numbers, physical format labels) from a title
+     * before it's used to search or match against WCC.
+     * See {@link Book#stripCopySuffix(String)} and {@link #TRAILING_FORMAT_SUFFIX_PATTERN}.
+     */
+    private String cleanTitle(String title) {
+        if (title == null) {
+            return "";
+        }
+        String cleaned = title.trim();
+        String previous;
+        do {
+            previous = cleaned;
+            cleaned = Book.stripCopySuffix(cleaned);
+            cleaned = TRAILING_FORMAT_SUFFIX_PATTERN.matcher(cleaned).replaceAll("").trim();
+        } while (!cleaned.equals(previous) && !cleaned.isEmpty());
+        return cleaned.isEmpty() ? title.trim() : cleaned;
+    }
+
+    /**
+     * Calls the WCC Primo pnxs search API and returns the "docs" array of matched records.
+     */
+    private JsonNode search(String title, String authorLastName) {
+        String queryValue = "any,contains,\"" + title + "\"" + (authorLastName != null ? " " + authorLastName : "");
+        String encodedQuery = urlEncode(queryValue);
+
+        String url = SEARCH_URL
+                + "?blendFacetsSeparately=false&disableCache=false&getMore=0"
+                + "&inst=" + INSTITUTION
+                + "&lang=en&limit=10&offset=0"
+                + "&q=" + encodedQuery
+                + "&qExclude=&qInclude=&rapido=false&scope=MyInst_and_CI"
+                + "&skipDelivery=Y&sort=rank&tab=Everything"
+                + "&vid=" + urlEncode(VID);
+
+        // Pass a pre-built URI rather than a String: RestTemplate treats a String URL as a URI
+        // template and re-encodes it via UriComponentsBuilder, which double-encodes the query
+        // string we've already percent-encoded above and makes Primo reject the request with a
+        // 400. A URI is used as-is, with no further encoding.
+        String response = wccRestTemplate.getForObject(URI.create(url), String.class);
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            return root.path("docs");
+        } catch (Exception e) {
+            throw new com.muczynski.library.exception.LibraryException("Failed to parse WCC response", e);
+        }
+    }
+
+    private String urlEncode(String value) {
+        try {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
+        } catch (UnsupportedEncodingException e) {
+            throw new com.muczynski.library.exception.LibraryException("Failed to encode WCC query", e);
+        }
+    }
+
+    /**
+     * Filters the search results down to locally-held entries (context == "L") that exactly
+     * match the book being looked up.
+     *
+     * <p>No fuzzy/substring matching of any kind: the title must be exactly equal (after
+     * normalization) to count at all - this is what stops a short, generic title/name like
+     * "Ellen" or "Joshua" from matching an unrelated title that merely starts with or contains
+     * the same word. Beyond that, an exact title match by itself is only trusted when the
+     * title is more than 4 words long, distinctive enough on its own; a title of 4 words or
+     * fewer additionally requires the book's author's last name to exactly match one of the
+     * words in one of the WCC record's author fields (again no substring matching).
+     */
+    private JsonNode filterMatches(JsonNode entries, String title, String authorLastName) {
+        com.fasterxml.jackson.databind.node.ArrayNode matches = objectMapper.createArrayNode();
+        String normalizedTitle = normalize(title);
+        int titleWordCount = normalizedTitle.isEmpty() ? 0 : normalizedTitle.split(" ").length;
+
+        for (JsonNode entry : entries) {
+            if (!"L".equals(entry.path("context").asText(""))) {
+                continue;
+            }
+            JsonNode display = entry.path("pnx").path("display");
+            String entryTitle = normalize(display.path("title").path(0).asText(""));
+            if (entryTitle.isEmpty() || !entryTitle.equals(normalizedTitle)) {
+                continue;
+            }
+
+            if (titleWordCount <= 4) {
+                if (authorLastName == null) {
+                    continue;
+                }
+                JsonNode addata = entry.path("pnx").path("addata");
+                boolean authorMatches = jsonArrayHasExactAuthorWordMatch(addata.path("au"), authorLastName)
+                        || jsonArrayHasExactAuthorWordMatch(addata.path("addau"), authorLastName);
+                if (!authorMatches) {
+                    continue;
+                }
+            }
+
+            matches.add(entry);
+        }
+        return matches;
+    }
+
+    /**
+     * True if {@code authorLastName} exactly matches one of the (normalized) words across any
+     * element of the given author-name array - a whole-word match, not a substring match, so a
+     * last name like "White" doesn't match "Whitehead" or "Fitzwhite".
+     */
+    private boolean jsonArrayHasExactAuthorWordMatch(JsonNode array, String authorLastName) {
+        String normalizedLastName = normalize(authorLastName);
+        if (normalizedLastName.isEmpty()) {
+            return false;
+        }
+        for (JsonNode element : array) {
+            for (String word : normalize(element.asText("")).split(" ")) {
+                if (word.equals(normalizedLastName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9 ]", "").replaceAll("\\s+", " ").trim();
+    }
+
+    /**
+     * Classifies a matched Primo record into "audio", "ebook", "paper", or "other" based on
+     * its display type ("book"/"audio") and format text (electronic resources describe
+     * themselves as "online resource").
+     */
+    private String classifyEntry(JsonNode entry) {
+        JsonNode display = entry.path("pnx").path("display");
+        String type = display.path("type").path(0).asText("").toLowerCase(Locale.ROOT);
+        String format = display.path("format").path(0).asText("").toLowerCase(Locale.ROOT);
+
+        if ("audio".equals(type)) {
+            return "audio";
+        }
+        if ("book".equals(type)) {
+            return format.contains("online resource") ? "ebook" : "paper";
+        }
+        return "other";
+    }
+}

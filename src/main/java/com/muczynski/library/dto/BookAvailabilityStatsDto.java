@@ -34,4 +34,8 @@ public class BookAvailabilityStatsDto {
     private long aclaPaper;
     private long aclaEbook;
     private long aclaAudio;
+    private long availableAtWcc;
+    private long wccPaper;
+    private long wccEbook;
+    private long wccAudio;
 }

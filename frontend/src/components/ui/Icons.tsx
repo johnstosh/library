@@ -131,6 +131,19 @@ export function EmuIcon({ className }: IconProps) {
   return <PiClock className={clsx(sizeClass, className)} />
 }
 
+/** Washtenaw Community College mark: white WCC letters over green waves. */
+export function WccIcon({ className }: IconProps) {
+  return (
+    <img
+      src="/images/wcc.png"
+      alt=""
+      aria-hidden
+      data-test="wcc-icon"
+      className={clsx(sizeClass, 'object-contain', className)}
+    />
+  )
+}
+
 /**
  * Allegheny County Library Association mark: three folded blue
  * book-pillars (light face + navy face) and two green wrapping swooshes.

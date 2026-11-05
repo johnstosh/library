@@ -71,7 +71,7 @@ export interface AuthorSummaryDto {
   name?: string
 }
 
-/** Per-author YDL/EMU/ACLA holdings rolled up from that author's books. */
+/** Per-author YDL/EMU/ACLA/WCC holdings rolled up from that author's books. */
 export interface AuthorAvailabilityDto {
   authorId: number
   hasYdlBook?: boolean
@@ -83,6 +83,9 @@ export interface AuthorAvailabilityDto {
   hasAclaBook?: boolean
   hasAclaEbook?: boolean
   hasAclaAudio?: boolean
+  hasWccBook?: boolean
+  hasWccEbook?: boolean
+  hasWccAudio?: boolean
 }
 
 export interface AuthorEnrichmentResultDto {
@@ -137,6 +140,11 @@ export interface BookDto {
   aclaEbookAvailable?: boolean
   aclaLastChecked?: string
   aclaLookupError?: string
+  wccAudioAvailable?: boolean
+  wccPaperAvailable?: boolean
+  wccEbookAvailable?: boolean
+  wccLastChecked?: string
+  wccLookupError?: string
   readingDifficulty?: ReadingDifficulty
   binding?: BookCoverType
   desireToPurchase?: number | null

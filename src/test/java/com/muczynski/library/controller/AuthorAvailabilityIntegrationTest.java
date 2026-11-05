@@ -58,6 +58,10 @@ class AuthorAvailabilityIntegrationTest {
         aclaAuthor.setName("Availability ACLA Author");
         aclaAuthor = authorRepository.save(aclaAuthor);
 
+        Author wccAuthor = new Author();
+        wccAuthor.setName("Availability WCC Author");
+        wccAuthor = authorRepository.save(wccAuthor);
+
         Book ydlBook = new Book();
         ydlBook.setTitle("YDL Paper and Audio");
         ydlBook.setAuthor(ydlAuthor);
@@ -94,6 +98,16 @@ class AuthorAvailabilityIntegrationTest {
         aclaBook.setAclaAudioAvailable(false);
         bookRepository.save(aclaBook);
 
+        Book wccBook = new Book();
+        wccBook.setTitle("WCC Audio");
+        wccBook.setAuthor(wccAuthor);
+        wccBook.setStatus(BookStatus.ACTIVE);
+        wccBook.setDateAddedToLibrary(LocalDateTime.now());
+        wccBook.setWccAudioAvailable(true);
+        wccBook.setWccPaperAvailable(false);
+        wccBook.setWccEbookAvailable(false);
+        bookRepository.save(wccBook);
+
         mockMvc.perform(get("/api/authors/availability"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.authorId == " + ydlAuthor.getId() + ")].hasYdlBook").value(hasItem(true)))
@@ -103,6 +117,9 @@ class AuthorAvailabilityIntegrationTest {
                 .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaBook").value(hasItem(true)))
                 .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaEbook").value(hasItem(true)))
                 .andExpect(jsonPath("$[?(@.authorId == " + aclaAuthor.getId() + ")].hasAclaAudio").value(hasItem(false)))
+                .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccAudio").value(hasItem(true)))
+                .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccBook").value(hasItem(false)))
+                .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccEbook").value(hasItem(false)))
                 .andExpect(jsonPath("$[?(@.authorId == " + noneAuthor.getId() + ")]").isEmpty());
     }
 }

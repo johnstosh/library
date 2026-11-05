@@ -51,6 +51,10 @@ vi.mock('@/api/acla-lookup', () => ({
   useLookupBulkAclaWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
+vi.mock('@/api/wcc-lookup', () => ({
+  useLookupBulkWccWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
 vi.mock('@/api/prices', () => ({
   useLookupBulkPricesWithProgress: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))

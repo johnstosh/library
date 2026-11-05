@@ -209,6 +209,12 @@ public class CatalogFilterService {
         public boolean withoutAclaAudio;
         public boolean withoutAclaBook;
         public boolean withoutAclaEbook;
+        public boolean wccAudio;
+        public boolean wccBook;
+        public boolean wccEbook;
+        public boolean withoutWccAudio;
+        public boolean withoutWccBook;
+        public boolean withoutWccEbook;
         public boolean withPrices;
         public boolean noPrices;
         public boolean priceOlder;
@@ -272,6 +278,12 @@ public class CatalogFilterService {
         public boolean withoutAclaBook;
         public boolean withoutAclaEbook;
         public boolean withoutAclaAudio;
+        public boolean wccBook;
+        public boolean wccEbook;
+        public boolean wccAudio;
+        public boolean withoutWccBook;
+        public boolean withoutWccEbook;
+        public boolean withoutWccAudio;
         public List<String> favoriteLists = List.of();
         /** Resolved when {@link #mostRecent} is on. Empty matches nothing. */
         public List<Long> mostRecentAuthorIds = List.of();

@@ -263,6 +263,10 @@ public class CatalogCriteria {
                 filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
                 filter.withoutAclaAudio, filter.withoutAclaBook, filter.withoutAclaEbook,
                 "aclaAudioAvailable", "aclaPaperAvailable", "aclaEbookAvailable");
+        addLibraryHoldings(cb, book, parts,
+                filter.wccAudio, filter.wccBook, filter.wccEbook,
+                filter.withoutWccAudio, filter.withoutWccBook, filter.withoutWccEbook,
+                "wccAudioAvailable", "wccPaperAvailable", "wccEbookAvailable");
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
@@ -537,6 +541,10 @@ public class CatalogCriteria {
                 filter.aclaAudio, filter.aclaBook, filter.aclaEbook,
                 filter.withoutAclaAudio, filter.withoutAclaBook, filter.withoutAclaEbook,
                 "aclaAudioAvailable", "aclaPaperAvailable", "aclaEbookAvailable");
+        addAuthorLibrary(cb, query, author, parts,
+                filter.wccAudio, filter.wccBook, filter.wccEbook,
+                filter.withoutWccAudio, filter.withoutWccBook, filter.withoutWccEbook,
+                "wccAudioAvailable", "wccPaperAvailable", "wccEbookAvailable");
         return and(cb, parts);
     }
 

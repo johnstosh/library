@@ -6,7 +6,7 @@ package com.muczynski.library.dto;
 import lombok.Data;
 
 /**
- * Per-author YDL/EMU/ACLA holdings rolled up from that author's books.
+ * Per-author YDL/EMU/ACLA/WCC holdings rolled up from that author's books.
  * Used by the Authors page filter chips. Not stored on Author; derived from Book flags.
  */
 @Data
@@ -21,4 +21,7 @@ public class AuthorAvailabilityDto {
     private Boolean hasAclaBook;
     private Boolean hasAclaEbook;
     private Boolean hasAclaAudio;
+    private Boolean hasWccBook;
+    private Boolean hasWccEbook;
+    private Boolean hasWccAudio;
 }
