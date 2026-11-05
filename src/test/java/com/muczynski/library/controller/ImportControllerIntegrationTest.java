@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.*;
 import com.muczynski.library.exception.AbeBooksRateLimitedException;
 import com.muczynski.library.repository.*;
@@ -1318,6 +1320,132 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getMsuEbookAvailable()));
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 13, 10, 45), after.getMsuLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("old-msu-err", after.getMsuLookupError());
+    }
+
+    /**
+     * GitHub #384: JSON import must store reading difficulty and desire to purchase
+     * on create and when the same title is updated, and an export of that book
+     * must re-import to the same values. Omitted fields stay as stored.
+     */
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void testImportJson_ReadingDifficultyAndDesire_RoundTrip() throws Exception {
+        String createJson = """
+            {
+                "libraries": [{"branchName": "Difficulty Library", "librarySystemName": "Difficulty System"}],
+                "authors": [{"name": "Difficulty Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Round Trip Difficulty Book",
+                    "libraryName": "Difficulty Library",
+                    "authorName": "Difficulty Author",
+                    "publicationYear": 2024,
+                    "publisher": "Test Publisher",
+                    "status": "ACTIVE",
+                    "readingDifficulty": "accessible",
+                    "desireToPurchase": 5
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createJson))
+                .andExpect(status().isOk());
+
+        entityManager.clear();
+        Book created = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(
+                "Round Trip Difficulty Book", "Difficulty Author").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(ReadingDifficulty.ACCESSIBLE, created.getReadingDifficulty());
+        org.junit.jupiter.api.Assertions.assertEquals(5, created.getDesireToPurchase());
+
+        String exportJson = mockMvc.perform(get("/api/import/json"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode exported = null;
+        for (JsonNode book : new ObjectMapper().readTree(exportJson).path("books")) {
+            if ("Round Trip Difficulty Book".equals(book.path("title").asText())) {
+                exported = book;
+                break;
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertNotNull(exported, "export should include the imported book");
+        org.junit.jupiter.api.Assertions.assertEquals("accessible", exported.path("readingDifficulty").asText());
+        org.junit.jupiter.api.Assertions.assertEquals(5, exported.path("desireToPurchase").asInt());
+
+        String updateJson = """
+            {
+                "libraries": [{"branchName": "Difficulty Library", "librarySystemName": "Difficulty System"}],
+                "authors": [{"name": "Difficulty Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Round Trip Difficulty Book",
+                    "libraryName": "Difficulty Library",
+                    "authorName": "Difficulty Author",
+                    "publicationYear": 2024,
+                    "publisher": "Test Publisher",
+                    "status": "ACTIVE",
+                    "readingDifficulty": "demanding",
+                    "desireToPurchase": 8
+                }],
+                "loans": []
+            }
+            """;
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isOk());
+        entityManager.clear();
+        Book updated = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(
+                "Round Trip Difficulty Book", "Difficulty Author").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(ReadingDifficulty.DEMANDING, updated.getReadingDifficulty());
+        org.junit.jupiter.api.Assertions.assertEquals(8, updated.getDesireToPurchase());
+
+        String omitJson = """
+            {
+                "libraries": [{"branchName": "Difficulty Library", "librarySystemName": "Difficulty System"}],
+                "authors": [{"name": "Difficulty Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Round Trip Difficulty Book",
+                    "libraryName": "Difficulty Library",
+                    "authorName": "Difficulty Author",
+                    "publicationYear": 2024,
+                    "publisher": "Test Publisher",
+                    "status": "ACTIVE"
+                }],
+                "loans": []
+            }
+            """;
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(omitJson))
+                .andExpect(status().isOk());
+        entityManager.clear();
+        Book preserved = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(
+                "Round Trip Difficulty Book", "Difficulty Author").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(ReadingDifficulty.DEMANDING, preserved.getReadingDifficulty());
+        org.junit.jupiter.api.Assertions.assertEquals(8, preserved.getDesireToPurchase());
+
+        String roundTripJson = """
+            {
+                "libraries": [{"branchName": "Difficulty Library", "librarySystemName": "Difficulty System"}],
+                "authors": [{"name": "Difficulty Author"}],
+                "users": [],
+                "books": [%s],
+                "loans": []
+            }
+            """.formatted(exported.toString());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(roundTripJson))
+                .andExpect(status().isOk());
+        entityManager.clear();
+        Book roundTrip = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc(
+                "Round Trip Difficulty Book", "Difficulty Author").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(ReadingDifficulty.ACCESSIBLE, roundTrip.getReadingDifficulty());
+        org.junit.jupiter.api.Assertions.assertEquals(5, roundTrip.getDesireToPurchase());
     }
 
     @Test
