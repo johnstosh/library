@@ -470,7 +470,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_Success() {
         BookAvailabilityStatsDto stats = new BookAvailabilityStatsDto(
-            3L, 8L, 7L, 2L, 1L, 9L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L, 4L, 2L, 1L, 1L, 7L, 3L, 2L, 1L
+            3L, 8L, 7L, 2L, 1L, 9L, 5L, 2L, 4L, 1L, 6L, 3L, 2L, 1L, 4L, 2L, 1L, 1L, 7L, 3L, 2L, 1L, 7L, 3L, 2L, 1L
         );
         when(importService.getAvailabilityStats()).thenReturn(stats);
 
@@ -502,7 +502,11 @@ class ImportControllerTest {
             .body("availableAtWcc", equalTo(7))
             .body("wccPaper", equalTo(3))
             .body("wccEbook", equalTo(2))
-            .body("wccAudio", equalTo(1));
+            .body("wccAudio", equalTo(1))
+            .body("availableAtMsu", equalTo(7))
+            .body("msuPaper", equalTo(3))
+            .body("msuEbook", equalTo(2))
+            .body("msuAudio", equalTo(1));
     }
 
     @Test
@@ -518,7 +522,7 @@ class ImportControllerTest {
     @WithMockUser(authorities = "LIBRARIAN")
     void testGetAvailabilityStats_HasAllFields() {
         when(importService.getAvailabilityStats()).thenReturn(
-            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+            new BookAvailabilityStatsDto(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
         );
 
         given()
@@ -549,6 +553,10 @@ class ImportControllerTest {
             .body("availableAtWcc", notNullValue())
             .body("wccPaper", notNullValue())
             .body("wccEbook", notNullValue())
-            .body("wccAudio", notNullValue());
+            .body("wccAudio", notNullValue())
+            .body("availableAtMsu", notNullValue())
+            .body("msuPaper", notNullValue())
+            .body("msuEbook", notNullValue())
+            .body("msuAudio", notNullValue());
     }
 }

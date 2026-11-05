@@ -8,9 +8,10 @@ import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { useLookupSingleWcc } from '@/api/wcc-lookup'
+import { useLookupSingleMsu } from '@/api/msu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
 import { formatBookLabel } from './components/BookLabelFilters'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle, PiBookOpen } from 'react-icons/pi'
@@ -66,6 +67,7 @@ export function BookViewPage() {
   const lookupEmu = useLookupSingleEmu()
   const lookupAcla = useLookupSingleAcla()
   const lookupWcc = useLookupSingleWcc()
+  const lookupMsu = useLookupSingleMsu()
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = useIsAuthenticated()
   const currentUser = useAuthStore((state) => state.user)
@@ -104,6 +106,13 @@ export function BookViewPage() {
       await lookupWcc.mutateAsync(bookId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up WCC availability')
+    }
+  }
+  const handleMsuLookup = async () => {
+    try {
+      await lookupMsu.mutateAsync(bookId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up MSU availability')
     }
   }
 
@@ -652,6 +661,61 @@ export function BookViewPage() {
             {book.wccLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="wcc-lookup-error">
                 {book.wccLookupError}
+              </p>
+            )}
+          </div>
+          <div className="bg-gray-50 rounded-lg p-6" data-test="msu-availability-section">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">MSU Availability</h2>
+              <div className="flex items-center gap-3">
+                <a
+                  href={msuCatalogSearchUrl(book.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
+                  data-test="book-view-msu-check-link"
+                >
+                  Go to MSU
+                </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMsuLookup}
+                  isLoading={lookupMsu.isPending}
+                  disabled={lookupMsu.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-msu-lookup"
+                >
+                  {book.msuLastChecked ? 'Retry MSU Lookup' : 'Lookup MSU Availability'}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div data-test="msu-audio-status">
+                <p className="text-sm font-medium text-gray-500">Audio Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.msuAudioAvailable)}
+                </p>
+              </div>
+              <div data-test="msu-paper-status">
+                <p className="text-sm font-medium text-gray-500">Paper Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.msuPaperAvailable)}
+                </p>
+              </div>
+              <div data-test="msu-ebook-status">
+                <p className="text-sm font-medium text-gray-500">Ebook</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.msuEbookAvailable)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3" data-test="msu-last-checked">
+              Last checked: {book.msuLastChecked ? formatDateTime(book.msuLastChecked) : 'never'}
+            </p>
+            {book.msuLookupError && (
+              <p className="text-xs text-red-600 mt-1" data-test="msu-lookup-error">
+                {book.msuLookupError}
               </p>
             )}
           </div>

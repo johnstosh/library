@@ -432,6 +432,9 @@ public class AuthorService {
         dto.setHasWccBook(positive(projection.getWccPaperCount()));
         dto.setHasWccEbook(positive(projection.getWccEbookCount()));
         dto.setHasWccAudio(positive(projection.getWccAudioCount()));
+        dto.setHasMsuBook(positive(projection.getMsuPaperCount()));
+        dto.setHasMsuEbook(positive(projection.getMsuEbookCount()));
+        dto.setHasMsuAudio(positive(projection.getMsuAudioCount()));
         return dto;
     }
 
@@ -447,7 +450,10 @@ public class AuthorService {
                 || Boolean.TRUE.equals(dto.getHasAclaAudio())
                 || Boolean.TRUE.equals(dto.getHasWccBook())
                 || Boolean.TRUE.equals(dto.getHasWccEbook())
-                || Boolean.TRUE.equals(dto.getHasWccAudio());
+                || Boolean.TRUE.equals(dto.getHasWccAudio())
+                || Boolean.TRUE.equals(dto.getHasMsuBook())
+                || Boolean.TRUE.equals(dto.getHasMsuEbook())
+                || Boolean.TRUE.equals(dto.getHasMsuAudio());
     }
 
     private static boolean positive(Long count) {

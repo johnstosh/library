@@ -98,14 +98,17 @@ public class PublicCatalogUITest {
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-acla-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-wcc-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-msu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='acla-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='wcc-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='msu-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Unknown");
         assertThat(page.locator("[data-test='emu-audio-status']")).containsText("Unknown");
         assertThat(page.locator("[data-test='acla-audio-status']")).containsText("Unknown");
         assertThat(page.locator("[data-test='wcc-audio-status']")).containsText("Unknown");
+        assertThat(page.locator("[data-test='msu-audio-status']")).containsText("Unknown");
     }
 
     @Test

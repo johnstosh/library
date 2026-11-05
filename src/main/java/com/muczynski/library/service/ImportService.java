@@ -615,6 +615,11 @@ public class ImportService {
         if (bDto.getWccEbookAvailable() != null) book.setWccEbookAvailable(bDto.getWccEbookAvailable());
         if (bDto.getWccLastChecked() != null) book.setWccLastChecked(bDto.getWccLastChecked());
         if (bDto.getWccLookupError() != null) book.setWccLookupError(bDto.getWccLookupError());
+        if (bDto.getMsuAudioAvailable() != null) book.setMsuAudioAvailable(bDto.getMsuAudioAvailable());
+        if (bDto.getMsuPaperAvailable() != null) book.setMsuPaperAvailable(bDto.getMsuPaperAvailable());
+        if (bDto.getMsuEbookAvailable() != null) book.setMsuEbookAvailable(bDto.getMsuEbookAvailable());
+        if (bDto.getMsuLastChecked() != null) book.setMsuLastChecked(bDto.getMsuLastChecked());
+        if (bDto.getMsuLookupError() != null) book.setMsuLookupError(bDto.getMsuLookupError());
 
         book = bookRepository.save(book);
     }
@@ -1237,6 +1242,11 @@ public class ImportService {
         bDto.setWccEbookAvailable(book.getWccEbookAvailable());
         bDto.setWccLastChecked(book.getWccLastChecked());
         bDto.setWccLookupError(emptyToNull(book.getWccLookupError()));
+        bDto.setMsuAudioAvailable(book.getMsuAudioAvailable());
+        bDto.setMsuPaperAvailable(book.getMsuPaperAvailable());
+        bDto.setMsuEbookAvailable(book.getMsuEbookAvailable());
+        bDto.setMsuLastChecked(book.getMsuLastChecked());
+        bDto.setMsuLookupError(emptyToNull(book.getMsuLookupError()));
         bDto.setReadingDifficulty(book.getReadingDifficulty());
         bDto.setBinding(book.getBinding());
         bDto.setDesireToPurchase(book.getDesireToPurchase());
@@ -1769,7 +1779,11 @@ public class ImportService {
             bookRepository.countAvailableAtWcc(),
             bookRepository.countByWccPaperAvailableTrue(),
             bookRepository.countByWccEbookAvailableTrue(),
-            bookRepository.countByWccAudioAvailableTrue()
+            bookRepository.countByWccAudioAvailableTrue(),
+            bookRepository.countAvailableAtMsu(),
+            bookRepository.countByMsuPaperAvailableTrue(),
+            bookRepository.countByMsuEbookAvailableTrue(),
+            bookRepository.countByMsuAudioAvailableTrue()
         );
     }
 }

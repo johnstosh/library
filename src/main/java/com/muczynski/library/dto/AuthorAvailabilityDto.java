@@ -24,4 +24,7 @@ public class AuthorAvailabilityDto {
     private Boolean hasWccBook;
     private Boolean hasWccEbook;
     private Boolean hasWccAudio;
+    private Boolean hasMsuBook;
+    private Boolean hasMsuEbook;
+    private Boolean hasMsuAudio;
 }

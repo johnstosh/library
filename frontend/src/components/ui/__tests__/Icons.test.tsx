@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { render, screen } from '@testing-library/react'
-import { AclaIcon, WccIcon, YdlIcon } from '../Icons'
+import { AclaIcon, MsuIcon, WccIcon, YdlIcon } from '../Icons'
 
 describe('YdlIcon', () => {
   it('renders a vector script Y with red, yellow, and blue strokes', () => {
@@ -47,6 +47,16 @@ describe('WccIcon', () => {
     const icon = screen.getByTestId('wcc-icon')
     expect(icon.tagName.toLowerCase()).toBe('img')
     expect(icon).toHaveAttribute('src', '/images/wcc.png')
+    expect(icon).toHaveAttribute('alt', '')
+  })
+})
+describe('MsuIcon', () => {
+  it('renders the Michigan State University mark', () => {
+    render(<MsuIcon />)
+
+    const icon = screen.getByTestId('msu-icon')
+    expect(icon.tagName.toLowerCase()).toBe('img')
+    expect(icon).toHaveAttribute('src', '/images/msu.png')
     expect(icon).toHaveAttribute('alt', '')
   })
 })

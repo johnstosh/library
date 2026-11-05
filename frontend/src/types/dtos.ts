@@ -86,6 +86,9 @@ export interface AuthorAvailabilityDto {
   hasWccBook?: boolean
   hasWccEbook?: boolean
   hasWccAudio?: boolean
+  hasMsuBook?: boolean
+  hasMsuEbook?: boolean
+  hasMsuAudio?: boolean
 }
 
 export interface AuthorEnrichmentResultDto {
@@ -145,6 +148,11 @@ export interface BookDto {
   wccEbookAvailable?: boolean
   wccLastChecked?: string
   wccLookupError?: string
+  msuAudioAvailable?: boolean
+  msuPaperAvailable?: boolean
+  msuEbookAvailable?: boolean
+  msuLastChecked?: string
+  msuLookupError?: string
   readingDifficulty?: ReadingDifficulty
   binding?: BookCoverType
   desireToPurchase?: number | null

@@ -73,6 +73,9 @@ vi.mock('@/api/acla-lookup', () => ({
 vi.mock('@/api/wcc-lookup', () => ({
   useLookupSingleWcc: () => idleMutation(),
 }))
+vi.mock('@/api/msu-lookup', () => ({
+  useLookupSingleMsu: () => idleMutation(),
+}))
 
 vi.mock('@/api/labels', () => ({
   generateLabelsPdf: vi.fn(),
@@ -233,7 +236,7 @@ describe('BookFormPage title and author from photo', () => {
 })
 
 describe('BookFormPage availability checkboxes', () => {
-  it('sends false when a checked EMU, YDL, ACLA, or WCC box is cleared', async () => {
+  it('sends false when a checked EMU, YDL, ACLA, WCC, or MSU box is cleared', async () => {
     mocks.updateBook.mockResolvedValue(editedBook)
     renderForm({
       book: {
@@ -251,6 +254,9 @@ describe('BookFormPage availability checkboxes', () => {
         wccAudioAvailable: true,
         wccPaperAvailable: true,
         wccEbookAvailable: true,
+        msuAudioAvailable: true,
+        msuPaperAvailable: true,
+        msuEbookAvailable: true,
       },
     })
 
@@ -258,6 +264,7 @@ describe('BookFormPage availability checkboxes', () => {
     fireEvent.click(screen.getByTestId('book-ydl-audio-available'))
     fireEvent.click(screen.getByTestId('book-acla-ebook-available'))
     fireEvent.click(screen.getByTestId('book-wcc-paper-available'))
+    fireEvent.click(screen.getByTestId('book-msu-paper-available'))
     fireEvent.click(screen.getByTestId('book-form-submit'))
 
     await waitFor(() => {
@@ -278,6 +285,9 @@ describe('BookFormPage availability checkboxes', () => {
             wccAudioAvailable: true,
             wccPaperAvailable: false,
             wccEbookAvailable: true,
+            msuAudioAvailable: true,
+            msuPaperAvailable: false,
+            msuEbookAvailable: true,
           }),
         }),
       )

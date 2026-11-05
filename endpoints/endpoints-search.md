@@ -35,9 +35,12 @@ Returns search results for books and authors matching the query.
 - `filterWccAudio` (boolean, optional, default `false`) - Books with WCC audio
 - `filterWccBook` (boolean, optional, default `false`) - Books with WCC paper
 - `filterWccEbook` (boolean, optional, default `false`) - Books with WCC ebook
-- `filterWithoutYdlAudio`, `filterWithoutYdlBook`, `filterWithoutYdlEbook`, `filterWithoutEmuAudio`, `filterWithoutEmuBook`, `filterWithoutEmuEbook`, `filterWithoutAclaAudio`, `filterWithoutAclaBook`, `filterWithoutAclaEbook`, `filterWithoutWccAudio`, `filterWithoutWccBook`, `filterWithoutWccEbook` (boolean, optional, default `false`) - That format flag is false or unset
+- `filterMsuAudio` (boolean, optional, default `false`) - Books with MSU audio
+- `filterMsuBook` (boolean, optional, default `false`) - Books with MSU paper
+- `filterMsuEbook` (boolean, optional, default `false`) - Books with MSU ebook
+- `filterWithoutYdlAudio`, `filterWithoutYdlBook`, `filterWithoutYdlEbook`, `filterWithoutEmuAudio`, `filterWithoutEmuBook`, `filterWithoutEmuEbook`, `filterWithoutAclaAudio`, `filterWithoutAclaBook`, `filterWithoutAclaEbook`, `filterWithoutWccAudio`, `filterWithoutWccBook`, `filterWithoutWccEbook`, `filterWithoutMsuAudio`, `filterWithoutMsuBook`, `filterWithoutMsuEbook` (boolean, optional, default `false`) - That format flag is false or unset
 
-Audio, Book, and Ebook OR within one public library (YDL, EMU, ACLA, or WCC) and AND across libraries. Without chips AND with that group. Search authors are authors of titles that match.
+Audio, Book, and Ebook OR within one public library (YDL, EMU, ACLA, WCC, or MSU) and AND across libraries. Without chips AND with that group. Search authors are authors of titles that match.
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. A name that contains a comma is `~` plus a percent-encoded name. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values

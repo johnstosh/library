@@ -96,6 +96,12 @@ public class SearchService {
      * @param filterWithoutWccAudio WCC audio is false or unset
      * @param filterWithoutWccBook WCC paper is false or unset
      * @param filterWithoutWccEbook WCC ebook is false or unset
+     * @param filterMsuAudio limit to books with MSU audio
+     * @param filterMsuBook limit to books with MSU paper
+     * @param filterMsuEbook limit to books with MSU ebook
+     * @param filterWithoutMsuAudio MSU audio is false or unset
+     * @param filterWithoutMsuBook MSU paper is false or unset
+     * @param filterWithoutMsuEbook MSU ebook is false or unset
      * @param labels          label tags that books must ALL have (null/empty = no label filter)
      * @param statusFilters   selected status-filter values; a book matches ANY of them (OR).
      *                        null/empty falls back to the legacy boolean flags, then the default hide.
@@ -119,6 +125,8 @@ public class SearchService {
             boolean filterWithoutAclaAudio, boolean filterWithoutAclaBook, boolean filterWithoutAclaEbook,
             boolean filterWccAudio, boolean filterWccBook, boolean filterWccEbook,
             boolean filterWithoutWccAudio, boolean filterWithoutWccBook, boolean filterWithoutWccEbook,
+            boolean filterMsuAudio, boolean filterMsuBook, boolean filterMsuEbook,
+            boolean filterWithoutMsuAudio, boolean filterWithoutMsuBook, boolean filterWithoutMsuEbook,
             List<String> labels,
             List<BookStatusFilter> statusFilters,
             List<ReadingDifficulty> readingDifficulties,
@@ -178,6 +186,12 @@ public class SearchService {
         filter.withoutWccAudio = filterWithoutWccAudio;
         filter.withoutWccBook = filterWithoutWccBook;
         filter.withoutWccEbook = filterWithoutWccEbook;
+        filter.msuAudio = filterMsuAudio;
+        filter.msuBook = filterMsuBook;
+        filter.msuEbook = filterMsuEbook;
+        filter.withoutMsuAudio = filterWithoutMsuAudio;
+        filter.withoutMsuBook = filterWithoutMsuBook;
+        filter.withoutMsuEbook = filterWithoutMsuEbook;
         filter.labels = hasLabels ? labels : List.of();
         filter.statuses = statuses;
         filter.readingDifficulties = hasReadingDifficulties ? readingDifficulties : List.of();
@@ -211,6 +225,8 @@ public class SearchService {
                 || filterWithoutAclaAudio || filterWithoutAclaBook || filterWithoutAclaEbook
                 || filterWccAudio || filterWccBook || filterWccEbook
                 || filterWithoutWccAudio || filterWithoutWccBook || filterWithoutWccEbook
+                || filterMsuAudio || filterMsuBook || filterMsuEbook
+                || filterWithoutMsuAudio || filterWithoutMsuBook || filterWithoutMsuEbook
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {

@@ -147,20 +147,23 @@ describe('applyChipFilters', () => {
     })
   })
 
-  it('YDL, EMU, ACLA, and WCC chips keep books with that holding', () => {
+  it('YDL, EMU, ACLA, WCC, and MSU chips keep books with that holding', () => {
     const ydlAudio = book({ id: 1, ydlAudioAvailable: true })
     const ydlPaper = book({ id: 2, ydlPaperAvailable: true })
     const emuEbook = book({ id: 3, emuEbookAvailable: true })
     const aclaPaper = book({ id: 4, aclaPaperAvailable: true })
     const wccAudio = book({ id: 7, wccAudioAvailable: true })
+    const msuAudio = book({ id: 8, msuAudioAvailable: true })
     const none = book({ id: 5 })
-    const sample = [ydlAudio, ydlPaper, emuEbook, aclaPaper, wccAudio, none]
+    const sample = [ydlAudio, ydlPaper, emuEbook, aclaPaper, wccAudio, msuAudio, none]
     expect(applyChipFilters(sample, chips({ hasYdlAudio: true })).map((b) => b.id)).toEqual([1])
     expect(applyChipFilters(sample, chips({ hasYdlBook: true })).map((b) => b.id)).toEqual([2])
     expect(applyChipFilters(sample, chips({ hasEmuEbook: true })).map((b) => b.id)).toEqual([3])
     expect(applyChipFilters(sample, chips({ hasAclaBook: true })).map((b) => b.id)).toEqual([4])
     expect(applyChipFilters(sample, chips({ hasWccAudio: true })).map((b) => b.id)).toEqual([7])
-    expect(applyChipFilters(sample, chips({ withoutWccAudio: true })).map((b) => b.id)).toEqual([1, 2, 3, 4, 5])
+    expect(applyChipFilters(sample, chips({ withoutWccAudio: true })).map((b) => b.id)).toEqual([1, 2, 3, 4, 8, 5])
+    expect(applyChipFilters(sample, chips({ hasMsuAudio: true })).map((b) => b.id)).toEqual([8])
+    expect(applyChipFilters(sample, chips({ withoutMsuAudio: true })).map((b) => b.id)).toEqual([1, 2, 3, 4, 7, 5])
     expect(applyChipFilters(sample, chips({ hasYdlAudio: true, hasYdlBook: true })).map((b) => b.id)).toEqual([1, 2])
     expect(applyChipFilters(sample, chips({ hasYdlAudio: true, hasEmuEbook: true })).map((b) => b.id)).toEqual([])
     const unset = book({ id: 6, ydlPaperAvailable: false })

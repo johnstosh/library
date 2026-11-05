@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import { FilterChip } from '@/components/ui/FilterChip'
-import { AclaIcon, EmuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, EmuIcon, MsuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
 
 // ─── BookFilters ──────────────────────────────────────────────────────────────
 
@@ -50,9 +50,9 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 }
 
 function libraryChips(
-  library: 'Ydl' | 'Emu' | 'Acla' | 'Wcc',
+  library: 'Ydl' | 'Emu' | 'Acla' | 'Wcc' | 'Msu',
   libraryName: string,
-  slug: 'ydl' | 'emu' | 'acla' | 'wcc',
+  slug: 'ydl' | 'emu' | 'acla' | 'wcc' | 'msu',
 ): AvailabilityGroupProps['items'] {
   const formats = [
     { label: 'Audio', flag: 'Audio', kind: 'audio', noun: 'an audiobook' },
@@ -93,7 +93,7 @@ export function BookFilters({
   return (
     <div className="space-y-2">
       {showAvailabilityFilters && (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-2">
           <AvailabilityGroup
             icon={<YdlIcon />}
             libraryAbbr="YDL"
@@ -129,6 +129,15 @@ export function BookFilters({
             chips={chips}
             onToggle={onToggle}
             items={libraryChips('Wcc', 'WCC', 'wcc')}
+          />
+          <AvailabilityGroup
+            icon={<MsuIcon />}
+            libraryAbbr="MSU"
+            libraryFull="Michigan State University"
+            dataTest="book-filter-msu"
+            chips={chips}
+            onToggle={onToggle}
+            items={libraryChips('Msu', 'MSU', 'msu')}
           />
         </div>
       )}

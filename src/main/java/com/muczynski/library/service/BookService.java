@@ -348,6 +348,9 @@ public class BookService {
         copyAvailability(bookDto.getWccAudioAvailable(), book::setWccAudioAvailable);
         copyAvailability(bookDto.getWccPaperAvailable(), book::setWccPaperAvailable);
         copyAvailability(bookDto.getWccEbookAvailable(), book::setWccEbookAvailable);
+        copyAvailability(bookDto.getMsuAudioAvailable(), book::setMsuAudioAvailable);
+        copyAvailability(bookDto.getMsuPaperAvailable(), book::setMsuPaperAvailable);
+        copyAvailability(bookDto.getMsuEbookAvailable(), book::setMsuEbookAvailable);
         book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
         book.setBinding(bookDto.getBinding() != null ? bookDto.getBinding() : BookCoverType.UNKNOWN);
         book.setDesireToPurchase(bookDto.getDesireToPurchase());

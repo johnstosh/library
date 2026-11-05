@@ -320,10 +320,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     long countByAclaAudioAvailableTrue();
 
     long countByWccPaperAvailableTrue();
+    long countByMsuPaperAvailableTrue();
 
     long countByWccEbookAvailableTrue();
+    long countByMsuEbookAvailableTrue();
 
     long countByWccAudioAvailableTrue();
+    long countByMsuAudioAvailableTrue();
 
     @Query("SELECT COUNT(b) FROM Book b WHERE b.ydlPaperAvailable = true OR b.ydlEbookAvailable = true OR b.ydlAudioAvailable = true")
     long countAvailableAtYdl();
@@ -336,9 +339,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT COUNT(b) FROM Book b WHERE b.wccPaperAvailable = true OR b.wccEbookAvailable = true OR b.wccAudioAvailable = true")
     long countAvailableAtWcc();
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.msuPaperAvailable = true OR b.msuEbookAvailable = true OR b.msuAudioAvailable = true")
+    long countAvailableAtMsu();
 
     /**
-     * Per-author counts of books held as paper/ebook/audio at YDL, EMU, ACLA, and WCC.
+     * Per-author counts of books held as paper/ebook/audio at YDL, EMU, ACLA, WCC, and MSU.
      * Authors with no matching books are omitted (treat missing as all false).
      */
     interface AuthorAvailabilityProjection {
@@ -355,6 +360,9 @@ public interface BookRepository extends JpaRepository<Book, Long> {
         Long getWccPaperCount();
         Long getWccEbookCount();
         Long getWccAudioCount();
+        Long getMsuPaperCount();
+        Long getMsuEbookCount();
+        Long getMsuAudioCount();
     }
 
     @Query("""
@@ -370,7 +378,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                    SUM(CASE WHEN b.aclaAudioAvailable = true THEN 1 ELSE 0 END) as aclaAudioCount,
                    SUM(CASE WHEN b.wccPaperAvailable = true THEN 1 ELSE 0 END) as wccPaperCount,
                    SUM(CASE WHEN b.wccEbookAvailable = true THEN 1 ELSE 0 END) as wccEbookCount,
-                   SUM(CASE WHEN b.wccAudioAvailable = true THEN 1 ELSE 0 END) as wccAudioCount
+                   SUM(CASE WHEN b.wccAudioAvailable = true THEN 1 ELSE 0 END) as wccAudioCount,
+                   SUM(CASE WHEN b.msuPaperAvailable = true THEN 1 ELSE 0 END) as msuPaperCount,
+                   SUM(CASE WHEN b.msuEbookAvailable = true THEN 1 ELSE 0 END) as msuEbookCount,
+                   SUM(CASE WHEN b.msuAudioAvailable = true THEN 1 ELSE 0 END) as msuAudioCount
             FROM Book b
             WHERE b.author IS NOT NULL
             GROUP BY b.author.id

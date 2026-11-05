@@ -50,6 +50,9 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.hasWccAudio ? '&filterWccAudio=true' : '',
     filters.hasWccBook ? '&filterWccBook=true' : '',
     filters.hasWccEbook ? '&filterWccEbook=true' : '',
+    filters.hasMsuAudio ? '&filterMsuAudio=true' : '',
+    filters.hasMsuBook ? '&filterMsuBook=true' : '',
+    filters.hasMsuEbook ? '&filterMsuEbook=true' : '',
     filters.withoutYdlAudio ? '&filterWithoutYdlAudio=true' : '',
     filters.withoutYdlBook ? '&filterWithoutYdlBook=true' : '',
     filters.withoutYdlEbook ? '&filterWithoutYdlEbook=true' : '',
@@ -62,6 +65,9 @@ function chipQueryParams(filters: SearchFilters): string {
     filters.withoutWccAudio ? '&filterWithoutWccAudio=true' : '',
     filters.withoutWccBook ? '&filterWithoutWccBook=true' : '',
     filters.withoutWccEbook ? '&filterWithoutWccEbook=true' : '',
+    filters.withoutMsuAudio ? '&filterWithoutMsuAudio=true' : '',
+    filters.withoutMsuBook ? '&filterWithoutMsuBook=true' : '',
+    filters.withoutMsuEbook ? '&filterWithoutMsuEbook=true' : '',
   ].join('')
 }
 

@@ -90,9 +90,16 @@ describe('applyAuthorChipFilters', () => {
     expect(applyAuthorChipFilters(authors, chips({ withGrokipedia: true })).map((a) => a.id)).toEqual([1])
   })
 
-  it('YDL/EMU/ACLA/WCC chips keep authors who have that holding on any book', () => {
+  it('YDL/EMU/ACLA/WCC/MSU chips keep authors who have that holding on any book', () => {
     const availability = new Map([
-      [1, { hasYdlBook: true, hasEmuEbook: true, hasYdlAudio: true, hasAclaBook: true, hasWccAudio: true }],
+      [1, {
+        hasYdlBook: true,
+        hasEmuEbook: true,
+        hasYdlAudio: true,
+        hasAclaBook: true,
+        hasWccAudio: true,
+        hasMsuAudio: true,
+      }],
       [2, { hasYdlEbook: true }],
     ])
     expect(
@@ -114,7 +121,13 @@ describe('applyAuthorChipFilters', () => {
       applyAuthorChipFilters(sample, chips({ hasWccAudio: true }), undefined, availability).map((a) => a.id)
     ).toEqual([1])
     expect(
+      applyAuthorChipFilters(sample, chips({ hasMsuAudio: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([1])
+    expect(
       applyAuthorChipFilters(sample, chips({ withoutWccAudio: true }), undefined, availability).map((a) => a.id)
+    ).toEqual([2])
+    expect(
+      applyAuthorChipFilters(sample, chips({ withoutMsuAudio: true }), undefined, availability).map((a) => a.id)
     ).toEqual([2])
     expect(
       applyAuthorChipFilters(sample, chips({ hasYdlAudio: true, hasYdlEbook: true }), undefined, availability).map((a) => a.id)

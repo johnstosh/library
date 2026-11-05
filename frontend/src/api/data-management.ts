@@ -86,6 +86,10 @@ export interface BookAvailabilityStatsDto {
   wccPaper: number
   wccEbook: number
   wccAudio: number
+  availableAtMsu: number
+  msuPaper: number
+  msuEbook: number
+  msuAudio: number
 }
 
 // Photo Export Types

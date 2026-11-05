@@ -35,7 +35,10 @@ export function wccCatalogSearchUrl(title: string): string {
   const queryTitle = stripCopySuffix(title)
   return `https://wccnet.primo.exlibrisgroup.com/discovery/search?query=${encodeURIComponent(`any,contains,"${queryTitle}"`)}&tab=Everything&search_scope=MyInst_and_CI&vid=01WCCO_INST:01WCCO`
 }
-
+export function msuCatalogSearchUrl(title: string): string {
+  const queryTitle = stripCopySuffix(title)
+  return `https://catalog.lib.msu.edu/Search/Results?lookfor=${encodeURIComponent(queryTitle)}&type=Title`
+}
 export function aclaCatalogSearchUrl(title: string): string {
   const queryTitle = stripCopySuffix(title)
   return `https://acl.bibliocommons.com/v2/search?query=${encodeURIComponent(`"${queryTitle}"`)}&searchType=smart`

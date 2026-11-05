@@ -267,6 +267,10 @@ public class CatalogCriteria {
                 filter.wccAudio, filter.wccBook, filter.wccEbook,
                 filter.withoutWccAudio, filter.withoutWccBook, filter.withoutWccEbook,
                 "wccAudioAvailable", "wccPaperAvailable", "wccEbookAvailable");
+        addLibraryHoldings(cb, book, parts,
+                filter.msuAudio, filter.msuBook, filter.msuEbook,
+                filter.withoutMsuAudio, filter.withoutMsuBook, filter.withoutMsuEbook,
+                "msuAudioAvailable", "msuPaperAvailable", "msuEbookAvailable");
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
@@ -545,6 +549,10 @@ public class CatalogCriteria {
                 filter.wccAudio, filter.wccBook, filter.wccEbook,
                 filter.withoutWccAudio, filter.withoutWccBook, filter.withoutWccEbook,
                 "wccAudioAvailable", "wccPaperAvailable", "wccEbookAvailable");
+        addAuthorLibrary(cb, query, author, parts,
+                filter.msuAudio, filter.msuBook, filter.msuEbook,
+                filter.withoutMsuAudio, filter.withoutMsuBook, filter.withoutMsuEbook,
+                "msuAudioAvailable", "msuPaperAvailable", "msuEbookAvailable");
         return and(cb, parts);
     }
 

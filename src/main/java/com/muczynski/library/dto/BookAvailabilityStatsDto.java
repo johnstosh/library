@@ -38,4 +38,8 @@ public class BookAvailabilityStatsDto {
     private long wccPaper;
     private long wccEbook;
     private long wccAudio;
+    private long availableAtMsu;
+    private long msuPaper;
+    private long msuEbook;
+    private long msuAudio;
 }

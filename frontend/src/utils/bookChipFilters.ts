@@ -14,7 +14,7 @@ export const PROPER_TEXT_MIN_CHARS = 400
  * Active chips AND together with genre labels, except Audio, Book, and Ebook
  * within one public library, which OR. A Without chip matches a false or unset flag.
  *
- * Row 1: has/without YDL, EMU, ACLA, and WCC audio, book, and ebook
+ * Row 1: has/without YDL, EMU, ACLA, WCC, and MSU audio, book, and ebook
  * Row 2: freeText, audio, mostRecent
  * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls,
  *   withoutProperPlotOrDescription, titleNotChicago, authorNotCanonical
@@ -36,6 +36,9 @@ export interface BookChipFilters {
   hasWccAudio: boolean
   hasWccBook: boolean
   hasWccEbook: boolean
+  hasMsuAudio: boolean
+  hasMsuBook: boolean
+  hasMsuEbook: boolean
   withoutYdlAudio: boolean
   withoutYdlBook: boolean
   withoutYdlEbook: boolean
@@ -48,6 +51,9 @@ export interface BookChipFilters {
   withoutWccAudio: boolean
   withoutWccBook: boolean
   withoutWccEbook: boolean
+  withoutMsuAudio: boolean
+  withoutMsuBook: boolean
+  withoutMsuEbook: boolean
   freeText: boolean
   audio: boolean
   mostRecent: boolean
@@ -77,6 +83,9 @@ export const defaultBookChipFilters: BookChipFilters = {
   hasWccAudio: false,
   hasWccBook: false,
   hasWccEbook: false,
+  hasMsuAudio: false,
+  hasMsuBook: false,
+  hasMsuEbook: false,
   withoutYdlAudio: false,
   withoutYdlBook: false,
   withoutYdlEbook: false,
@@ -89,6 +98,9 @@ export const defaultBookChipFilters: BookChipFilters = {
   withoutWccAudio: false,
   withoutWccBook: false,
   withoutWccEbook: false,
+  withoutMsuAudio: false,
+  withoutMsuBook: false,
+  withoutMsuEbook: false,
   freeText: false,
   audio: false,
   // Shared default is off (Search). The Books page turns mostRecent on when
@@ -145,6 +157,12 @@ const AVAILABILITY_OPPOSITE: Partial<Record<keyof BookChipFilters, keyof BookChi
   withoutWccBook: 'hasWccBook',
   hasWccEbook: 'withoutWccEbook',
   withoutWccEbook: 'hasWccEbook',
+  hasMsuAudio: 'withoutMsuAudio',
+  withoutMsuAudio: 'hasMsuAudio',
+  hasMsuBook: 'withoutMsuBook',
+  withoutMsuBook: 'hasMsuBook',
+  hasMsuEbook: 'withoutMsuEbook',
+  withoutMsuEbook: 'hasMsuEbook',
 }
 
 /** Turning a format chip on clears its Without pair, and the reverse. */
@@ -217,6 +235,9 @@ export function applyChipFilters<T extends Pick<
   | 'wccAudioAvailable'
   | 'wccPaperAvailable'
   | 'wccEbookAvailable'
+  | 'msuAudioAvailable'
+  | 'msuPaperAvailable'
+  | 'msuEbookAvailable'
   | 'plotSummary'
   | 'detailedDescription'
   | 'author'
@@ -267,9 +288,17 @@ export function applyChipFilters<T extends Pick<
       { on: chips.hasWccBook, value: book.wccPaperAvailable },
       { on: chips.hasWccEbook, value: book.wccEbookAvailable },
     ])) return false
+    if (!matchesFormatOr([
+      { on: chips.hasMsuAudio, value: book.msuAudioAvailable },
+      { on: chips.hasMsuBook, value: book.msuPaperAvailable },
+      { on: chips.hasMsuEbook, value: book.msuEbookAvailable },
+    ])) return false
     if (!matchesWithout(chips.withoutWccAudio, book.wccAudioAvailable)) return false
     if (!matchesWithout(chips.withoutWccBook, book.wccPaperAvailable)) return false
     if (!matchesWithout(chips.withoutWccEbook, book.wccEbookAvailable)) return false
+    if (!matchesWithout(chips.withoutMsuAudio, book.msuAudioAvailable)) return false
+    if (!matchesWithout(chips.withoutMsuBook, book.msuPaperAvailable)) return false
+    if (!matchesWithout(chips.withoutMsuEbook, book.msuEbookAvailable)) return false
     if (chips.freeText && isBlank(book.freeTextUrl)) return false
     if (chips.audio) {
       if (!book.freeTextUrl || !book.freeTextUrl.toLowerCase().includes('librivox')) return false
