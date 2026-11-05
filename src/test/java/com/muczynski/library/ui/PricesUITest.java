@@ -101,6 +101,8 @@ public class PricesUITest {
         assertThat(page.locator("[data-test='filter-no-prices']")).isVisible();
         assertThat(page.locator("[data-test='filter-no-prices']")).containsText("Books without Pricing");
         assertThat(page.locator("[data-test='filter-price-older']")).isVisible();
+        assertThat(page.locator("[data-test='filter-library-checked-older']")).isVisible();
+        assertThat(page.locator("[data-test='filter-library-checked-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-price-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-lookup-errors']")).isVisible();
         assertThat(page.locator("[data-test='filter-lookup-errors']")).containsText("Lookup Errors");

@@ -1,6 +1,19 @@
 // (c) Copyright 2025 by Muczynski
 import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
+  LIBRARY_CHECKED_OLDER_CODES,
+  libraryCheckedOlderCode,
+} from '@/utils/bookFilterParams'
+
+const LIBRARY_FULL_NAMES: Record<(typeof LIBRARY_CHECKED_OLDER_CODES)[number], string> = {
+  YDL: 'Ypsilanti District Library',
+  EMU: 'EMU Halle Library',
+  ACLA: 'Allegheny County Library Association',
+  WCC: 'Washtenaw Community College',
+  MSU: 'Michigan State University',
+}
 import { FilterChip } from '@/components/ui/FilterChip'
 import { AclaIcon, EmuIcon, MsuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
 
@@ -80,6 +93,11 @@ interface BookFiltersProps {
   showAvailabilityFilters?: boolean
   /** Search page: hide cataloger-only chips (Without *). */
   showCatalogerFilters?: boolean
+  /** Blank means the library-data age filter is off. */
+  libraryCheckedOlder?: string
+  libraryCheckedOlderDays?: number
+  /** Books, Search, and Prices pass this. Savings and Authors do not. */
+  onLibraryCheckedOlderChange?: (library: string, days: number) => void
 }
 
 export function BookFilters({
@@ -87,8 +105,14 @@ export function BookFilters({
   onToggle,
   showAvailabilityFilters = false,
   showCatalogerFilters = true,
+  libraryCheckedOlder = '',
+  libraryCheckedOlderDays = DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
+  onLibraryCheckedOlderChange,
 }: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
+  const selectedLibrary = libraryCheckedOlderCode(libraryCheckedOlder)
+  const days = libraryCheckedOlderDays >= 1 ? libraryCheckedOlderDays : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
+  const showLibraryAge = showAvailabilityFilters && onLibraryCheckedOlderChange != null
 
   return (
     <div className="space-y-2">
@@ -139,6 +163,47 @@ export function BookFilters({
             onToggle={onToggle}
             items={libraryChips('Msu', 'MSU', 'msu')}
           />
+        </div>
+      )}
+
+      {showLibraryAge && (
+        <div className="flex flex-wrap items-center gap-2" data-test="library-checked-older">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
+            Library data older than
+            <select
+              value={selectedLibrary}
+              onChange={(e) => onLibraryCheckedOlderChange?.(e.target.value, days)}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
+              data-test="filter-library-checked-older"
+              aria-label="Library data older than"
+            >
+              <option value="">Off</option>
+              {LIBRARY_CHECKED_OLDER_CODES.map((code) => (
+                <option key={code} value={code} title={LIBRARY_FULL_NAMES[code]}>
+                  {code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="inline-flex items-center gap-1 text-sm text-gray-600">
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={days}
+              disabled={selectedLibrary === ''}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10)
+                if (Number.isFinite(n) && n >= 1) {
+                  onLibraryCheckedOlderChange?.(selectedLibrary, n)
+                }
+              }}
+              className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+              data-test="filter-library-checked-older-days"
+              aria-label="Library data older than days"
+            />
+            days
+          </label>
         </div>
       )}
 

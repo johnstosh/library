@@ -34,6 +34,8 @@ import {
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
+  libraryCheckedOlderDaysFromSearchParams,
+  libraryCheckedOlderFromSearchParams,
   priceOlderDaysFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
@@ -64,6 +66,8 @@ export function PricesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const chips = chipsFromSearchParams(searchParams, 'prices')
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
+  const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
+  const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedBindings = bindingsFromSearchParams(searchParams)
@@ -101,6 +105,8 @@ export function PricesPage() {
     maxTotal?: string
     priceOlderDays?: number
     recentHours?: number
+    libraryCheckedOlder?: string
+    libraryCheckedOlderDays?: number
   }) => {
     startTransition(() => {
       const bookParams = bookFilterParamsForUrl(
@@ -114,6 +120,10 @@ export function PricesPage() {
           favoriteLists: next.favoriteLists ?? selectedFavoriteLists,
           q: next.q !== undefined ? next.q : urlQuery,
           priceOlderDays: next.priceOlderDays ?? priceOlderDays,
+          libraryCheckedOlder: next.libraryCheckedOlder !== undefined
+            ? next.libraryCheckedOlder
+            : libraryCheckedOlder,
+          libraryCheckedOlderDays: next.libraryCheckedOlderDays ?? libraryCheckedOlderDays,
         },
         'prices',
       )
@@ -135,6 +145,8 @@ export function PricesPage() {
     desireToPurchase: desireToPurchaseFromSearchParams(searchParams),
     favoriteLists: favoriteListsFromSearchParams(searchParams),
     priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
+    libraryCheckedOlder: libraryCheckedOlderFromSearchParams(searchParams),
+    libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
     chips: chipsFromSearchParams(searchParams, 'prices'),
   }), [searchParams])
 
@@ -274,6 +286,8 @@ export function PricesPage() {
               favoriteLists: selectedFavoriteLists,
               q: inputValue.trim() || urlQuery,
               priceOlderDays,
+              libraryCheckedOlder,
+              libraryCheckedOlderDays,
             })}
             leftIcon={<PiBooks />}
             data-test="open-in-books"
@@ -292,6 +306,11 @@ export function PricesPage() {
             onToggle={(key) => writeUrl({ chips: toggleBookChip(chips, key) })}
             showAvailabilityFilters
             showCatalogerFilters
+            libraryCheckedOlder={libraryCheckedOlder}
+            libraryCheckedOlderDays={libraryCheckedOlderDays}
+            onLibraryCheckedOlderChange={(library, days) =>
+              writeUrl({ libraryCheckedOlder: library, libraryCheckedOlderDays: days })
+            }
           />
           <BookLabelFilters
             selectedLabels={selectedLabels}

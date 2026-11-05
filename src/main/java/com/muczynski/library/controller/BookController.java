@@ -575,6 +575,8 @@ public class BookController {
             @RequestParam(defaultValue = "false") boolean noPrices,
             @RequestParam(defaultValue = "false") boolean priceOlder,
             @RequestParam(defaultValue = "false") boolean lookupErrors,
+            @RequestParam(required = false) String libraryCheckedOlder,
+            @RequestParam(defaultValue = "90") int libraryCheckedOlderDays,
             Principal principal) {
         try {
             CatalogFilterService.BookCatalogFilter filter = new CatalogFilterService.BookCatalogFilter();
@@ -630,6 +632,8 @@ public class BookController {
             filter.noPrices = noPrices;
             filter.priceOlder = priceOlder;
             filter.lookupErrors = lookupErrors;
+            filter.libraryCheckedOlder = libraryCheckedOlder;
+            filter.libraryCheckedOlderDays = libraryCheckedOlderDays;
             return ResponseEntity.ok(catalogFilterService.bookSummaries(filter, userId(principal), isLibrarian()));
         } catch (Exception e) {
             logger.warn("Failed to retrieve filtered book summaries: {}", e.getMessage(), e);

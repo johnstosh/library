@@ -132,6 +132,58 @@ public class SearchService {
             List<ReadingDifficulty> readingDifficulties,
             Long userId,
             List<String> favoriteLists) {
+        return search(query, bookPageNumber, authorPageNumber, size,
+                filterInLibrary, filterElectronic, filterFreeText, filterAudio,
+                filterMostRecent, filterWithoutLoc, filterThreeLetterLoc,
+                filterWithoutGrokipedia, filterWithoutGenres, filterNotActiveStatus,
+                filterWithoutFreeTextUrls,
+                filterYdlAudio, filterYdlBook, filterYdlEbook,
+                filterEmuAudio, filterEmuBook, filterEmuEbook,
+                filterAclaAudio, filterAclaBook, filterAclaEbook,
+                filterWithGrokipedia,
+                filterWithoutYdlAudio, filterWithoutYdlBook, filterWithoutYdlEbook,
+                filterWithoutEmuAudio, filterWithoutEmuBook, filterWithoutEmuEbook,
+                filterWithoutAclaAudio, filterWithoutAclaBook, filterWithoutAclaEbook,
+                filterWccAudio, filterWccBook, filterWccEbook,
+                filterWithoutWccAudio, filterWithoutWccBook, filterWithoutWccEbook,
+                filterMsuAudio, filterMsuBook, filterMsuEbook,
+                filterWithoutMsuAudio, filterWithoutMsuBook, filterWithoutMsuEbook,
+                labels, statusFilters, readingDifficulties, userId, favoriteLists,
+                null, CatalogFilterService.DEFAULT_LIBRARY_CHECKED_OLDER_DAYS);
+    }
+
+    /**
+     * Same search, plus a library-data age filter. {@code libraryCheckedOlder} is
+     * YDL, EMU, ACLA, WCC, or MSU. A null or unknown code is off. Any stored last
+     * check counts, including not-held and lookup errors. Never-checked titles
+     * do not. {@code libraryCheckedOlderDays} below 1 uses 90.
+     */
+    @Transactional(readOnly = true)
+    public SearchResponseDto search(String query, int bookPageNumber, int authorPageNumber, int size,
+            boolean filterInLibrary, boolean filterElectronic,
+            boolean filterFreeText, boolean filterAudio,
+            boolean filterMostRecent, boolean filterWithoutLoc,
+            boolean filterThreeLetterLoc, boolean filterWithoutGrokipedia,
+            boolean filterWithoutGenres, boolean filterNotActiveStatus,
+            boolean filterWithoutFreeTextUrls,
+            boolean filterYdlAudio, boolean filterYdlBook, boolean filterYdlEbook,
+            boolean filterEmuAudio, boolean filterEmuBook, boolean filterEmuEbook,
+            boolean filterAclaAudio, boolean filterAclaBook, boolean filterAclaEbook,
+            boolean filterWithGrokipedia,
+            boolean filterWithoutYdlAudio, boolean filterWithoutYdlBook, boolean filterWithoutYdlEbook,
+            boolean filterWithoutEmuAudio, boolean filterWithoutEmuBook, boolean filterWithoutEmuEbook,
+            boolean filterWithoutAclaAudio, boolean filterWithoutAclaBook, boolean filterWithoutAclaEbook,
+            boolean filterWccAudio, boolean filterWccBook, boolean filterWccEbook,
+            boolean filterWithoutWccAudio, boolean filterWithoutWccBook, boolean filterWithoutWccEbook,
+            boolean filterMsuAudio, boolean filterMsuBook, boolean filterMsuEbook,
+            boolean filterWithoutMsuAudio, boolean filterWithoutMsuBook, boolean filterWithoutMsuEbook,
+            List<String> labels,
+            List<BookStatusFilter> statusFilters,
+            List<ReadingDifficulty> readingDifficulties,
+            Long userId,
+            List<String> favoriteLists,
+            String libraryCheckedOlder,
+            int libraryCheckedOlderDays) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
         Pageable bookPageable = PageRequest.of(bookPageNumber, size);
@@ -199,6 +251,9 @@ public class SearchService {
         filter.favoriteBookIds = favoriteBookIds;
         filter.favoriteAuthors = hasFavoriteLists;
         filter.favoriteAuthorIds = favoriteAuthorIds;
+        filter.libraryCheckedOlder = libraryCheckedOlder;
+        filter.libraryCheckedOlderDays = libraryCheckedOlderDays;
+        CatalogFilterService.applyLibraryCheckedOlder(filter);
         if (filterMostRecent) {
             LocalDateTime max = bookRepository.findMaxDateAddedToLibrary();
             filter.mostRecentCutoff = (max != null)
@@ -227,6 +282,7 @@ public class SearchService {
                 || filterWithoutWccAudio || filterWithoutWccBook || filterWithoutWccEbook
                 || filterMsuAudio || filterMsuBook || filterMsuEbook
                 || filterWithoutMsuAudio || filterWithoutMsuBook || filterWithoutMsuEbook
+                || filter.libraryCheckedOlder != null
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {

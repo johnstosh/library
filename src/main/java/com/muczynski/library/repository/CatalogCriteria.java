@@ -271,6 +271,7 @@ public class CatalogCriteria {
                 filter.msuAudio, filter.msuBook, filter.msuEbook,
                 filter.withoutMsuAudio, filter.withoutMsuBook, filter.withoutMsuEbook,
                 "msuAudioAvailable", "msuPaperAvailable", "msuEbookAvailable");
+        addLibraryCheckedOlder(cb, book, filter, parts);
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
@@ -334,6 +335,38 @@ public class CatalogCriteria {
             arms.add(cb.equal(book.get("status"), BookStatus.REQUESTED));
         }
         return or(cb, arms);
+    }
+
+    /**
+     * One public library's last check is present and strictly before the cutoff.
+     * Never-checked titles stay out. An unknown library code adds no predicate.
+     */
+    private void addLibraryCheckedOlder(HibernateCriteriaBuilder cb, Root<Book> book,
+            BookCatalogFilter filter, List<Predicate> parts) {
+        String code = CatalogFilterService.libraryCheckedOlderCode(filter.libraryCheckedOlder);
+        if (code == null) {
+            return;
+        }
+        LocalDateTime cutoff = filter.libraryCheckedOlderCutoff;
+        if (cutoff == null) {
+            int days = filter.libraryCheckedOlderDays > 0
+                    ? filter.libraryCheckedOlderDays
+                    : CatalogFilterService.DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
+            cutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+        }
+        String field = switch (code) {
+            case "YDL" -> "ydlLastChecked";
+            case "EMU" -> "emuLastChecked";
+            case "ACLA" -> "aclaLastChecked";
+            case "WCC" -> "wccLastChecked";
+            case "MSU" -> "msuLastChecked";
+            default -> null;
+        };
+        if (field == null) {
+            return;
+        }
+        Path<LocalDateTime> checked = book.get(field);
+        parts.add(cb.and(cb.isNotNull(checked), cb.lessThan(checked, cutoff)));
     }
 
     private Predicate mostRecent(HibernateCriteriaBuilder cb, Root<Book> book, BookCatalogFilter filter) {

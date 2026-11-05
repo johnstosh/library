@@ -168,6 +168,8 @@ describe('BooksPage Pricing filters', () => {
     expect(screen.getByTestId('filter-no-prices')).toHaveTextContent('Books without Pricing')
     expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-library-checked-older')).toBeInTheDocument()
+    expect(screen.getByTestId('filter-library-checked-older-days')).toHaveValue(90)
     expect(screen.queryByTestId('filter-price-hardcover')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()
   })
@@ -176,6 +178,24 @@ describe('BooksPage Pricing filters', () => {
     librarianState.current = true
     renderBooksPage('/books?mostRecent=false')
     expect(screen.queryByTestId('price-statistics')).not.toBeInTheDocument()
+  })
+})
+
+describe('BooksPage library data age', () => {
+  it('selecting a library turns off the default recent-arrivals intake', () => {
+    librarianState.current = true
+    renderBooksPage('/books')
+
+    fireEvent.change(screen.getByTestId('filter-library-checked-older'), { target: { value: 'MSU' } })
+
+    const location = screen.getByTestId('location').textContent ?? ''
+    expect(location).toContain('libraryCheckedOlder=MSU')
+    expect(location).toContain('libraryCheckedOlderDays=90')
+    expect(location).toContain('mostRecent=false')
+    expect(lastBookFilters.current).toMatchObject({
+      libraryCheckedOlder: 'MSU',
+      libraryCheckedOlderDays: 90,
+    })
   })
 })
 

@@ -10,11 +10,13 @@ import {
   isBooksIntakeConstrained,
   isSearchVisibleChip,
   labelsFromSearchParams,
+  libraryCheckedOlderFromSearchParams,
   matchesBookQuery,
   pageFromSearchParams,
   priceOlderDaysFromSearchParams,
   SEARCH_VISIBLE_CHIPS,
 } from '@/utils/bookFilterParams'
+import { bookListFilterQuery } from '@/api/books'
 
 function chips(overrides: Partial<BookChipFilters> = {}): BookChipFilters {
   return { ...defaultBookChipFilters, ...overrides }
@@ -385,5 +387,65 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips(), [], 'narnia')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], ['Have Read'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], ['in-library'])).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], 'MSU')).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], 'nope')).toBe(false)
+  })
+})
+
+describe('library data older than', () => {
+  it('reads a known library and ignores anything else', () => {
+    expect(libraryCheckedOlderFromSearchParams(new URLSearchParams('libraryCheckedOlder=msu'))).toBe('MSU')
+    expect(libraryCheckedOlderFromSearchParams(new URLSearchParams('libraryCheckedOlder=LOC'))).toBe('')
+  })
+
+  it('turns off the Books recent-arrivals default when a library is selected', () => {
+    const chips = chipsFromSearchParams(
+      new URLSearchParams('libraryCheckedOlder=WCC&libraryCheckedOlderDays=14'),
+      'books',
+    )
+    expect(chips.mostRecent).toBe(false)
+  })
+
+  it('emits the library and days only when a library is selected', () => {
+    expect(bookFilterParamsForUrl({
+      chips: chips({ mostRecent: false }),
+      labels: [],
+      q: '',
+      libraryCheckedOlder: 'emu',
+      libraryCheckedOlderDays: 30,
+    }, 'search')).toEqual({
+      libraryCheckedOlder: 'EMU',
+      libraryCheckedOlderDays: '30',
+    })
+    expect(bookFilterParamsForUrl({
+      chips: chips(),
+      labels: [],
+      q: '',
+      libraryCheckedOlder: 'nope',
+    }, 'search')).toEqual({})
+  })
+
+  it('copies the filter onto Books, Prices, and the summaries query', () => {
+    const shared = {
+      chips: chips({ mostRecent: false }),
+      labels: [] as string[],
+      q: '',
+      libraryCheckedOlder: 'ACLA',
+      libraryCheckedOlderDays: 45,
+    }
+    expect(booksPathFromFilters(shared)).toBe(
+      '/books?mostRecent=false&libraryCheckedOlder=ACLA&libraryCheckedOlderDays=45',
+    )
+    expect(pricesPathFromFilters(shared)).toBe(
+      '/prices?libraryCheckedOlder=ACLA&libraryCheckedOlderDays=45',
+    )
+    expect(booksPathFromPriceFilters(shared)).toBe(
+      '/books?mostRecent=false&libraryCheckedOlder=ACLA&libraryCheckedOlderDays=45',
+    )
+    expect(bookListFilterQuery({
+      chips: chips(),
+      libraryCheckedOlder: 'ydl',
+      libraryCheckedOlderDays: 12,
+    })).toBe('libraryCheckedOlder=YDL&libraryCheckedOlderDays=12')
   })
 })

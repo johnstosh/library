@@ -55,6 +55,7 @@ Deleting a book cascades to its prices.
 - **Listing** shows an AbeBooks URL: the listing when a price was found (`AbeBooks`), or the last search used when no price was found (`Search`)
 - Filters:
   - The same book chips, labels, reading difficulty, favorite lists, and title/author query as Books
+  - **Library data older than** (`data-test="filter-library-checked-older"`) plus a days field (`data-test="filter-library-checked-older-days"`, default 90). One of YDL, EMU, ACLA, WCC, or MSU. A title matches when that library's last check is strictly older than that many days. Not-held and lookup errors count. Never-checked titles stay out. Off sends no `libraryCheckedOlder` param. Open in Books copies it.
   - **Desire to Purchase** (`data-test="desire-to-purchase-filters"`) — OR chips for 0–10 plus Unset, same pattern as Reading Difficulty (`desireToPurchase=0,10,unset`)
   - A bottom **Pricing** section (`data-test="book-price-filters"`) with:
     - **Looked up recently** chip (last **N hours**, default 24; `data-test="filter-price-recent"`) + hours input (FilterChip pattern)

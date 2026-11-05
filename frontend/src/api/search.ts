@@ -7,6 +7,10 @@ import {
   type BookChipFilters,
 } from '@/utils/bookChipFilters'
 import { joinFavoriteLists } from '@/utils/favoriteListParams'
+import {
+  DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
+  libraryCheckedOlderCode,
+} from '@/utils/bookFilterParams'
 
 export interface SearchResponse {
   books: BookDto[]
@@ -82,6 +86,8 @@ export function useSearch(
   selectedDifficulties?: string[],
   favoriteLists?: string[],
   selectedStatuses?: string[],
+  libraryCheckedOlder?: string,
+  libraryCheckedOlderDays?: number,
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
@@ -98,6 +104,13 @@ export function useSearch(
     ? `&status=${encodeURIComponent((selectedStatuses ?? []).join(','))}`
     : ''
   const filterParams = chipQueryParams(filters)
+  const library = libraryCheckedOlderCode(libraryCheckedOlder)
+  const libraryDays = libraryCheckedOlderDays != null && libraryCheckedOlderDays >= 1
+    ? libraryCheckedOlderDays
+    : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
+  const libraryParam = library
+    ? `&libraryCheckedOlder=${encodeURIComponent(library)}&libraryCheckedOlderDays=${libraryDays}`
+    : ''
   return useQuery({
     queryKey: [
       'search',
@@ -110,10 +123,12 @@ export function useSearch(
       selectedDifficulties ?? [],
       favoriteLists ?? [],
       selectedStatuses ?? [],
+      library,
+      library ? libraryDays : 0,
     ],
     queryFn: () =>
       api.get<SearchResponse>(
-        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}${favoriteParam}${statusParam}`,
+        `/search?query=${encodeURIComponent(query)}&bookPage=${bookPage}&authorPage=${authorPage}&size=${size}${filterParams}${labelsParam}${difficultyParam}${favoriteParam}${statusParam}${libraryParam}`,
         { requireAuth: false },
       ),
     enabled,
