@@ -19,6 +19,7 @@ import { useLookupBulkYdlWithProgress, type YdlLookupResultDto } from '@/api/ydl
 import { useLookupBulkEmuWithProgress, type EmuLookupResultDto } from '@/api/emu-lookup'
 import { useLookupBulkAclaWithProgress, type AclaLookupResultDto } from '@/api/acla-lookup'
 import { useLookupBulkWccWithProgress, type WccLookupResultDto } from '@/api/wcc-lookup'
+import { useLookupBulkMsuWithProgress, type MsuLookupResultDto } from '@/api/msu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useBranches } from '@/api/branches'
 import { LocLookupResultsModal } from './LocLookupResultsModal'
@@ -31,6 +32,7 @@ import { YdlLookupResultsModal } from './YdlLookupResultsModal'
 import { EmuLookupResultsModal } from './EmuLookupResultsModal'
 import { AclaLookupResultsModal } from './AclaLookupResultsModal'
 import { WccLookupResultsModal } from './WccLookupResultsModal'
+import { MsuLookupResultsModal } from './MsuLookupResultsModal'
 import { NameNormalizationResultsModal } from './NameNormalizationResultsModal'
 import { useLookupBulkPricesWithProgress } from '@/api/prices'
 import { PriceLookupResultsModal } from '@/pages/prices/components/PriceLookupResultsModal'
@@ -39,7 +41,7 @@ import { PiCamera } from 'react-icons/pi'
 import { PiBookOpen } from 'react-icons/pi'
 import { PiCurrencyDollar } from 'react-icons/pi'
 import { PiTextAa } from 'react-icons/pi'
-import { AclaIcon, AiIcon, EmuIcon, GrokipediaIcon, LocIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, AiIcon, EmuIcon, GrokipediaIcon, LocIcon, MsuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
 import type {
   BookDto,
   BookPriceLookupResultDto,
@@ -109,8 +111,11 @@ export function BulkActionsToolbar({
   const [aclaResults, setAclaResults] = useState<AclaLookupResultDto[]>([])
   const [aclaProgress, setAclaProgress] = useState(0)
   const [showWccResults, setShowWccResults] = useState(false)
+  const [showMsuResults, setShowMsuResults] = useState(false)
   const [wccResults, setWccResults] = useState<WccLookupResultDto[]>([])
+  const [msuResults, setMsuResults] = useState<MsuLookupResultDto[]>([])
   const [wccProgress, setWccProgress] = useState(0)
+  const [msuProgress, setMsuProgress] = useState(0)
   const [showReadingDifficultyResults, setShowReadingDifficultyResults] = useState(false)
   const [readingDifficultyResults, setReadingDifficultyResults] = useState<ReadingDifficultyLookupResultDto[]>([])
   const [readingDifficultyProgress, setReadingDifficultyProgress] = useState(0)
@@ -153,6 +158,9 @@ export function BulkActionsToolbar({
   })
   const lookupWcc = useLookupBulkWccWithProgress((completed) => {
     setWccProgress(completed)
+  })
+  const lookupMsu = useLookupBulkMsuWithProgress((completed) => {
+    setMsuProgress(completed)
   })
   const lookupReadingDifficulty = useLookupBulkReadingDifficultyWithProgress((completed) => {
     setReadingDifficultyProgress(completed)
@@ -338,6 +346,17 @@ export function BulkActionsToolbar({
     } catch (error) {
       console.error('Failed to lookup WCC availability:', error)
       toast.error('Failed to lookup WCC availability')
+    }
+  }
+  const handleMsuLookup = async () => {
+    setMsuProgress(0)
+    try {
+      const results = await lookupMsu.mutateAsync(Array.from(selectedIds))
+      setMsuResults(results)
+      setShowMsuResults(true)
+    } catch (error) {
+      console.error('Failed to lookup MSU availability:', error)
+      toast.error('Failed to lookup MSU availability')
     }
   }
 
@@ -616,6 +635,23 @@ export function BulkActionsToolbar({
             <Button
               variant="outline"
               size="sm"
+              onClick={handleMsuLookup}
+              isLoading={lookupMsu.isPending}
+              disabled={lookupMsu.isPending}
+              leftIcon={<MsuIcon />}
+              data-test="bulk-lookup-msu"
+            >
+              {progressLabel(
+                'Lookup MSU Availability',
+                'Checking MSU...',
+                lookupMsu.isPending,
+                msuProgress,
+                selectedCount
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleNormalizeTitles}
               isLoading={normalizeTitles.isPending}
               disabled={normalizeTitles.isPending}
@@ -722,6 +758,11 @@ export function BulkActionsToolbar({
         isOpen={showWccResults}
         onClose={() => setShowWccResults(false)}
         results={wccResults}
+      />
+      <MsuLookupResultsModal
+        isOpen={showMsuResults}
+        onClose={() => setShowMsuResults(false)}
+        results={msuResults}
       />
 
       <PriceLookupResultsModal

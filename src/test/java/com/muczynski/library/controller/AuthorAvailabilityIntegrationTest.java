@@ -61,6 +61,9 @@ class AuthorAvailabilityIntegrationTest {
         Author wccAuthor = new Author();
         wccAuthor.setName("Availability WCC Author");
         wccAuthor = authorRepository.save(wccAuthor);
+        Author msuAuthor = new Author();
+        msuAuthor.setName("Availability MSU Author");
+        msuAuthor = authorRepository.save(msuAuthor);
 
         Book ydlBook = new Book();
         ydlBook.setTitle("YDL Paper and Audio");
@@ -107,6 +110,15 @@ class AuthorAvailabilityIntegrationTest {
         wccBook.setWccPaperAvailable(false);
         wccBook.setWccEbookAvailable(false);
         bookRepository.save(wccBook);
+        Book msuBook = new Book();
+        msuBook.setTitle("MSU Audio");
+        msuBook.setAuthor(msuAuthor);
+        msuBook.setStatus(BookStatus.ACTIVE);
+        msuBook.setDateAddedToLibrary(LocalDateTime.now());
+        msuBook.setMsuAudioAvailable(true);
+        msuBook.setMsuPaperAvailable(false);
+        msuBook.setMsuEbookAvailable(false);
+        bookRepository.save(msuBook);
 
         mockMvc.perform(get("/api/authors/availability"))
                 .andExpect(status().isOk())
@@ -120,6 +132,9 @@ class AuthorAvailabilityIntegrationTest {
                 .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccAudio").value(hasItem(true)))
                 .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccBook").value(hasItem(false)))
                 .andExpect(jsonPath("$[?(@.authorId == " + wccAuthor.getId() + ")].hasWccEbook").value(hasItem(false)))
+                .andExpect(jsonPath("$[?(@.authorId == " + msuAuthor.getId() + ")].hasMsuAudio").value(hasItem(true)))
+                .andExpect(jsonPath("$[?(@.authorId == " + msuAuthor.getId() + ")].hasMsuBook").value(hasItem(false)))
+                .andExpect(jsonPath("$[?(@.authorId == " + msuAuthor.getId() + ")].hasMsuEbook").value(hasItem(false)))
                 .andExpect(jsonPath("$[?(@.authorId == " + noneAuthor.getId() + ")]").isEmpty());
     }
 }

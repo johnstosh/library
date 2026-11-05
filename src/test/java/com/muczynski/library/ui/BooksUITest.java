@@ -361,7 +361,7 @@ public class BooksUITest {
     }
 
     @Test
-    @DisplayName("Should save checked and cleared YDL, EMU, ACLA, and WCC availability")
+    @DisplayName("Should save checked and cleared YDL, EMU, ACLA, WCC, and MSU availability")
     void testEditBookAvailabilityCheckboxes() {
         page.waitForLoadState(LoadState.NETWORKIDLE);
         page.waitForSelector("text=Initial Book", new Page.WaitForSelectorOptions().setTimeout(10000L));
@@ -375,6 +375,7 @@ public class BooksUITest {
         page.locator("[data-test='book-ydl-audio-available']").check();
         page.locator("[data-test='book-acla-ebook-available']").check();
         page.locator("[data-test='book-wcc-paper-available']").check();
+        page.locator("[data-test='book-msu-paper-available']").check();
         page.click("[data-test='book-form-submit']");
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
@@ -382,6 +383,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Available");
         assertThat(page.locator("[data-test='acla-ebook-status']")).containsText("Available");
         assertThat(page.locator("[data-test='wcc-paper-status']")).containsText("Available");
+        assertThat(page.locator("[data-test='msu-paper-status']")).containsText("Available");
         assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
 
         page.click("[data-test='book-view-edit']");
@@ -391,6 +393,7 @@ public class BooksUITest {
         page.locator("[data-test='book-ydl-audio-available']").uncheck();
         page.locator("[data-test='book-acla-ebook-available']").uncheck();
         page.locator("[data-test='book-wcc-paper-available']").uncheck();
+        page.locator("[data-test='book-msu-paper-available']").uncheck();
         page.click("[data-test='book-form-submit']");
         page.waitForURL("**/books/1", new Page.WaitForURLOptions().setTimeout(10000L));
 
@@ -398,6 +401,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='ydl-audio-status']")).containsText("Not available");
         assertThat(page.locator("[data-test='acla-ebook-status']")).containsText("Not available");
         assertThat(page.locator("[data-test='wcc-paper-status']")).containsText("Not available");
+        assertThat(page.locator("[data-test='msu-paper-status']")).containsText("Not available");
     }
 
     @Test
@@ -583,6 +587,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-view-emu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-acla-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-wcc-lookup']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-msu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
 
         page.click("[data-test='checkout-this-book']");
@@ -865,6 +870,11 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-view-wcc-lookup']")).containsText("Lookup WCC Availability");
         assertThat(page.locator("[data-test='wcc-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='wcc-audio-status']")).containsText("Unknown");
+        assertThat(page.locator("[data-test='msu-availability-section']")).isVisible();
+        assertThat(page.locator("[data-test='book-view-msu-check-link']")).hasText("Go to MSU");
+        assertThat(page.locator("[data-test='book-view-msu-lookup']")).containsText("Lookup MSU Availability");
+        assertThat(page.locator("[data-test='msu-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='msu-audio-status']")).containsText("Unknown");
     }
 
     @Test
@@ -879,6 +889,8 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='bulk-lookup-acla']")).containsText("Lookup ACLA Availability");
         assertThat(page.locator("[data-test='bulk-lookup-wcc']")).isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-wcc']")).containsText("Lookup WCC Availability");
+        assertThat(page.locator("[data-test='bulk-lookup-msu']")).isVisible();
+        assertThat(page.locator("[data-test='bulk-lookup-msu']")).containsText("Lookup MSU Availability");
     }
 
     @Test

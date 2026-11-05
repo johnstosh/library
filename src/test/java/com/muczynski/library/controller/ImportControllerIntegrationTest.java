@@ -354,6 +354,11 @@ class ImportControllerIntegrationTest {
         testBook.setWccEbookAvailable(true);
         testBook.setWccLastChecked(LocalDateTime.of(2025, 6, 4, 15, 45));
         testBook.setWccLookupError("wcc-timeout");
+        testBook.setMsuAudioAvailable(false);
+        testBook.setMsuPaperAvailable(true);
+        testBook.setMsuEbookAvailable(true);
+        testBook.setMsuLastChecked(LocalDateTime.of(2025, 6, 4, 15, 45));
+        testBook.setMsuLookupError("msu-timeout");
         bookRepository.save(testBook);
 
         mockMvc.perform(get("/api/import/json"))
@@ -378,7 +383,12 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].wccPaperAvailable", hasItem(true)))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].wccEbookAvailable", hasItem(true)))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].wccLastChecked", hasItem("2025-06-04T15:45:00")))
-                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].wccLookupError", hasItem("wcc-timeout")));
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].wccLookupError", hasItem("wcc-timeout")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].msuAudioAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].msuPaperAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].msuEbookAvailable", hasItem(true)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].msuLastChecked", hasItem("2025-06-04T15:45:00")))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].msuLookupError", hasItem("msu-timeout")));
     }
 
     // ==================== GET /api/import/stats Integration Tests ====================
@@ -990,7 +1000,11 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.availableAtWcc").exists())
                 .andExpect(jsonPath("$.wccPaper").exists())
                 .andExpect(jsonPath("$.wccEbook").exists())
-                .andExpect(jsonPath("$.wccAudio").exists());
+                .andExpect(jsonPath("$.wccAudio").exists())
+                .andExpect(jsonPath("$.availableAtMsu").exists())
+                .andExpect(jsonPath("$.msuPaper").exists())
+                .andExpect(jsonPath("$.msuEbook").exists())
+                .andExpect(jsonPath("$.msuAudio").exists());
 
         String beforeJson = mockMvc.perform(get("/api/import/availability-stats"))
                 .andReturn().getResponse().getContentAsString();
@@ -1023,6 +1037,9 @@ class ImportControllerIntegrationTest {
         ydlEmu.setWccPaperAvailable(true);
         ydlEmu.setWccEbookAvailable(true);
         ydlEmu.setWccAudioAvailable(false);
+        ydlEmu.setMsuPaperAvailable(true);
+        ydlEmu.setMsuEbookAvailable(true);
+        ydlEmu.setMsuAudioAvailable(false);
         ydlEmu.setFreeTextUrl("https://librivox.org/city-of-god");
         ydlEmu.setLibrary(testLibrary);
         bookRepository.save(ydlEmu);
@@ -1078,7 +1095,11 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.availableAtWcc", equalTo(before.get("availableAtWcc").asInt() + 1)))
                 .andExpect(jsonPath("$.wccPaper", equalTo(before.get("wccPaper").asInt() + 1)))
                 .andExpect(jsonPath("$.wccEbook", equalTo(before.get("wccEbook").asInt() + 1)))
-                .andExpect(jsonPath("$.wccAudio", equalTo(before.get("wccAudio").asInt())));
+                .andExpect(jsonPath("$.wccAudio", equalTo(before.get("wccAudio").asInt())))
+                .andExpect(jsonPath("$.availableAtMsu", equalTo(before.get("availableAtMsu").asInt() + 1)))
+                .andExpect(jsonPath("$.msuPaper", equalTo(before.get("msuPaper").asInt() + 1)))
+                .andExpect(jsonPath("$.msuEbook", equalTo(before.get("msuEbook").asInt() + 1)))
+                .andExpect(jsonPath("$.msuAudio", equalTo(before.get("msuAudio").asInt())));
     }
 
     @Test
@@ -1119,6 +1140,11 @@ class ImportControllerIntegrationTest {
         testBook.setWccEbookAvailable(true);
         testBook.setWccLastChecked(LocalDateTime.of(2025, 8, 4, 16, 20));
         testBook.setWccLookupError("wcc-slow");
+        testBook.setMsuAudioAvailable(true);
+        testBook.setMsuPaperAvailable(false);
+        testBook.setMsuEbookAvailable(true);
+        testBook.setMsuLastChecked(LocalDateTime.of(2025, 8, 4, 16, 20));
+        testBook.setMsuLookupError("msu-slow");
         bookRepository.save(testBook);
 
         // Export the data
@@ -1148,6 +1174,11 @@ class ImportControllerIntegrationTest {
         reloaded.setWccEbookAvailable(null);
         reloaded.setWccLastChecked(null);
         reloaded.setWccLookupError(null);
+        reloaded.setMsuAudioAvailable(null);
+        reloaded.setMsuPaperAvailable(null);
+        reloaded.setMsuEbookAvailable(null);
+        reloaded.setMsuLastChecked(null);
+        reloaded.setMsuLookupError(null);
         bookRepository.save(reloaded);
 
         // Import the previously exported JSON (round-trip)
@@ -1178,6 +1209,11 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getWccEbookAvailable()), "wccEbookAvailable should be restored");
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 4, 16, 20), afterImport.getWccLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("wcc-slow", afterImport.getWccLookupError());
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getMsuAudioAvailable()), "msuAudioAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(afterImport.getMsuPaperAvailable()), "msuPaperAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(afterImport.getMsuEbookAvailable()), "msuEbookAvailable should be restored");
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 8, 4, 16, 20), afterImport.getMsuLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("msu-slow", afterImport.getMsuLookupError());
     }
 
     @Test
@@ -1216,7 +1252,12 @@ class ImportControllerIntegrationTest {
                     "wccPaperAvailable": true,
                     "wccEbookAvailable": false,
                     "wccLastChecked": "2025-07-13T10:45:00",
-                    "wccLookupError": "old-wcc-err"
+                    "wccLookupError": "old-wcc-err",
+                    "msuAudioAvailable": false,
+                    "msuPaperAvailable": true,
+                    "msuEbookAvailable": false,
+                    "msuLastChecked": "2025-07-13T10:45:00",
+                    "msuLookupError": "old-msu-err"
                 }],
                 "loans": []
             }
@@ -1272,6 +1313,11 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getWccEbookAvailable()));
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 13, 10, 45), after.getWccLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("old-wcc-err", after.getWccLookupError());
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getMsuAudioAvailable()));
+        org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getMsuPaperAvailable()));
+        org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getMsuEbookAvailable()));
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 13, 10, 45), after.getMsuLastChecked());
+        org.junit.jupiter.api.Assertions.assertEquals("old-msu-err", after.getMsuLookupError());
     }
 
     @Test

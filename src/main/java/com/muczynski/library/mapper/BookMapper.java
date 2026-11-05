@@ -121,6 +121,11 @@ public class BookMapper {
         book.setWccEbookAvailable(bookDto.getWccEbookAvailable());
         book.setWccLastChecked(bookDto.getWccLastChecked());
         book.setWccLookupError(bookDto.getWccLookupError());
+        book.setMsuAudioAvailable(bookDto.getMsuAudioAvailable());
+        book.setMsuPaperAvailable(bookDto.getMsuPaperAvailable());
+        book.setMsuEbookAvailable(bookDto.getMsuEbookAvailable());
+        book.setMsuLastChecked(bookDto.getMsuLastChecked());
+        book.setMsuLookupError(bookDto.getMsuLookupError());
         book.setReadingDifficulty(bookDto.getReadingDifficulty() != null ? bookDto.getReadingDifficulty() : ReadingDifficulty.UNSET);
         book.setBinding(BookCoverType.orUnknown(bookDto.getBinding()));
         book.setDesireToPurchase(bookDto.getDesireToPurchase());
@@ -202,6 +207,11 @@ public class BookMapper {
         bookDto.setWccEbookAvailable(book.getWccEbookAvailable());
         bookDto.setWccLastChecked(book.getWccLastChecked());
         bookDto.setWccLookupError(book.getWccLookupError());
+        bookDto.setMsuAudioAvailable(book.getMsuAudioAvailable());
+        bookDto.setMsuPaperAvailable(book.getMsuPaperAvailable());
+        bookDto.setMsuEbookAvailable(book.getMsuEbookAvailable());
+        bookDto.setMsuLastChecked(book.getMsuLastChecked());
+        bookDto.setMsuLookupError(book.getMsuLookupError());
         bookDto.setReadingDifficulty(book.getReadingDifficulty());
         bookDto.setBinding(BookCoverType.orUnknown(book.getBinding()));
         bookDto.setDesireToPurchase(book.getDesireToPurchase());

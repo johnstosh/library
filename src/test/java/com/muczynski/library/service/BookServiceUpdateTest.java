@@ -69,14 +69,19 @@ class BookServiceUpdateTest {
         book.setWccAudioAvailable(true);
         book.setWccPaperAvailable(true);
         book.setWccEbookAvailable(false);
+        book.setMsuAudioAvailable(true);
+        book.setMsuPaperAvailable(true);
+        book.setMsuEbookAvailable(false);
         book.setYdlLastChecked(checked);
         book.setEmuLastChecked(checked);
         book.setAclaLastChecked(checked);
         book.setWccLastChecked(checked);
+        book.setMsuLastChecked(checked);
         book.setYdlLookupError("ydl down");
         book.setEmuLookupError("emu down");
         book.setAclaLookupError("acla down");
         book.setWccLookupError("wcc down");
+        book.setMsuLookupError("msu down");
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(bookRepository.existsByTitle("Confessions")).thenReturn(false);
@@ -97,6 +102,9 @@ class BookServiceUpdateTest {
         incoming.setWccAudioAvailable(false);
         incoming.setWccPaperAvailable(false);
         incoming.setWccEbookAvailable(true);
+        incoming.setMsuAudioAvailable(false);
+        incoming.setMsuPaperAvailable(false);
+        incoming.setMsuEbookAvailable(true);
 
         bookService.updateBook(1L, incoming);
 
@@ -116,15 +124,20 @@ class BookServiceUpdateTest {
         assertEquals(Boolean.FALSE, result.getWccAudioAvailable());
         assertEquals(Boolean.FALSE, result.getWccPaperAvailable());
         assertEquals(Boolean.TRUE, result.getWccEbookAvailable());
+        assertEquals(Boolean.FALSE, result.getMsuAudioAvailable());
+        assertEquals(Boolean.FALSE, result.getMsuPaperAvailable());
+        assertEquals(Boolean.TRUE, result.getMsuEbookAvailable());
 
         assertEquals(checked, result.getYdlLastChecked());
         assertEquals(checked, result.getEmuLastChecked());
         assertEquals(checked, result.getAclaLastChecked());
         assertEquals(checked, result.getWccLastChecked());
+        assertEquals(checked, result.getMsuLastChecked());
         assertEquals("ydl down", result.getYdlLookupError());
         assertEquals("emu down", result.getEmuLookupError());
         assertEquals("acla down", result.getAclaLookupError());
         assertEquals("wcc down", result.getWccLookupError());
+        assertEquals("msu down", result.getMsuLookupError());
     }
 
     @Test
@@ -135,6 +148,7 @@ class BookServiceUpdateTest {
         book.setEmuPaperAvailable(true);
         book.setYdlAudioAvailable(false);
         book.setWccPaperAvailable(true);
+        book.setMsuPaperAvailable(true);
 
         when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
         when(bookRepository.existsByTitle("Confessions")).thenReturn(false);
@@ -152,5 +166,6 @@ class BookServiceUpdateTest {
         assertEquals(Boolean.FALSE, saved.getValue().getYdlAudioAvailable());
         assertNull(saved.getValue().getAclaEbookAvailable());
         assertEquals(Boolean.TRUE, saved.getValue().getWccPaperAvailable());
+        assertEquals(Boolean.TRUE, saved.getValue().getMsuPaperAvailable());
     }
 }

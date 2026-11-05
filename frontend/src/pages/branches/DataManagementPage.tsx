@@ -82,6 +82,10 @@ const AVAILABILITY_COUNT_ITEMS: {
   { key: 'wccPaper', label: 'WCC paper', test: 'availability-count-wcc-paper' },
   { key: 'wccEbook', label: 'WCC ebook', test: 'availability-count-wcc-ebook' },
   { key: 'wccAudio', label: 'WCC audio', test: 'availability-count-wcc-audio' },
+  { key: 'availableAtMsu', label: 'Available at MSU', test: 'availability-count-msu' },
+  { key: 'msuPaper', label: 'MSU paper', test: 'availability-count-msu-paper' },
+  { key: 'msuEbook', label: 'MSU ebook', test: 'availability-count-msu-ebook' },
+  { key: 'msuAudio', label: 'MSU audio', test: 'availability-count-msu-audio' },
 ]
 
 interface AppliedDuplicateAction {

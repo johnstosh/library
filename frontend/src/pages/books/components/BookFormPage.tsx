@@ -28,16 +28,17 @@ import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { useLookupSingleWcc } from '@/api/wcc-lookup'
+import { useLookupSingleMsu } from '@/api/msu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
 import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
-import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon, WccIcon } from '@/components/ui/Icons'
+import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon, MsuIcon, WccIcon } from '@/components/ui/Icons'
 import { IconButton } from '@/components/ui/IconButton'
 
 function linesToTitles(text: string): string[] {
@@ -110,6 +111,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     wccAudioAvailable: false,
     wccPaperAvailable: false,
     wccEbookAvailable: false,
+    msuAudioAvailable: false,
+    msuPaperAvailable: false,
+    msuEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
     binding: BookCoverType.UNKNOWN as BookCoverType,
     desireToPurchase: null as number | null,
@@ -157,6 +161,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupEmu = useLookupSingleEmu()
   const lookupAcla = useLookupSingleAcla()
   const lookupWcc = useLookupSingleWcc()
+  const lookupMsu = useLookupSingleMsu()
 
   useEffect(() => {
     if (book) {
@@ -191,6 +196,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         wccAudioAvailable: book.wccAudioAvailable ?? false,
         wccPaperAvailable: book.wccPaperAvailable ?? false,
         wccEbookAvailable: book.wccEbookAvailable ?? false,
+        msuAudioAvailable: book.msuAudioAvailable ?? false,
+        msuPaperAvailable: book.msuPaperAvailable ?? false,
+        msuEbookAvailable: book.msuEbookAvailable ?? false,
         readingDifficulty: book.readingDifficulty ?? ReadingDifficulty.UNSET,
         binding: book.binding ?? BookCoverType.UNKNOWN,
         desireToPurchase: book.desireToPurchase ?? null,
@@ -229,6 +237,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         wccAudioAvailable: false,
         wccPaperAvailable: false,
         wccEbookAvailable: false,
+        msuAudioAvailable: false,
+        msuPaperAvailable: false,
+        msuEbookAvailable: false,
         readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
         binding: BookCoverType.UNKNOWN as BookCoverType,
         desireToPurchase: null as number | null,
@@ -415,6 +426,32 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       setError(err instanceof Error ? err.message : 'Failed to look up WCC availability')
     }
   }
+  const handleLookupMsu = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupMsu.mutateAsync(book.id)
+      if (typeof result.audioAvailable === 'boolean') {
+        setFormData({
+          ...formData,
+          msuAudioAvailable: result.audioAvailable,
+          msuPaperAvailable: result.paperAvailable ?? false,
+          msuEbookAvailable: result.ebookAvailable ?? false,
+        })
+        setHasUnsavedChanges(true)
+      }
+      if (result.success) {
+        setSuccessMessage(`MSU availability updated for "${result.matchedTitle}"`)
+      } else {
+        setError(result.errorMessage || 'Not held by Michigan State University')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up MSU availability')
+    }
+  }
 
   const handleSuggestLoc = async () => {
     setError('')
@@ -576,6 +613,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         wccAudioAvailable: formData.wccAudioAvailable,
         wccPaperAvailable: formData.wccPaperAvailable,
         wccEbookAvailable: formData.wccEbookAvailable,
+        msuAudioAvailable: formData.msuAudioAvailable,
+        msuPaperAvailable: formData.msuPaperAvailable,
+        msuEbookAvailable: formData.msuEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -626,6 +666,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         wccAudioAvailable: formData.wccAudioAvailable,
         wccPaperAvailable: formData.wccPaperAvailable,
         wccEbookAvailable: formData.wccEbookAvailable,
+        msuAudioAvailable: formData.msuAudioAvailable,
+        msuPaperAvailable: formData.msuPaperAvailable,
+        msuEbookAvailable: formData.msuEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -708,6 +751,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         wccAudioAvailable: formData.wccAudioAvailable,
         wccPaperAvailable: formData.wccPaperAvailable,
         wccEbookAvailable: formData.wccEbookAvailable,
+        msuAudioAvailable: formData.msuAudioAvailable,
+        msuPaperAvailable: formData.msuPaperAvailable,
+        msuEbookAvailable: formData.msuEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -783,6 +829,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       wccAudioAvailable: formData.wccAudioAvailable,
       wccPaperAvailable: formData.wccPaperAvailable,
       wccEbookAvailable: formData.wccEbookAvailable,
+      msuAudioAvailable: formData.msuAudioAvailable,
+      msuPaperAvailable: formData.msuPaperAvailable,
+      msuEbookAvailable: formData.msuEbookAvailable,
       readingDifficulty: formData.readingDifficulty,
       binding: formData.binding,
       desireToPurchase: formData.desireToPurchase,
@@ -846,7 +895,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
-    lookupYdl.isPending || lookupEmu.isPending || lookupAcla.isPending || lookupWcc.isPending || lookupLoc.isPending
+    lookupYdl.isPending || lookupEmu.isPending || lookupAcla.isPending || lookupWcc.isPending || lookupMsu.isPending || lookupLoc.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -1036,6 +1085,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-lookup-wcc"
             >
               Lookup WCC Availability
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupMsu}
+              isLoading={lookupMsu.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<MsuIcon />}
+              data-test="book-operation-lookup-msu"
+            >
+              Lookup MSU Availability
             </Button>
             <Button
               type="button"
@@ -1624,6 +1685,93 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             </p>
           )}
         </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">MSU Availability</p>
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={msuCatalogSearchUrl(formData.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-800 underline text-sm"
+                  data-test="book-form-msu-check-link"
+                >
+                  Go to MSU
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupMsu}
+                  isLoading={lookupMsu.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<MsuIcon />}
+                  data-test="book-field-lookup-msu"
+                >
+                  {book?.msuLastChecked ? 'Retry MSU Lookup' : 'Lookup MSU Availability'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="msuAudioAvailable"
+                checked={formData.msuAudioAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, msuAudioAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-msu-audio-available"
+              />
+              <label htmlFor="msuAudioAvailable" className="text-sm text-gray-700">
+                Audio Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="msuPaperAvailable"
+                checked={formData.msuPaperAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, msuPaperAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-msu-paper-available"
+              />
+              <label htmlFor="msuPaperAvailable" className="text-sm text-gray-700">
+                Paper Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="msuEbookAvailable"
+                checked={formData.msuEbookAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, msuEbookAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-msu-ebook-available"
+              />
+              <label htmlFor="msuEbookAvailable" className="text-sm text-gray-700">
+                Ebook
+              </label>
+            </div>
+          </div>
+          {book?.msuLookupError && (
+            <p className="text-xs text-red-600 mt-1" data-test="book-msu-lookup-error">
+              {book.msuLookupError}
+            </p>
+          )}
+        </div>
 
         <div>
           <div className="flex items-center justify-between gap-2 mb-2">
@@ -1806,6 +1954,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 wccAudioAvailable: formData.wccAudioAvailable,
                 wccPaperAvailable: formData.wccPaperAvailable,
                 wccEbookAvailable: formData.wccEbookAvailable,
+                msuAudioAvailable: formData.msuAudioAvailable,
+                msuPaperAvailable: formData.msuPaperAvailable,
+                msuEbookAvailable: formData.msuEbookAvailable,
                 readingDifficulty: formData.readingDifficulty,
                 binding: formData.binding,
                 desireToPurchase: formData.desireToPurchase,

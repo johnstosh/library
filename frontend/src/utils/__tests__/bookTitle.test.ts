@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { describe, expect, it } from 'vitest'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, stripCopySuffix, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '../bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, stripCopySuffix, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '../bookTitle'
 
 describe('stripCopySuffix', () => {
   it('removes a canonical ", c. N" suffix', () => {
@@ -59,7 +59,16 @@ describe('wccCatalogSearchUrl', () => {
     expect(url).not.toContain('c.%202')
   })
 })
-
+describe('msuCatalogSearchUrl', () => {
+  it('searches the MSU VuFind catalog by title without the copy suffix', () => {
+    const url = msuCatalogSearchUrl('Gather Comprehensive, c. 2')
+    expect(url).toContain('catalog.lib.msu.edu/Search/Results')
+    expect(url).toContain('type=Title')
+    expect(url).toContain('lookfor=' + encodeURIComponent('Gather Comprehensive'))
+    expect(url).not.toContain('c.%202')
+    expect(url).not.toContain('primo')
+  })
+})
 describe('aclaCatalogSearchUrl', () => {
   it('quotes the title without the copy suffix', () => {
     const url = aclaCatalogSearchUrl('Gather Comprehensive, c. 2')

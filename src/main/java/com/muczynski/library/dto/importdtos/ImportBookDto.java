@@ -78,11 +78,18 @@ public class ImportBookDto {
     private String aclaLookupError;
 
     // WCC availability fields (exported for diagnostics; persisted on import when present)
+    // WCC availability fields (exported for diagnostics; persisted on import when present)
     private Boolean wccAudioAvailable;
     private Boolean wccPaperAvailable;
     private Boolean wccEbookAvailable;
     private LocalDateTime wccLastChecked;
     private String wccLookupError;
+    // MSU availability fields (exported for diagnostics; persisted on import when present)
+    private Boolean msuAudioAvailable;
+    private Boolean msuPaperAvailable;
+    private Boolean msuEbookAvailable;
+    private LocalDateTime msuLastChecked;
+    private String msuLookupError;
 
     /**
      * Reading difficulty level (stored as enum key: children, accessible, moderate, demanding,

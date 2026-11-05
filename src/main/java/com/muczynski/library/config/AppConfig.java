@@ -128,6 +128,27 @@ public class AppConfig {
 
         return restTemplate;
     }
+    /**
+     * RestTemplate for the Michigan State University Libraries VuFind catalog.
+     * Same timeout shape as the EMU client. The catalog sometimes answers bots with an HTML
+     * block page; that is treated as a lookup error, not as "not held".
+     */
+    @Bean("msuRestTemplate")
+    public RestTemplate msuRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000);
+        factory.setReadTimeout(15000);
+        restTemplate.setRequestFactory(factory);
+
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+
+        return restTemplate;
+    }
 
     /**
      * RestTemplate for the ACLA (Allegheny County Library Association) BiblioCommons

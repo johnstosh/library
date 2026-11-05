@@ -96,6 +96,7 @@ Returns named book-count statistics for the Data Management Books Availability s
 - `availableAtEmu` / `emuPaper` / `emuEbook` / `emuAudio`
 - `availableAtAcla` / `aclaPaper` / `aclaEbook` / `aclaAudio`
 - `availableAtWcc` / `wccPaper` / `wccEbook` / `wccAudio`
+- `availableAtMsu` / `msuPaper` / `msuEbook` / `msuAudio`
 
 Boolean flags are counted only when true (null/false are excluded).
 
@@ -123,7 +124,11 @@ Boolean flags are counted only when true (null/false are excluded).
   "availableAtWcc": 7,
   "wccPaper": 3,
   "wccEbook": 2,
-  "wccAudio": 1
+  "wccAudio": 1,
+  "availableAtMsu": 7,
+  "msuPaper": 3,
+  "msuEbook": 2,
+  "msuAudio": 1
 }
 ```
 

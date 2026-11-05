@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { AuthorChipFilters } from '@/utils/authorChipFilters'
 import { FilterChip } from '@/components/ui/FilterChip'
-import { AclaIcon, EmuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
+import { AclaIcon, EmuIcon, MsuIcon, WccIcon, YdlIcon } from '@/components/ui/Icons'
 
 interface AvailabilityGroupProps {
   icon: ReactNode
@@ -48,9 +48,9 @@ function AvailabilityGroup({ icon, libraryAbbr, libraryFull, dataTest, items, ch
 }
 
 function libraryChips(
-  library: 'Ydl' | 'Emu' | 'Acla' | 'Wcc',
+  library: 'Ydl' | 'Emu' | 'Acla' | 'Wcc' | 'Msu',
   libraryName: string,
-  slug: 'ydl' | 'emu' | 'acla' | 'wcc',
+  slug: 'ydl' | 'emu' | 'acla' | 'wcc' | 'msu',
 ): AvailabilityGroupProps['items'] {
   const formats = [
     { label: 'Audio', flag: 'Audio', kind: 'audio', noun: 'an audiobook' },
@@ -80,7 +80,7 @@ interface AuthorFiltersProps {
 export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
   return (
     <div className="space-y-3" data-test="author-filter-chips">
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-2">
         <AvailabilityGroup
           icon={<YdlIcon />}
           libraryAbbr="YDL"
@@ -116,6 +116,15 @@ export function AuthorFilters({ chips, onToggle }: AuthorFiltersProps) {
           chips={chips}
           onToggle={onToggle}
           items={libraryChips('Wcc', 'WCC', 'wcc')}
+        />
+        <AvailabilityGroup
+          icon={<MsuIcon />}
+          libraryAbbr="MSU"
+          libraryFull="Michigan State University"
+          dataTest="author-filter-msu"
+          chips={chips}
+          onToggle={onToggle}
+          items={libraryChips('Msu', 'MSU', 'msu')}
         />
       </div>
 

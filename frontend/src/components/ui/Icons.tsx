@@ -143,6 +143,18 @@ export function WccIcon({ className }: IconProps) {
     />
   )
 }
+/** Michigan State University mark: white Spartan helmet on green. */
+export function MsuIcon({ className }: IconProps) {
+  return (
+    <img
+      src="/images/msu.png"
+      alt=""
+      aria-hidden
+      data-test="msu-icon"
+      className={clsx(sizeClass, 'object-contain', className)}
+    />
+  )
+}
 
 /**
  * Allegheny County Library Association mark: three folded blue

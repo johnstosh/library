@@ -142,7 +142,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 
 **Authentication:** Public (permitAll)
 
-**Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU, ACLA, and WCC sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
+**Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU, ACLA, WCC, and MSU sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
 - `q` — title, any alternate title, or author name
 - `labels` — comma-separated; the book must have every label
 - `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
@@ -151,7 +151,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
-- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `hasWccAudio`, `hasWccBook`, `hasWccEbook`, `withoutWccAudio`, `withoutWccBook`, `withoutWccEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
+- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `hasWccAudio`, `hasWccBook`, `hasWccEbook`, `withoutWccAudio`, `withoutWccBook`, `withoutWccEbook`, `hasMsuAudio`, `hasMsuBook`, `hasMsuEbook`, `withoutMsuAudio`, `withoutMsuBook`, `withoutMsuEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto
 
@@ -499,6 +499,43 @@ Looks up paper/ebook/audio holdings for one book at Washtenaw Community College'
 **Use Case:**
 - Books page bulk-action carousel "Lookup WCC Availability"
 - Book edit/view page "Lookup WCC Availability"
+
+---
+
+
+## POST /api/msu-lookup/lookup/{bookId}
+Looks up paper/ebook/audio holdings for one book at Michigan State University Libraries (VuFind 11 at `catalog.lib.msu.edu`, `GET /api/v1/search`, `type=Title`) and stores the result on the book.
+
+**Authentication:** Public (`permitAll`)
+
+**Path Parameters:**
+- `bookId` - Book ID to look up
+
+**Response:** `MsuLookupResultDto`
+```json
+{
+  "bookId": 1,
+  "success": true,
+  "audioAvailable": false,
+  "paperAvailable": true,
+  "ebookAvailable": true,
+  "matchedTitle": "The Hobbit"
+}
+```
+
+**Behavior:**
+- Temporary date-format titles are skipped (`Not Ready - Temporary title`)
+- A hit in the primary VuFind index counts as held by MSU. The public catalog link is `Search/Results?type=Title`
+- Format labels follow MSU's catalog map: `Book` is paper, `eBook` or `Book` plus `Electronic` is an ebook, and `Audio`, `CD`, `Cassette`, `Vinyl Record`, and `Shellac Record` are audio
+- Title matching is exact after normalization (short title, full title, title before ` / `, or title before a subtitle colon). Short titles (4 words or fewer) also require an author last-name word match
+- A completed search that finds no match clears stale holdings and returns `Not held by Michigan State University`
+- An HTML block page or other non-JSON response is a lookup error, not a "not held" result
+- HTTP and other lookup failures are stored on the book as `msuLookupError` (max 255 characters) and returned as `success: false`
+- Same pattern as `/api/wcc-lookup/lookup/{bookId}`
+
+**Use Case:**
+- Books page bulk-action carousel "Lookup MSU Availability"
+- Book edit/view page "Lookup MSU Availability"
 
 ---
 

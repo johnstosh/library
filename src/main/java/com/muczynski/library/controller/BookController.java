@@ -565,6 +565,12 @@ public class BookController {
             @RequestParam(defaultValue = "false") boolean withoutWccAudio,
             @RequestParam(defaultValue = "false") boolean withoutWccBook,
             @RequestParam(defaultValue = "false") boolean withoutWccEbook,
+            @RequestParam(defaultValue = "false") boolean hasMsuAudio,
+            @RequestParam(defaultValue = "false") boolean hasMsuBook,
+            @RequestParam(defaultValue = "false") boolean hasMsuEbook,
+            @RequestParam(defaultValue = "false") boolean withoutMsuAudio,
+            @RequestParam(defaultValue = "false") boolean withoutMsuBook,
+            @RequestParam(defaultValue = "false") boolean withoutMsuEbook,
             @RequestParam(defaultValue = "false") boolean withPrices,
             @RequestParam(defaultValue = "false") boolean noPrices,
             @RequestParam(defaultValue = "false") boolean priceOlder,
@@ -614,6 +620,12 @@ public class BookController {
             filter.withoutWccAudio = withoutWccAudio;
             filter.withoutWccBook = withoutWccBook;
             filter.withoutWccEbook = withoutWccEbook;
+            filter.msuAudio = hasMsuAudio;
+            filter.msuBook = hasMsuBook;
+            filter.msuEbook = hasMsuEbook;
+            filter.withoutMsuAudio = withoutMsuAudio;
+            filter.withoutMsuBook = withoutMsuBook;
+            filter.withoutMsuEbook = withoutMsuEbook;
             filter.withPrices = withPrices;
             filter.noPrices = noPrices;
             filter.priceOlder = priceOlder;

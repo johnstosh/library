@@ -68,7 +68,7 @@ class SearchControllerTest {
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(response);
     }
 
@@ -81,7 +81,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(response);
     }
 
@@ -193,7 +193,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -226,7 +226,7 @@ class SearchControllerTest {
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
                 anyBoolean(), anyBoolean(), anyBoolean(),
-                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenThrow(new RuntimeException("Database error"));
 
         given()
@@ -339,7 +339,7 @@ class SearchControllerTest {
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -358,7 +358,7 @@ class SearchControllerTest {
                 eq(false), eq(true), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -369,7 +369,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -392,7 +392,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(true), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -414,7 +414,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -436,7 +436,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(true), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -458,7 +458,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
 
         given()
@@ -477,7 +477,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(), isNull(), isNull(), isNull());
     }
 
     @Test
@@ -488,7 +488,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),  isNull(), isNull(),
                 eq(List.of(ReadingDifficulty.CHILDREN, ReadingDifficulty.UNSET)),
                 isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
@@ -509,7 +509,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(), isNull(),
                 eq(List.of(ReadingDifficulty.CHILDREN, ReadingDifficulty.UNSET)),
                 isNull(), isNull());
     }
@@ -522,7 +522,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),eq(false), eq(false), eq(false), eq(false), eq(false), eq(false),  isNull(),
                 eq(List.of(BookStatusFilter.IN_LIBRARY, BookStatusFilter.REQUESTED)),
                 isNull(), isNull(), isNull()))
                 .thenReturn(emptyResponse(10));
@@ -543,7 +543,7 @@ class SearchControllerTest {
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
                 eq(false), eq(false), eq(false),
-                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(),
+                eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), eq(false), isNull(),
                 eq(List.of(BookStatusFilter.IN_LIBRARY, BookStatusFilter.REQUESTED)),
                 isNull(), isNull(), isNull());
     }

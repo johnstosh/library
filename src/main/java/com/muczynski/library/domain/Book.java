@@ -33,7 +33,7 @@ public class Book {
 
     /**
      * Trailing copy-number suffix our catalog appends to disambiguate duplicate
-     * titles, e.g. ", c. 2", ", c.2", ", c 3". External catalogs (YDL, EMU, ACLA, WCC) do
+     * titles, e.g. ", c. 2", ", c.2", ", c 3". External catalogs (YDL, EMU, ACLA, WCC, MSU) do
      * not carry this suffix on their titles.
      */
     private static final Pattern COPY_SUFFIX_PATTERN =
@@ -140,6 +140,16 @@ public class Book {
     /** Last WCC catalog-lookup error; max 255 characters. */
     @Column(length = 255)
     private String wccLookupError;
+
+    private Boolean msuAudioAvailable;
+    private Boolean msuPaperAvailable;
+    private Boolean msuEbookAvailable;
+
+    private LocalDateTime msuLastChecked;
+
+    /** Last MSU catalog-lookup error; max 255 characters. */
+    @Column(length = 255)
+    private String msuLookupError;
 
 
     @Convert(converter = ReadingDifficultyConverter.class)

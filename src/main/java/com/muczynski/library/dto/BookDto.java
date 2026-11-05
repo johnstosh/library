@@ -74,6 +74,11 @@ public class BookDto {
     private Boolean wccEbookAvailable;
     private LocalDateTime wccLastChecked;
     private String wccLookupError;
+    private Boolean msuAudioAvailable;
+    private Boolean msuPaperAvailable;
+    private Boolean msuEbookAvailable;
+    private LocalDateTime msuLastChecked;
+    private String msuLookupError;
 
     /**
      * Reading difficulty level. Uses enum keys in JSON (children, accessible, etc.).

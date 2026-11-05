@@ -7,7 +7,7 @@ import { authorNeedsCanonicalName } from '@/utils/canonicalAuthorName'
  * and Ebook within one public library, which OR. A positive chip means at least
  * one title has that holding. A Without chip means no title has it.
  *
- * Row 1: has/without YDL, EMU, ACLA, and WCC audio, book, and ebook
+ * Row 1: has/without YDL, EMU, ACLA, WCC, and MSU audio, book, and ebook
  * Row 2: mostRecent, withoutDescription, withoutGrokipedia, withGrokipedia,
  *   zeroBooks, notCanonical, withoutPhotos, withPhotos, withoutBirthDate, withoutDeathDate
  */
@@ -24,6 +24,9 @@ export interface AuthorChipFilters {
   hasWccBook: boolean
   hasWccEbook: boolean
   hasWccAudio: boolean
+  hasMsuBook: boolean
+  hasMsuEbook: boolean
+  hasMsuAudio: boolean
   withoutYdlBook: boolean
   withoutYdlEbook: boolean
   withoutYdlAudio: boolean
@@ -36,6 +39,9 @@ export interface AuthorChipFilters {
   withoutWccBook: boolean
   withoutWccEbook: boolean
   withoutWccAudio: boolean
+  withoutMsuBook: boolean
+  withoutMsuEbook: boolean
+  withoutMsuAudio: boolean
   mostRecent: boolean
   withoutDescription: boolean
   withoutGrokipedia: boolean
@@ -61,6 +67,9 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   hasWccBook: false,
   hasWccEbook: false,
   hasWccAudio: false,
+  hasMsuBook: false,
+  hasMsuEbook: false,
+  hasMsuAudio: false,
   withoutYdlBook: false,
   withoutYdlEbook: false,
   withoutYdlAudio: false,
@@ -73,6 +82,9 @@ export const defaultAuthorChipFilters: AuthorChipFilters = {
   withoutWccBook: false,
   withoutWccEbook: false,
   withoutWccAudio: false,
+  withoutMsuBook: false,
+  withoutMsuEbook: false,
+  withoutMsuAudio: false,
   // Shared default is off. The Authors page overrides this to true in uiStore
   // so it can use GET /authors/most-recent-day instead of GET /authors/summaries.
   mostRecent: false,
@@ -100,6 +112,9 @@ const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
   'hasWccBook',
   'hasWccEbook',
   'hasWccAudio',
+  'hasMsuBook',
+  'hasMsuEbook',
+  'hasMsuAudio',
   'withoutYdlBook',
   'withoutYdlEbook',
   'withoutYdlAudio',
@@ -112,6 +127,9 @@ const AVAILABILITY_CHIPS: (keyof AuthorChipFilters)[] = [
   'withoutWccBook',
   'withoutWccEbook',
   'withoutWccAudio',
+  'withoutMsuBook',
+  'withoutMsuEbook',
+  'withoutMsuAudio',
 ]
 
 const AUTHOR_AVAILABILITY_OPPOSITE: Partial<Record<keyof AuthorChipFilters, keyof AuthorChipFilters>> = {
@@ -139,6 +157,12 @@ const AUTHOR_AVAILABILITY_OPPOSITE: Partial<Record<keyof AuthorChipFilters, keyo
   withoutWccBook: 'hasWccBook',
   hasWccEbook: 'withoutWccEbook',
   withoutWccEbook: 'hasWccEbook',
+  hasMsuAudio: 'withoutMsuAudio',
+  withoutMsuAudio: 'hasMsuAudio',
+  hasMsuBook: 'withoutMsuBook',
+  withoutMsuBook: 'hasMsuBook',
+  hasMsuEbook: 'withoutMsuEbook',
+  withoutMsuEbook: 'hasMsuEbook',
 }
 
 /** Turning a format chip on clears its Without pair, and the reverse. */
@@ -181,6 +205,9 @@ export interface AuthorAvailabilityFlags {
   hasWccBook?: boolean
   hasWccEbook?: boolean
   hasWccAudio?: boolean
+  hasMsuBook?: boolean
+  hasMsuEbook?: boolean
+  hasMsuAudio?: boolean
 }
 
 function isBlank(value: string | null | undefined): boolean {
@@ -228,9 +255,16 @@ export function applyAuthorChipFilters(
       [chips.hasWccAudio, chips.hasWccBook, chips.hasWccEbook],
       [availability?.hasWccAudio, availability?.hasWccBook, availability?.hasWccEbook],
     )) return false
+    if (!matchesAuthorFormatOr(
+      [chips.hasMsuAudio, chips.hasMsuBook, chips.hasMsuEbook],
+      [availability?.hasMsuAudio, availability?.hasMsuBook, availability?.hasMsuEbook],
+    )) return false
     if (chips.withoutWccAudio && availability?.hasWccAudio) return false
     if (chips.withoutWccBook && availability?.hasWccBook) return false
     if (chips.withoutWccEbook && availability?.hasWccEbook) return false
+    if (chips.withoutMsuAudio && availability?.hasMsuAudio) return false
+    if (chips.withoutMsuBook && availability?.hasMsuBook) return false
+    if (chips.withoutMsuEbook && availability?.hasMsuEbook) return false
     if (chips.withoutDescription && !isBlank(author.briefBiography)) return false
     if (chips.withoutGrokipedia && !isMissingGrokipediaUrl(author.grokipediaUrl)) return false
     if (chips.withGrokipedia && isMissingGrokipediaUrl(author.grokipediaUrl)) return false
