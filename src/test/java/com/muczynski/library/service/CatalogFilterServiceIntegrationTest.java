@@ -137,6 +137,54 @@ class CatalogFilterServiceIntegrationTest {
     }
 
     @Test
+    void bookSummariesKeepLibraryChecksOlderThanTheCutoff() {
+        String token = "Stale" + UUID.randomUUID().toString().replace("-", "");
+        Author author = authorRepository.save(authorNamed("Author " + token));
+        LocalDateTime old = LocalDateTime.now(ZoneOffset.UTC).minusDays(120);
+        LocalDateTime fresh = LocalDateTime.now(ZoneOffset.UTC).minusDays(2);
+
+        Book staleHeld = book(token + " held", author, null, null);
+        staleHeld.setMsuLastChecked(old);
+        staleHeld.setMsuPaperAvailable(true);
+        staleHeld = bookRepository.save(staleHeld);
+
+        Book staleNotHeld = book(token + " not held", author, null, null);
+        staleNotHeld.setMsuLastChecked(old);
+        staleNotHeld.setMsuPaperAvailable(false);
+        staleNotHeld.setMsuLookupError("Not held by Michigan State University");
+        staleNotHeld = bookRepository.save(staleNotHeld);
+
+        Book freshHeld = book(token + " fresh", author, null, null);
+        freshHeld.setMsuLastChecked(fresh);
+        freshHeld.setMsuPaperAvailable(true);
+        freshHeld = bookRepository.save(freshHeld);
+
+        Book never = bookRepository.save(book(token + " never", author, null, null));
+
+        Book otherLibrary = book(token + " ydl", author, null, null);
+        otherLibrary.setYdlLastChecked(old);
+        otherLibrary.setYdlPaperAvailable(true);
+        otherLibrary = bookRepository.save(otherLibrary);
+
+        CatalogFilterService.BookCatalogFilter filter = query(token);
+        filter.libraryCheckedOlder = "msu";
+        filter.libraryCheckedOlderDays = 90;
+        List<Long> matched = ids(catalogFilterService.bookSummaries(filter, null, true));
+        assertTrue(matched.contains(staleHeld.getId()));
+        assertTrue(matched.contains(staleNotHeld.getId()));
+        assertFalse(matched.contains(freshHeld.getId()));
+        assertFalse(matched.contains(never.getId()));
+        assertFalse(matched.contains(otherLibrary.getId()));
+
+        CatalogFilterService.BookCatalogFilter unknown = query(token);
+        unknown.libraryCheckedOlder = "NOPE";
+        List<Long> unconstrained = ids(catalogFilterService.bookSummaries(unknown, null, true));
+        assertTrue(unconstrained.contains(never.getId()));
+        assertTrue(unconstrained.contains(freshHeld.getId()));
+        assertTrue(unconstrained.contains(otherLibrary.getId()));
+    }
+
+    @Test
     void authorSummariesAndMostRecentWithOtherChips() {
         String token = "AuthorFilter" + UUID.randomUUID().toString().replace("-", "");
         Author recent = authorRepository.save(authorNamed(token + " recent"));

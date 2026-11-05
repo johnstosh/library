@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -38,6 +39,9 @@ public class CatalogFilterService {
     public static final int PROPER_TEXT_MIN_CHARS = 400;
 
     private static final int DEFAULT_PRICE_OLDER_DAYS = 90;
+    /** Days when a library is selected and the request omits a positive count. */
+    public static final int DEFAULT_LIBRARY_CHECKED_OLDER_DAYS = 90;
+    private static final Set<String> LIBRARY_CHECKED_OLDER_CODES = Set.of("YDL", "EMU", "ACLA", "WCC", "MSU");
     private static final int ID_CHUNK = 500;
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
 
@@ -87,6 +91,7 @@ public class CatalogFilterService {
         }
         int days = filter.priceOlderDays > 0 ? filter.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS;
         filter.priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+        applyLibraryCheckedOlder(filter);
         filter.hideRequested = !includeRequested;
 
         List<BookRepository.DatedBookSummaryProjection> rows = catalogCriteria.bookSummaries(filter);
@@ -161,6 +166,36 @@ public class CatalogFilterService {
         return keep;
     }
 
+    /**
+     * YDL, EMU, ACLA, WCC, or MSU. Blank and anything else mean the filter is off.
+     */
+    public static String libraryCheckedOlderCode(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String code = raw.trim().toUpperCase(Locale.ROOT);
+        return LIBRARY_CHECKED_OLDER_CODES.contains(code) ? code : null;
+    }
+
+    /**
+     * Keeps a known library and sets the UTC cutoff. A null last-checked time
+     * does not match. Not-held and lookup-error rows match when that timestamp
+     * is strictly older than the cutoff.
+     */
+    public static void applyLibraryCheckedOlder(BookCatalogFilter filter) {
+        String code = libraryCheckedOlderCode(filter.libraryCheckedOlder);
+        filter.libraryCheckedOlder = code;
+        if (code == null) {
+            filter.libraryCheckedOlderCutoff = null;
+            return;
+        }
+        int days = filter.libraryCheckedOlderDays > 0
+                ? filter.libraryCheckedOlderDays
+                : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
+        filter.libraryCheckedOlderDays = days;
+        filter.libraryCheckedOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+    }
+
     private BookSummaryDto toBookSummary(BookRepository.DatedBookSummaryProjection projection) {
         BookSummaryDto dto = new BookSummaryDto();
         dto.setId(projection.getId());
@@ -226,6 +261,12 @@ public class CatalogFilterService {
         public boolean priceOlder;
         public boolean lookupErrors;
         public int priceOlderDays = DEFAULT_PRICE_OLDER_DAYS;
+        /**
+         * YDL, EMU, ACLA, WCC, or MSU. Null means the library-data age filter is off.
+         * Any stored last check counts, including not-held and lookup errors.
+         */
+        public String libraryCheckedOlder;
+        public int libraryCheckedOlderDays = DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
         /** Search-page chip. Catalog summaries leave this off. */
         public boolean threeLetterLoc;
         public List<String> labels = List.of();
@@ -248,6 +289,8 @@ public class CatalogFilterService {
         public boolean hideRequested;
         /** UTC instant for the price-older chip. Set by the service. */
         public LocalDateTime priceOlderCutoff;
+        /** UTC instant for {@link #libraryCheckedOlder}. Set by the service. */
+        public LocalDateTime libraryCheckedOlderCutoff;
     }
 
     /** Parsed Authors page filter. */

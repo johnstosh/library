@@ -114,6 +114,27 @@ export function priceOlderDaysFromSearchParams(params: URLSearchParams): number 
   return Number.isFinite(n) && n >= 1 ? n : DEFAULT_PRICE_OLDER_DAYS
 }
 
+/** Public libraries that store a last-checked time. */
+export const LIBRARY_CHECKED_OLDER_CODES = ['YDL', 'EMU', 'ACLA', 'WCC', 'MSU'] as const
+
+export const DEFAULT_LIBRARY_CHECKED_OLDER_DAYS = 90
+
+/** Blank when the value is not one of the five library codes. */
+export function libraryCheckedOlderCode(raw: string | null | undefined): string {
+  const code = (raw ?? '').trim().toUpperCase()
+  return (LIBRARY_CHECKED_OLDER_CODES as readonly string[]).includes(code) ? code : ''
+}
+
+export function libraryCheckedOlderFromSearchParams(params: URLSearchParams): string {
+  return libraryCheckedOlderCode(params.get('libraryCheckedOlder'))
+}
+
+export function libraryCheckedOlderDaysFromSearchParams(params: URLSearchParams): number {
+  const raw = params.get('libraryCheckedOlderDays')
+  const n = parseInt(raw ?? '', 10)
+  return Number.isFinite(n) && n >= 1 ? n : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
+}
+
 export function labelsFromSearchParams(params: URLSearchParams): string[] {
   const raw = params.get('labels')
   if (!raw) return []
@@ -141,6 +162,7 @@ export function isBooksIntakeConstrained(
   favoriteLists: string[] = [],
   statuses: string[] = [],
   bindings: string[] = [],
+  libraryCheckedOlder = '',
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
@@ -149,7 +171,8 @@ export function isBooksIntakeConstrained(
     favoriteLists.length > 0 ||
     statuses.length > 0 ||
     bindings.length > 0 ||
-    q.trim().length > 0
+    q.trim().length > 0 ||
+    libraryCheckedOlderCode(libraryCheckedOlder) !== ''
   )
 }
 
@@ -173,6 +196,7 @@ export function chipsFromSearchParams(
     const q = (params.get('q') ?? '').trim()
     const favoriteLists = favoriteListsFromSearchParams(params)
     const bindings = bindingsFromSearchParams(params)
+    const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(params)
     const explicitMostRecent = params.get(CHIP_URL_KEYS.mostRecent)
     if (explicitMostRecent === 'true') {
       chips.mostRecent = true
@@ -186,6 +210,7 @@ export function chipsFromSearchParams(
       favoriteLists,
       statuses,
       bindings,
+      libraryCheckedOlder,
     )) {
       chips.mostRecent = true
     } else {
@@ -207,6 +232,10 @@ export interface BookFilterUrlState {
   authorPage?: number
   /** Days for the Books "price older than" chip. Default 90 when the chip is on. */
   priceOlderDays?: number
+  /** YDL, EMU, ACLA, WCC, or MSU. Blank leaves the library-data age filter off. */
+  libraryCheckedOlder?: string
+  /** Days for libraryCheckedOlder. Default 90 when a library is selected. */
+  libraryCheckedOlderDays?: number
   /** Desire-to-purchase chips (Prices page). */
   desireToPurchase?: DesireToPurchaseFilter[]
   /** When true, emit `q=` even if the query is blank (Search “has searched”). */
@@ -254,6 +283,8 @@ export function bookFilterParamsForUrl(
     params[CHIP_URL_KEYS.mostRecent] = 'true'
   }
 
+  const libraryCheckedOlder = libraryCheckedOlderCode(state.libraryCheckedOlder)
+
   if (mode === 'books') {
     const othersOn = isBooksIntakeConstrained(
       state.chips,
@@ -263,6 +294,7 @@ export function bookFilterParamsForUrl(
       favoriteLists,
       statuses,
       bindings,
+      libraryCheckedOlder,
     )
     // Always emit mostRecent state honestly (true or false) so it stays toggleable
     // and combinable. Omit only the default intake-on when nothing else is active.
@@ -287,6 +319,14 @@ export function bookFilterParamsForUrl(
     params.priceOlderDays = String(days)
   }
 
+  if (libraryCheckedOlder) {
+    const days = state.libraryCheckedOlderDays != null && state.libraryCheckedOlderDays >= 1
+      ? state.libraryCheckedOlderDays
+      : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
+    params.libraryCheckedOlder = libraryCheckedOlder
+    params.libraryCheckedOlderDays = String(days)
+  }
+
   return params
 }
 
@@ -299,8 +339,14 @@ export function booksPathFromFilters(state: {
   statuses?: string[]
   favoriteLists?: string[]
   q: string
+  libraryCheckedOlder?: string
+  libraryCheckedOlderDays?: number
 }): string {
-  const discoveryChips: BookChipFilters = { ...defaultBookChipFilters, mostRecent: true }
+  const libraryCheckedOlder = libraryCheckedOlderCode(state.libraryCheckedOlder)
+  const discoveryChips: BookChipFilters = {
+    ...defaultBookChipFilters,
+    mostRecent: state.chips.mostRecent || libraryCheckedOlder === '',
+  }
   for (const key of SEARCH_VISIBLE_CHIPS) {
     if (key === 'mostRecent') continue
     discoveryChips[key] = state.chips[key]
@@ -316,6 +362,8 @@ export function booksPathFromFilters(state: {
       statuses: state.statuses ?? [],
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
+      libraryCheckedOlder,
+      libraryCheckedOlderDays: state.libraryCheckedOlderDays,
     },
     'books',
   )
@@ -334,6 +382,8 @@ export function pricesPathFromFilters(state: {
   q: string
   priceOlderDays?: number
   desireToPurchase?: DesireToPurchaseFilter[]
+  libraryCheckedOlder?: string
+  libraryCheckedOlderDays?: number
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -346,6 +396,8 @@ export function pricesPathFromFilters(state: {
       q: state.q,
       priceOlderDays: state.priceOlderDays,
       desireToPurchase: state.desireToPurchase,
+      libraryCheckedOlder: state.libraryCheckedOlder,
+      libraryCheckedOlderDays: state.libraryCheckedOlderDays,
     },
     'prices',
   )
@@ -363,6 +415,8 @@ export function booksPathFromPriceFilters(state: {
   favoriteLists?: string[]
   q: string
   priceOlderDays?: number
+  libraryCheckedOlder?: string
+  libraryCheckedOlderDays?: number
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -374,6 +428,8 @@ export function booksPathFromPriceFilters(state: {
       favoriteLists: state.favoriteLists ?? [],
       q: state.q,
       priceOlderDays: state.priceOlderDays,
+      libraryCheckedOlder: state.libraryCheckedOlder,
+      libraryCheckedOlderDays: state.libraryCheckedOlderDays,
     },
     'books',
   )

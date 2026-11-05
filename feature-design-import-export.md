@@ -21,6 +21,7 @@ The JSON export includes:
 - **Favorites** (per-user list names, referenced by book title+author or author name)
 - **Prices** (AbeBooks listings: book title+author, cover including library binding, price, shipping, condition, date, URL)
 - Book `binding` (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`; missing on legacy JSON imports as `UNKNOWN`)
+- Book `readingDifficulty` and `desireToPurchase`. Export writes both. Import stores them on create and on an existing title when the JSON includes them. A missing field leaves the stored value unchanged.
 - **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included

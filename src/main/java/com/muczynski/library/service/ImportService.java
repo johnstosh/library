@@ -620,6 +620,9 @@ public class ImportService {
         if (bDto.getMsuEbookAvailable() != null) book.setMsuEbookAvailable(bDto.getMsuEbookAvailable());
         if (bDto.getMsuLastChecked() != null) book.setMsuLastChecked(bDto.getMsuLastChecked());
         if (bDto.getMsuLookupError() != null) book.setMsuLookupError(bDto.getMsuLookupError());
+        // Optional on older dumps. A missing value leaves the stored book unchanged.
+        if (bDto.getReadingDifficulty() != null) book.setReadingDifficulty(bDto.getReadingDifficulty());
+        if (bDto.getDesireToPurchase() != null) book.setDesireToPurchase(bDto.getDesireToPurchase());
 
         book = bookRepository.save(book);
     }

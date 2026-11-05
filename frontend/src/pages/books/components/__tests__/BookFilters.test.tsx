@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { vi } from 'vitest'
 import { BookFilters } from '../BookFilters'
 import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFilters'
 
@@ -33,6 +34,31 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-without-ydl-ebook')).toHaveTextContent('Without Ebook')
     expect(screen.getByTestId('filter-without-emu-audio')).toBeInTheDocument()
     expect(screen.getByTestId('filter-without-acla-ebook')).toBeInTheDocument()
+    expect(screen.queryByTestId('filter-library-checked-older')).not.toBeInTheDocument()
+  })
+
+  it('shows the library data age filter when the page opts in', () => {
+    const onLibraryCheckedOlderChange = vi.fn()
+    const props = {
+      chips,
+      onToggle: () => {},
+      showAvailabilityFilters: true,
+      libraryCheckedOlderDays: 90,
+      onLibraryCheckedOlderChange,
+    }
+    const view = render(<BookFilters {...props} libraryCheckedOlder="" />)
+
+    const select = screen.getByTestId('filter-library-checked-older')
+    expect(select).toHaveValue('')
+    expect(screen.getByTestId('filter-library-checked-older-days')).toBeDisabled()
+
+    fireEvent.change(select, { target: { value: 'MSU' } })
+    expect(onLibraryCheckedOlderChange).toHaveBeenCalledWith('MSU', 90)
+
+    view.rerender(<BookFilters {...props} libraryCheckedOlder="MSU" />)
+    expect(screen.getByTestId('filter-library-checked-older-days')).toBeEnabled()
+    fireEvent.change(screen.getByTestId('filter-library-checked-older-days'), { target: { value: '14' } })
+    expect(onLibraryCheckedOlderChange).toHaveBeenCalledWith('MSU', 14)
   })
 
   it('hides cataloger chips when showCatalogerFilters is false', () => {

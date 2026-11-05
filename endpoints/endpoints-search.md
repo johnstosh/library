@@ -41,6 +41,8 @@ Returns search results for books and authors matching the query.
 - `filterWithoutYdlAudio`, `filterWithoutYdlBook`, `filterWithoutYdlEbook`, `filterWithoutEmuAudio`, `filterWithoutEmuBook`, `filterWithoutEmuEbook`, `filterWithoutAclaAudio`, `filterWithoutAclaBook`, `filterWithoutAclaEbook`, `filterWithoutWccAudio`, `filterWithoutWccBook`, `filterWithoutWccEbook`, `filterWithoutMsuAudio`, `filterWithoutMsuBook`, `filterWithoutMsuEbook` (boolean, optional, default `false`) - That format flag is false or unset
 
 Audio, Book, and Ebook OR within one public library (YDL, EMU, ACLA, WCC, or MSU) and AND across libraries. Without chips AND with that group. Search authors are authors of titles that match.
+- `libraryCheckedOlder` (string, optional) - `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`. Titles whose last check for that library is older than `libraryCheckedOlderDays`. A stored not-held result or lookup error counts. Never-checked titles do not. Unknown values are ignored. When this is set, search authors are authors of matching books.
+- `libraryCheckedOlderDays` (int, optional, default `90`) - Days for that cutoff. The last check must be strictly before now UTC minus this many days.
 - `labels` (string, optional) - Comma-separated genre tags; book must have ALL of them
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the logged-in user. A name that contains a comma is `~` plus a percent-encoded name. Lists are ORed; the clause is ANDed with other filters. Ignored when anonymous.
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (`children`, `accessible`, `moderate`, `demanding`, `advanced`, `unset`); book must match ANY of them. `unset` also matches null or blank stored values

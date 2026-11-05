@@ -17,6 +17,8 @@ import {
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
   labelsFromSearchParams,
+  libraryCheckedOlderDaysFromSearchParams,
+  libraryCheckedOlderFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { bookBindingDisplay } from '@/utils/bookBinding'
@@ -71,6 +73,8 @@ export function SearchPage() {
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedStatuses = bookStatusesFromSearchParams(searchParams)
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
+  const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
+  const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'search')
 
@@ -88,6 +92,7 @@ export function SearchPage() {
     || selectedDifficulties.length > 0
     || selectedStatuses.length > 0
     || selectedFavoriteLists.length > 0
+    || libraryCheckedOlder !== ''
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -100,6 +105,8 @@ export function SearchPage() {
     selectedDifficulties,
     selectedFavoriteLists,
     selectedStatuses,
+    libraryCheckedOlder,
+    libraryCheckedOlderDays,
   )
   const isLibrarian = useIsLibrarian()
 
@@ -113,6 +120,8 @@ export function SearchPage() {
     includeQ?: boolean
     bookPage?: number
     authorPage?: number
+    libraryCheckedOlder?: string
+    libraryCheckedOlderDays?: number
   }) => {
     const includeQ = next.includeQ ?? hasSearched
     setSearchParams(
@@ -127,6 +136,10 @@ export function SearchPage() {
           bookPage: next.bookPage ?? 0,
           authorPage: next.authorPage ?? 0,
           includeBlankQuery: includeQ,
+          libraryCheckedOlder: next.libraryCheckedOlder !== undefined
+            ? next.libraryCheckedOlder
+            : libraryCheckedOlder,
+          libraryCheckedOlderDays: next.libraryCheckedOlderDays ?? libraryCheckedOlderDays,
         },
         'search',
       ),
@@ -201,6 +214,8 @@ export function SearchPage() {
     statuses: selectedStatuses,
     favoriteLists: selectedFavoriteLists,
     q: inputValue.trim() || urlQuery,
+    libraryCheckedOlder,
+    libraryCheckedOlderDays,
   })
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
@@ -259,6 +274,11 @@ export function SearchPage() {
               onToggle={handleFilterToggle}
               showAvailabilityFilters
               showCatalogerFilters={false}
+              libraryCheckedOlder={libraryCheckedOlder}
+              libraryCheckedOlderDays={libraryCheckedOlderDays}
+              onLibraryCheckedOlderChange={(library, days) =>
+                writeUrl({ libraryCheckedOlder: library, libraryCheckedOlderDays: days })
+              }
             />
           </div>
 

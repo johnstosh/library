@@ -6,6 +6,10 @@ import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
 import { DEFAULT_PRICE_OLDER_DAYS, type BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
+  libraryCheckedOlderCode,
+} from '@/utils/bookFilterParams'
 import { joinFavoriteLists } from '@/utils/favoriteListParams'
 import type {
   BookDto,
@@ -29,6 +33,9 @@ export interface BookListFilters {
   favoriteLists?: readonly string[]
   desireToPurchase?: readonly (string | number)[]
   priceOlderDays?: number
+  /** YDL, EMU, ACLA, WCC, or MSU. Omitted or unknown leaves the age filter off. */
+  libraryCheckedOlder?: string
+  libraryCheckedOlderDays?: number
   chips: BookChipFilters
 }
 
@@ -104,6 +111,14 @@ export function bookListFilterQuery(filters: BookListFilters): string {
       ? filters.priceOlderDays
       : DEFAULT_PRICE_OLDER_DAYS
     params.set('priceOlderDays', String(days))
+  }
+  const library = libraryCheckedOlderCode(filters.libraryCheckedOlder)
+  if (library) {
+    const days = filters.libraryCheckedOlderDays != null && filters.libraryCheckedOlderDays >= 1
+      ? filters.libraryCheckedOlderDays
+      : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
+    params.set('libraryCheckedOlder', library)
+    params.set('libraryCheckedOlderDays', String(days))
   }
   return params.toString()
 }

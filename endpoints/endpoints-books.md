@@ -151,6 +151,8 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
+- `libraryCheckedOlder` — `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`. Keeps titles whose last check for that library is older than `libraryCheckedOlderDays`. A not-held result or a lookup error still counts. A title that has never been checked for that library does not match. Any other value is ignored.
+- `libraryCheckedOlderDays` — days for `libraryCheckedOlder` (default 90). The cutoff is now in UTC minus that many days, and the last check must be strictly earlier.
 - Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `hasWccAudio`, `hasWccBook`, `hasWccEbook`, `withoutWccAudio`, `withoutWccBook`, `withoutWccEbook`, `hasMsuAudio`, `hasMsuBook`, `hasMsuEbook`, `withoutMsuAudio`, `withoutMsuBook`, `withoutMsuEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto

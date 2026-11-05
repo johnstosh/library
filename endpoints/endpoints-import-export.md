@@ -36,6 +36,7 @@ Imports database from JSON format.
 - Merges data with existing records (doesn't delete existing data)
 - Matches entities by natural keys (e.g., library name, author name, book title+author)
 - On an existing author, a missing or null field stays as stored, including `alternateNames`. Only a value present in the payload replaces that field. An empty `alternateNames` list clears the stored list.
+- On a book, `readingDifficulty` and `desireToPurchase` are stored on create and when updating an existing title, but only when the JSON includes them. A missing field leaves the stored value unchanged. Export writes both fields, so a round trip keeps them.
 - Photos in the import file are processed but image bytes are not expected
 
 ---

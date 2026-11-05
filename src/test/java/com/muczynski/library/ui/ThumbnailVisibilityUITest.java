@@ -129,13 +129,16 @@ public class ThumbnailVisibilityUITest {
         page.locator("text=Thumbnail Book One").waitFor(
                 new Locator.WaitForOptions().setTimeout(20000));
 
-        // Poll until 5 thumbnail-img elements appear in the DOM
+        // Covers render only after they intersect the viewport. Filter rows can
+        // push the last arrival below the fold, so scroll it into view.
         Locator thumbnails = page.locator("[data-test='thumbnail-img']");
+        Locator lastBook = page.locator("text=Thumbnail Book Five");
         for (int attempt = 0; attempt < 40; attempt++) {
-            page.waitForTimeout(500);
             if (thumbnails.count() >= 5) {
                 break;
             }
+            lastBook.scrollIntoViewIfNeeded();
+            page.waitForTimeout(500);
         }
         int initialCount = thumbnails.count();
         assertTrue(initialCount >= 5,
