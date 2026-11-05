@@ -78,7 +78,7 @@ class SearchServiceTest {
             boolean inLib, boolean elec, boolean freeText, boolean audio, List<String> labels) {
         return searchService.search(query, page, page, size, inLib, elec, freeText, audio,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, labels, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, labels, null, null, null, null);
     }
 
     private void stubBooks(Page<Book> bookPage) {
@@ -512,7 +512,7 @@ class SearchServiceTest {
 
         searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         BookCatalogFilter filter = capturedBookFilter();
         assertTrue(filter.statuses.isEmpty());
@@ -534,7 +534,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, true, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         assertEquals(List.of(
@@ -562,7 +562,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 true, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         BookCatalogFilter filter = capturedBookFilter();
@@ -583,7 +583,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, true, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null);
 
         assertNotNull(result);
         assertEquals(List.of(BookStatusFilter.WITHOUT_LOC), capturedBookFilter().statuses);
@@ -602,7 +602,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, difficulties, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, null, difficulties, null, null);
 
         assertNotNull(result);
         assertEquals(difficulties, capturedBookFilter().readingDifficulties);
@@ -623,7 +623,7 @@ class SearchServiceTest {
 
         SearchResponseDto result = searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, statuses, null, null, null);
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, null, statuses, null, null, null);
 
         assertNotNull(result);
         assertEquals(statuses, capturedBookFilter().statuses);
@@ -644,7 +644,7 @@ class SearchServiceTest {
 
         searchService.search(query, page, page, size, false, false, false, false,
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
                 null, null, null, 7L, List.of("mine"));
 
         BookCatalogFilter filter = capturedBookFilter();

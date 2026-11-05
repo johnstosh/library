@@ -27,16 +27,17 @@ import { useLookupSingleFreeText, type FreeTextLookupResultDto } from '@/api/fre
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { useLookupSingleAcla } from '@/api/acla-lookup'
+import { useLookupSingleWcc } from '@/api/wcc-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { parseISODateSafe } from '@/utils/formatters'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
 import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
-import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon } from '@/components/ui/Icons'
+import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon, WccIcon } from '@/components/ui/Icons'
 import { IconButton } from '@/components/ui/IconButton'
 
 function linesToTitles(text: string): string[] {
@@ -106,6 +107,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     aclaAudioAvailable: false,
     aclaPaperAvailable: false,
     aclaEbookAvailable: false,
+    wccAudioAvailable: false,
+    wccPaperAvailable: false,
+    wccEbookAvailable: false,
     readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
     binding: BookCoverType.UNKNOWN as BookCoverType,
     desireToPurchase: null as number | null,
@@ -152,6 +156,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const lookupAcla = useLookupSingleAcla()
+  const lookupWcc = useLookupSingleWcc()
 
   useEffect(() => {
     if (book) {
@@ -183,6 +188,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: book.aclaAudioAvailable ?? false,
         aclaPaperAvailable: book.aclaPaperAvailable ?? false,
         aclaEbookAvailable: book.aclaEbookAvailable ?? false,
+        wccAudioAvailable: book.wccAudioAvailable ?? false,
+        wccPaperAvailable: book.wccPaperAvailable ?? false,
+        wccEbookAvailable: book.wccEbookAvailable ?? false,
         readingDifficulty: book.readingDifficulty ?? ReadingDifficulty.UNSET,
         binding: book.binding ?? BookCoverType.UNKNOWN,
         desireToPurchase: book.desireToPurchase ?? null,
@@ -218,6 +226,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: false,
         aclaPaperAvailable: false,
         aclaEbookAvailable: false,
+        wccAudioAvailable: false,
+        wccPaperAvailable: false,
+        wccEbookAvailable: false,
         readingDifficulty: ReadingDifficulty.UNSET as ReadingDifficulty,
         binding: BookCoverType.UNKNOWN as BookCoverType,
         desireToPurchase: null as number | null,
@@ -378,6 +389,33 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  const handleLookupWcc = async () => {
+    if (!book?.id) return
+
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const result = await lookupWcc.mutateAsync(book.id)
+      if (typeof result.audioAvailable === 'boolean') {
+        setFormData({
+          ...formData,
+          wccAudioAvailable: result.audioAvailable,
+          wccPaperAvailable: result.paperAvailable ?? false,
+          wccEbookAvailable: result.ebookAvailable ?? false,
+        })
+        setHasUnsavedChanges(true)
+      }
+      if (result.success) {
+        setSuccessMessage(`WCC availability updated for "${result.matchedTitle}"`)
+      } else {
+        setError(result.errorMessage || 'Not held by Washtenaw Community College')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up WCC availability')
+    }
+  }
+
   const handleSuggestLoc = async () => {
     setError('')
     setSuccessMessage('')
@@ -535,6 +573,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: formData.aclaAudioAvailable,
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
+        wccAudioAvailable: formData.wccAudioAvailable,
+        wccPaperAvailable: formData.wccPaperAvailable,
+        wccEbookAvailable: formData.wccEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -582,6 +623,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: formData.aclaAudioAvailable,
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
+        wccAudioAvailable: formData.wccAudioAvailable,
+        wccPaperAvailable: formData.wccPaperAvailable,
+        wccEbookAvailable: formData.wccEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -661,6 +705,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         aclaAudioAvailable: formData.aclaAudioAvailable,
         aclaPaperAvailable: formData.aclaPaperAvailable,
         aclaEbookAvailable: formData.aclaEbookAvailable,
+        wccAudioAvailable: formData.wccAudioAvailable,
+        wccPaperAvailable: formData.wccPaperAvailable,
+        wccEbookAvailable: formData.wccEbookAvailable,
         readingDifficulty: formData.readingDifficulty,
         binding: formData.binding,
         desireToPurchase: formData.desireToPurchase,
@@ -733,6 +780,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       aclaAudioAvailable: formData.aclaAudioAvailable,
       aclaPaperAvailable: formData.aclaPaperAvailable,
       aclaEbookAvailable: formData.aclaEbookAvailable,
+      wccAudioAvailable: formData.wccAudioAvailable,
+      wccPaperAvailable: formData.wccPaperAvailable,
+      wccEbookAvailable: formData.wccEbookAvailable,
       readingDifficulty: formData.readingDifficulty,
       binding: formData.binding,
       desireToPurchase: formData.desireToPurchase,
@@ -796,7 +846,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
   const isOperationPending = cloneBook.isPending || deleteBook.isPending || bookFromImage.isPending ||
     bookFromFirstPhoto.isPending || titleAuthorFromPhoto.isPending || bookFromTitleAuthor.isPending ||
     lookupGrokipediaQuick.isPending || lookupGrokipediaSlow.isPending || lookupFreeText.isPending || lookupGenres.isPending || isGeneratingLabel ||
-    lookupYdl.isPending || lookupEmu.isPending || lookupAcla.isPending || lookupLoc.isPending
+    lookupYdl.isPending || lookupEmu.isPending || lookupAcla.isPending || lookupWcc.isPending || lookupLoc.isPending
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -974,6 +1024,18 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
               data-test="book-operation-lookup-acla"
             >
               Lookup ACLA Availability
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLookupWcc}
+              isLoading={lookupWcc.isPending}
+              disabled={isOperationPending || isLoading}
+              leftIcon={<WccIcon />}
+              data-test="book-operation-lookup-wcc"
+            >
+              Lookup WCC Availability
             </Button>
             <Button
               type="button"
@@ -1476,6 +1538,94 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         </div>
 
         <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">WCC Availability</p>
+            <div className="flex items-center gap-3">
+              {formData.title && (
+                <a
+                  href={wccCatalogSearchUrl(formData.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:text-primary-800 underline text-sm"
+                  data-test="book-form-wcc-check-link"
+                >
+                  Go to WCC
+                </a>
+              )}
+              {isEditing && isLibrarian && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLookupWcc}
+                  isLoading={lookupWcc.isPending}
+                  disabled={isOperationPending || isLoading}
+                  leftIcon={<WccIcon />}
+                  data-test="book-field-lookup-wcc"
+                >
+                  {book?.wccLastChecked ? 'Retry WCC Lookup' : 'Lookup WCC Availability'}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="wccAudioAvailable"
+                checked={formData.wccAudioAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, wccAudioAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-wcc-audio-available"
+              />
+              <label htmlFor="wccAudioAvailable" className="text-sm text-gray-700">
+                Audio Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="wccPaperAvailable"
+                checked={formData.wccPaperAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, wccPaperAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-wcc-paper-available"
+              />
+              <label htmlFor="wccPaperAvailable" className="text-sm text-gray-700">
+                Paper Book
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="wccEbookAvailable"
+                checked={formData.wccEbookAvailable}
+                onChange={(e) => {
+                  setFormData({ ...formData, wccEbookAvailable: e.target.checked })
+                  setHasUnsavedChanges(true)
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                data-test="book-wcc-ebook-available"
+              />
+              <label htmlFor="wccEbookAvailable" className="text-sm text-gray-700">
+                Ebook
+              </label>
+            </div>
+          </div>
+          {book?.wccLookupError && (
+            <p className="text-xs text-red-600 mt-1" data-test="book-wcc-lookup-error">
+              {book.wccLookupError}
+            </p>
+          )}
+        </div>
+
+        <div>
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="text-sm font-medium text-gray-700">Genres</span>
             {isEditing && isLibrarian && (
@@ -1653,6 +1803,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 aclaAudioAvailable: formData.aclaAudioAvailable,
                 aclaPaperAvailable: formData.aclaPaperAvailable,
                 aclaEbookAvailable: formData.aclaEbookAvailable,
+                wccAudioAvailable: formData.wccAudioAvailable,
+                wccPaperAvailable: formData.wccPaperAvailable,
+                wccEbookAvailable: formData.wccEbookAvailable,
                 readingDifficulty: formData.readingDifficulty,
                 binding: formData.binding,
                 desireToPurchase: formData.desireToPurchase,

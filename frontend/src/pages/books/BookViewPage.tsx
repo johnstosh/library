@@ -7,9 +7,10 @@ import { useTitleLoaned } from '@/api/loans'
 import { useLookupSingleYdl } from '@/api/ydl-lookup'
 import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { useLookupSingleAcla } from '@/api/acla-lookup'
+import { useLookupSingleWcc } from '@/api/wcc-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
 import { formatBookLabel } from './components/BookLabelFilters'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
 import { PageLoading } from '@/components/progress/PageLoading'
 import { PiCopy, PiPencil, PiTrash, PiMagnifyingGlass, PiCheckCircle, PiXCircle, PiBookOpen } from 'react-icons/pi'
@@ -64,6 +65,7 @@ export function BookViewPage() {
   const lookupYdl = useLookupSingleYdl()
   const lookupEmu = useLookupSingleEmu()
   const lookupAcla = useLookupSingleAcla()
+  const lookupWcc = useLookupSingleWcc()
   const isLibrarian = useIsLibrarian()
   const isAuthenticated = useIsAuthenticated()
   const currentUser = useAuthStore((state) => state.user)
@@ -94,6 +96,14 @@ export function BookViewPage() {
       await lookupAcla.mutateAsync(bookId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to look up ACLA availability')
+    }
+  }
+
+  const handleWccLookup = async () => {
+    try {
+      await lookupWcc.mutateAsync(bookId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to look up WCC availability')
     }
   }
 
@@ -586,6 +596,62 @@ export function BookViewPage() {
             {book.aclaLookupError && (
               <p className="text-xs text-red-600 mt-1" data-test="acla-lookup-error">
                 {book.aclaLookupError}
+              </p>
+            )}
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-6" data-test="wcc-availability-section">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">WCC Availability</h2>
+              <div className="flex items-center gap-3">
+                <a
+                  href={wccCatalogSearchUrl(book.title)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${TEXT_LINK_UNDERLINE_CLASS} text-sm`}
+                  data-test="book-view-wcc-check-link"
+                >
+                  Go to WCC
+                </a>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleWccLookup}
+                  isLoading={lookupWcc.isPending}
+                  disabled={lookupWcc.isPending}
+                  leftIcon={<PiMagnifyingGlass />}
+                  data-test="book-view-wcc-lookup"
+                >
+                  {book.wccLastChecked ? 'Retry WCC Lookup' : 'Lookup WCC Availability'}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div data-test="wcc-audio-status">
+                <p className="text-sm font-medium text-gray-500">Audio Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.wccAudioAvailable)}
+                </p>
+              </div>
+              <div data-test="wcc-paper-status">
+                <p className="text-sm font-medium text-gray-500">Paper Book</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.wccPaperAvailable)}
+                </p>
+              </div>
+              <div data-test="wcc-ebook-status">
+                <p className="text-sm font-medium text-gray-500">Ebook</p>
+                <p className="text-gray-900 flex items-center gap-1">
+                  {holdingStatus(book.wccEbookAvailable)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3" data-test="wcc-last-checked">
+              Last checked: {book.wccLastChecked ? formatDateTime(book.wccLastChecked) : 'never'}
+            </p>
+            {book.wccLookupError && (
+              <p className="text-xs text-red-600 mt-1" data-test="wcc-lookup-error">
+                {book.wccLookupError}
               </p>
             )}
           </div>

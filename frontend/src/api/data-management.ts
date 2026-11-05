@@ -82,6 +82,10 @@ export interface BookAvailabilityStatsDto {
   aclaPaper: number
   aclaEbook: number
   aclaAudio: number
+  availableAtWcc: number
+  wccPaper: number
+  wccEbook: number
+  wccAudio: number
 }
 
 // Photo Export Types

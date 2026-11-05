@@ -78,6 +78,10 @@ const AVAILABILITY_COUNT_ITEMS: {
   { key: 'aclaPaper', label: 'ACLA paper', test: 'availability-count-acla-paper' },
   { key: 'aclaEbook', label: 'ACLA ebook', test: 'availability-count-acla-ebook' },
   { key: 'aclaAudio', label: 'ACLA audio', test: 'availability-count-acla-audio' },
+  { key: 'availableAtWcc', label: 'Available at WCC', test: 'availability-count-wcc' },
+  { key: 'wccPaper', label: 'WCC paper', test: 'availability-count-wcc-paper' },
+  { key: 'wccEbook', label: 'WCC ebook', test: 'availability-count-wcc-ebook' },
+  { key: 'wccAudio', label: 'WCC audio', test: 'availability-count-wcc-audio' },
 ]
 
 interface AppliedDuplicateAction {

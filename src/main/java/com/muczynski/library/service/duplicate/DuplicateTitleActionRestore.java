@@ -78,9 +78,10 @@ public class DuplicateTitleActionRestore {
                         ydl_last_checked, ydl_lookup_error, emu_audio_available, emu_paper_available,
                         emu_ebook_available, emu_last_checked, emu_lookup_error, acla_audio_available,
                         acla_paper_available, acla_ebook_available, acla_last_checked, acla_lookup_error,
+                        wcc_audio_available, wcc_paper_available, wcc_ebook_available, wcc_last_checked, wcc_lookup_error,
                         reading_difficulty, binding, desire_to_purchase, author_id, library_id)
                     VALUES (?, ?, ?, ?, ?, ?, lo_from_bytea(0, ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
@@ -113,11 +114,16 @@ public class DuplicateTitleActionRestore {
                 setBoolean(statement, 29, book.getAclaEbookAvailable());
                 setTimestamp(statement, 30, book.getAclaLastChecked());
                 setString(statement, 31, book.getAclaLookupError());
-                setString(statement, 32, book.getReadingDifficulty());
-                setString(statement, 33, book.getBinding());
-                setInteger(statement, 34, book.getDesireToPurchase());
-                setLong(statement, 35, book.getAuthorId());
-                setLong(statement, 36, book.getLibraryId());
+                setBoolean(statement, 32, book.getWccAudioAvailable());
+                setBoolean(statement, 33, book.getWccPaperAvailable());
+                setBoolean(statement, 34, book.getWccEbookAvailable());
+                setTimestamp(statement, 35, book.getWccLastChecked());
+                setString(statement, 36, book.getWccLookupError());
+                setString(statement, 37, book.getReadingDifficulty());
+                setString(statement, 38, book.getBinding());
+                setInteger(statement, 39, book.getDesireToPurchase());
+                setLong(statement, 40, book.getAuthorId());
+                setLong(statement, 41, book.getLibraryId());
                 statement.executeUpdate();
             }
             return null;

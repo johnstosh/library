@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { describe, expect, it } from 'vitest'
-import { aclaCatalogSearchUrl, emuCatalogSearchUrl, stripCopySuffix, ydlCatalogSearchUrl } from '../bookTitle'
+import { aclaCatalogSearchUrl, emuCatalogSearchUrl, stripCopySuffix, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '../bookTitle'
 
 describe('stripCopySuffix', () => {
   it('removes a canonical ", c. N" suffix', () => {
@@ -44,6 +44,17 @@ describe('ydlCatalogSearchUrl', () => {
 describe('emuCatalogSearchUrl', () => {
   it('quotes the title without the copy suffix', () => {
     const url = emuCatalogSearchUrl('Gather Comprehensive, c. 2')
+    expect(url).toContain(encodeURIComponent('any,contains,"Gather Comprehensive"'))
+    expect(url).not.toContain('c.%202')
+  })
+})
+
+describe('wccCatalogSearchUrl', () => {
+  it('quotes the title without the copy suffix', () => {
+    const url = wccCatalogSearchUrl('Gather Comprehensive, c. 2')
+    expect(url).toContain('wccnet.primo.exlibrisgroup.com')
+    expect(url).toContain('vid=01WCCO_INST:01WCCO')
+    expect(url).toContain('search_scope=MyInst_and_CI')
     expect(url).toContain(encodeURIComponent('any,contains,"Gather Comprehensive"'))
     expect(url).not.toContain('c.%202')
   })

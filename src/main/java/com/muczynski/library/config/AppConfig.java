@@ -109,6 +109,27 @@ public class AppConfig {
     }
 
     /**
+     * RestTemplate for the Washtenaw Community College Bailey Library (Ex Libris Primo) lookup.
+     * Same timeout shape as the EMU Primo client.
+     */
+    @Bean("wccRestTemplate")
+    public RestTemplate wccRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(15000);
+        factory.setReadTimeout(15000);
+        restTemplate.setRequestFactory(factory);
+
+        ClientHttpRequestInterceptor interceptor = (request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            return execution.execute(request, body);
+        };
+        restTemplate.setInterceptors(Collections.singletonList(interceptor));
+
+        return restTemplate;
+    }
+
+    /**
      * RestTemplate for the ACLA (Allegheny County Library Association) BiblioCommons
      * availability lookup. Uses Java's HttpClient so Origin/User-Agent are actually
      * sent (HttpURLConnection treats them as restricted) and so BiblioCommons session

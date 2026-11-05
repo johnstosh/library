@@ -69,6 +69,12 @@ public class BookDto {
     private LocalDateTime aclaLastChecked;
     private String aclaLookupError;
 
+    private Boolean wccAudioAvailable;
+    private Boolean wccPaperAvailable;
+    private Boolean wccEbookAvailable;
+    private LocalDateTime wccLastChecked;
+    private String wccLookupError;
+
     /**
      * Reading difficulty level. Uses enum keys in JSON (children, accessible, etc.).
      * Frontend displays short patron-facing labels.

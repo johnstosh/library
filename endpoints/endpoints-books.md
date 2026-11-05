@@ -142,7 +142,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 
 **Authentication:** Public (permitAll)
 
-**Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU and ACLA sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
+**Query Parameters:** All optional. Boolean chips default to `false`. Send `true` only for chips that are on. Chips AND together, except `hasYdlAudio` / `hasYdlBook` / `hasYdlEbook` (and the EMU, ACLA, and WCC sets), which OR within that library. `withoutYdlAudio` and the other Without chips match when that flag is false or unset, and AND with the rest.
 - `q` — title, any alternate title, or author name
 - `labels` — comma-separated; the book must have every label
 - `status` — comma-separated OR group (`in-library`, `electronic-resource`, `without-loc`, `lost`, `withdrawn`, `on-order`, `requested`). Empty hides WITHDRAWN and REQUESTED
@@ -151,7 +151,7 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
-- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
+- Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `hasWccAudio`, `hasWccBook`, `hasWccEbook`, `withoutWccAudio`, `withoutWccBook`, `withoutWccEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto
 
@@ -465,6 +465,40 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 **Use Case:**
 - Books page bulk-action carousel "Lookup ACLA Availability"
 - Book edit/view page "Lookup ACLA Availability"
+
+---
+
+## POST /api/wcc-lookup/lookup/{bookId}
+Looks up paper/ebook/audio holdings for one book at Washtenaw Community College's Richard W. Bailey Library (Ex Libris Primo VE, `wccnet.primo.exlibrisgroup.com`, vid `01WCCO_INST:01WCCO`, scope `MyInst_and_CI`) and stores the result on the book.
+
+**Authentication:** Public (`permitAll`)
+
+**Path Parameters:**
+- `bookId` - Book ID to look up
+
+**Response:** `WccLookupResultDto`
+```json
+{
+  "bookId": 1,
+  "success": true,
+  "audioAvailable": false,
+  "paperAvailable": true,
+  "ebookAvailable": true,
+  "matchedTitle": "The Hobbit"
+}
+```
+
+**Behavior:**
+- Temporary date-format titles are skipped (`Not Ready - Temporary title`)
+- Only local holdings (`context == "L"`) count. Central-index results are ignored
+- Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
+- A completed search that finds no match clears stale holdings and returns `Not held by Washtenaw Community College`
+- HTTP and other lookup failures are stored on the book as `wccLookupError` (max 255 characters) and returned as `success: false`
+- Same pattern as `/api/emu-lookup/lookup/{bookId}`
+
+**Use Case:**
+- Books page bulk-action carousel "Lookup WCC Availability"
+- Book edit/view page "Lookup WCC Availability"
 
 ---
 

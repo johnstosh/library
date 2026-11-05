@@ -407,7 +407,7 @@ public class AuthorService {
     }
 
     /**
-     * Roll up each author's YDL/EMU book/ebook/audio holdings from their books.
+     * Roll up each author's YDL/EMU/ACLA/WCC book/ebook/audio holdings from their books.
      * Authors with no true flags are omitted; the frontend treats a missing id as all false.
      */
     public List<AuthorAvailabilityDto> getAuthorAvailability() {
@@ -429,6 +429,9 @@ public class AuthorService {
         dto.setHasAclaBook(positive(projection.getAclaPaperCount()));
         dto.setHasAclaEbook(positive(projection.getAclaEbookCount()));
         dto.setHasAclaAudio(positive(projection.getAclaAudioCount()));
+        dto.setHasWccBook(positive(projection.getWccPaperCount()));
+        dto.setHasWccEbook(positive(projection.getWccEbookCount()));
+        dto.setHasWccAudio(positive(projection.getWccAudioCount()));
         return dto;
     }
 
@@ -441,7 +444,10 @@ public class AuthorService {
                 || Boolean.TRUE.equals(dto.getHasEmuAudio())
                 || Boolean.TRUE.equals(dto.getHasAclaBook())
                 || Boolean.TRUE.equals(dto.getHasAclaEbook())
-                || Boolean.TRUE.equals(dto.getHasAclaAudio());
+                || Boolean.TRUE.equals(dto.getHasAclaAudio())
+                || Boolean.TRUE.equals(dto.getHasWccBook())
+                || Boolean.TRUE.equals(dto.getHasWccEbook())
+                || Boolean.TRUE.equals(dto.getHasWccAudio());
     }
 
     private static boolean positive(Long count) {

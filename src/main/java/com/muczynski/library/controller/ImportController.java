@@ -123,7 +123,7 @@ public class ImportController {
     }
 
     /**
-     * Returns named book-count statistics for electronic, call number, withdrawn, YDL, EMU, and ACLA.
+     * Returns named book-count statistics for electronic, call number, withdrawn, YDL, EMU, ACLA, and WCC.
      * hasCallNumber excludes WITHDRAWN and REQUESTED even when a call number is present.
      */
     @GetMapping("/availability-stats")

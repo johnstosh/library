@@ -153,6 +153,12 @@ public class AuthorController {
             @RequestParam(defaultValue = "false") boolean withoutAclaBook,
             @RequestParam(defaultValue = "false") boolean withoutAclaEbook,
             @RequestParam(defaultValue = "false") boolean withoutAclaAudio,
+            @RequestParam(defaultValue = "false") boolean hasWccBook,
+            @RequestParam(defaultValue = "false") boolean hasWccEbook,
+            @RequestParam(defaultValue = "false") boolean hasWccAudio,
+            @RequestParam(defaultValue = "false") boolean withoutWccBook,
+            @RequestParam(defaultValue = "false") boolean withoutWccEbook,
+            @RequestParam(defaultValue = "false") boolean withoutWccAudio,
             @RequestParam(required = false) String favoriteLists,
             @RequestParam(required = false) String q,
             Principal principal) {
@@ -187,6 +193,12 @@ public class AuthorController {
             filter.withoutAclaBook = withoutAclaBook;
             filter.withoutAclaEbook = withoutAclaEbook;
             filter.withoutAclaAudio = withoutAclaAudio;
+            filter.wccBook = hasWccBook;
+            filter.wccEbook = hasWccEbook;
+            filter.wccAudio = hasWccAudio;
+            filter.withoutWccBook = withoutWccBook;
+            filter.withoutWccEbook = withoutWccEbook;
+            filter.withoutWccAudio = withoutWccAudio;
             filter.favoriteLists = FavoriteListParams.split(favoriteLists);
             return ResponseEntity.ok(catalogFilterService.authorSummaries(filter, userId(principal)));
         } catch (Exception e) {

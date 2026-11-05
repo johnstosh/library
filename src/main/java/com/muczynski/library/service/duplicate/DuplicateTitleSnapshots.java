@@ -122,6 +122,11 @@ public final class DuplicateTitleSnapshots {
         private Boolean aclaEbookAvailable;
         private LocalDateTime aclaLastChecked;
         private String aclaLookupError;
+        private Boolean wccAudioAvailable;
+        private Boolean wccPaperAvailable;
+        private Boolean wccEbookAvailable;
+        private LocalDateTime wccLastChecked;
+        private String wccLookupError;
         private String readingDifficulty;
         private String binding;
         private Integer desireToPurchase;
@@ -163,6 +168,11 @@ public final class DuplicateTitleSnapshots {
             state.aclaEbookAvailable = book.getAclaEbookAvailable();
             state.aclaLastChecked = book.getAclaLastChecked();
             state.aclaLookupError = book.getAclaLookupError();
+            state.wccAudioAvailable = book.getWccAudioAvailable();
+            state.wccPaperAvailable = book.getWccPaperAvailable();
+            state.wccEbookAvailable = book.getWccEbookAvailable();
+            state.wccLastChecked = book.getWccLastChecked();
+            state.wccLookupError = book.getWccLookupError();
             state.readingDifficulty = book.getReadingDifficulty() == null
                     ? null : book.getReadingDifficulty().getKey();
             state.binding = book.getBinding() == null ? null : book.getBinding().name();

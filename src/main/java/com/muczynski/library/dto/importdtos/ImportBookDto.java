@@ -77,9 +77,16 @@ public class ImportBookDto {
     private LocalDateTime aclaLastChecked;
     private String aclaLookupError;
 
+    // WCC availability fields (exported for diagnostics; persisted on import when present)
+    private Boolean wccAudioAvailable;
+    private Boolean wccPaperAvailable;
+    private Boolean wccEbookAvailable;
+    private LocalDateTime wccLastChecked;
+    private String wccLookupError;
+
     /**
      * Reading difficulty level (stored as enum key: children, accessible, moderate, demanding,
-     * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU/ACLA fields.
+     * advanced, or unset for legacy). Round-trips in JSON export/import like YDL/EMU/ACLA/WCC fields.
      */
     private ReadingDifficulty readingDifficulty;
     /**

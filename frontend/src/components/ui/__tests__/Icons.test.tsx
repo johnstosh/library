@@ -1,6 +1,6 @@
 // (c) Copyright 2025 by Muczynski
 import { render, screen } from '@testing-library/react'
-import { AclaIcon, YdlIcon } from '../Icons'
+import { AclaIcon, WccIcon, YdlIcon } from '../Icons'
 
 describe('YdlIcon', () => {
   it('renders a vector script Y with red, yellow, and blue strokes', () => {
@@ -37,5 +37,16 @@ describe('AclaIcon', () => {
     expect(swooshes).toHaveLength(2)
     expect(swooshes[0]).toHaveAttribute('stroke', '#8CC449')
     expect(swooshes[1]).toHaveAttribute('stroke', '#8CC449')
+  })
+})
+
+describe('WccIcon', () => {
+  it('renders the Washtenaw Community College mark', () => {
+    render(<WccIcon />)
+
+    const icon = screen.getByTestId('wcc-icon')
+    expect(icon.tagName.toLowerCase()).toBe('img')
+    expect(icon).toHaveAttribute('src', '/images/wcc.png')
+    expect(icon).toHaveAttribute('alt', '')
   })
 })
