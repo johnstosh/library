@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
@@ -76,6 +77,9 @@ public final class CatalogLookupRetry {
                 if (!isRetryableStatus(e.getStatusCode().value()) || attempt == attempts) {
                     if (isRetryableStatus(e.getStatusCode().value())) {
                         delayNextRequest(backoffMs(attempt, backoffMs, e));
+                        if (attempt > 1) {
+                            throw exhausted(e, attempt);
+                        }
                     }
                     throw e;
                 }
@@ -96,6 +100,25 @@ public final class CatalogLookupRetry {
             }
         }
         throw last != null ? last : new LibraryException(catalog + " lookup failed");
+    }
+
+    /**
+     * The last retry still failed. Name the status, how many tries ran, and
+     * go-away when that filter is the host that answered (its {@code Via} header).
+     */
+    static LibraryException exhausted(RestClientResponseException exception, int attempts) {
+        StringBuilder detail = new StringBuilder("HTTP ").append(exception.getStatusCode().value());
+        if (exception.getStatusText() != null && !exception.getStatusText().isBlank()) {
+            detail.append(' ').append(exception.getStatusText());
+        }
+        detail.append(" after ").append(attempts).append(attempts == 1 ? " attempt" : " attempts");
+        String via = exception.getResponseHeaders() == null
+                ? null
+                : exception.getResponseHeaders().getFirst(HttpHeaders.VIA);
+        if (via != null && via.toLowerCase(Locale.ROOT).contains("go-away")) {
+            detail.append(" (go-away filter)");
+        }
+        return new LibraryException(detail.toString(), exception);
     }
 
     public static boolean isRetryableStatus(int statusCode) {

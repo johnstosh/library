@@ -38,6 +38,47 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Browser fetch rejects with a generic message ("Failed to fetch", Firefox's
+ * "NetworkError when attempting to fetch resource.", Safari's "Load failed")
+ * when the connection closes before any HTTP status arrives. The status code
+ * is hidden on purpose. Say that no response arrived and how long the call was open.
+ */
+export function describeTransportFailure(
+  error: unknown,
+  method: string,
+  endpoint: string,
+  elapsedMs: number,
+): string {
+  const errorName = readErrorField(error, 'name')
+  const raw = readErrorField(error, 'message') || 'Network error'
+  const target = `${method.toUpperCase()} ${endpoint}`
+  const immediate = elapsedMs < 1500
+  const when = immediate ? 'immediately' : `after ${Math.round(elapsedMs / 1000)}s`
+
+  if (errorName === 'AbortError' || /aborted|abort/i.test(raw)) {
+    return immediate
+      ? `Request cancelled for ${target}.`
+      : `Request cancelled for ${target} after ${Math.round(elapsedMs / 1000)}s.`
+  }
+
+  const reported = /failed to fetch|networkerror when attempting to fetch resource\.?|load failed/i.test(raw)
+    ? 'The'
+    : `${raw}: the`
+  const cause = error instanceof Error && error.cause instanceof Error && error.cause.message.trim()
+    ? ` Cause: ${error.cause.message.trim()}.`
+    : ''
+  return `No response (${when}). ${reported} connection closed before a status code arrived.${cause}`
+}
+
+function readErrorField(error: unknown, field: 'name' | 'message'): string {
+  if (typeof error !== 'object' || error === null || !(field in error)) {
+    return ''
+  }
+  const value = (error as Record<string, unknown>)[field]
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 interface RequestOptions extends RequestInit {
   requireAuth?: boolean
 }
@@ -67,8 +108,20 @@ export async function apiClient<T>(
     credentials: 'include', // Important for cookie-based auth
   }
 
+  const method = (fetchOptions.method || 'GET').toUpperCase()
+  const started = Date.now()
+  let response: Response
   try {
-    const response = await fetch(url, config)
+    response = await fetch(url, config)
+  } catch (error) {
+    throw new ApiError(
+      describeTransportFailure(error, method, endpoint, Date.now() - started),
+      0,
+      'Network Error'
+    )
+  }
+
+  try {
 
     // Handle 401 Unauthorized - redirect to login with state (Alternative 5)
     if (response.status === 401 && requireAuth) {

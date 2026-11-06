@@ -333,8 +333,8 @@ class MsuLookupServiceTest {
         MsuLookupResultDto result = retrying.lookupAndUpdateBook(1L);
 
         assertFalse(result.isSuccess());
-        assertEquals("Error: HTTP 429 Too Many Requests", result.getErrorMessage());
-        assertEquals("Error: HTTP 429 Too Many Requests", book.getMsuLookupError());
+        assertEquals("Error: HTTP 429 Too Many Requests after 3 attempts", result.getErrorMessage());
+        assertEquals("Error: HTTP 429 Too Many Requests after 3 attempts", book.getMsuLookupError());
         verify(msuRestTemplate, times(3)).getForObject(any(URI.class), eq(String.class));
         assertEquals(2, pauses.size());
         assertClose(2_000, pauses.get(0));
