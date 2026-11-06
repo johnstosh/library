@@ -164,6 +164,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-price-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-library-checked-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-library-checked-older-days']")).isVisible();
+        assertThat(page.locator("[data-test='filter-library-lookup-error']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-title-not-chicago']")).isVisible();
         assertThat(page.locator("[data-test='filter-title-not-chicago']")).containsText("Title not Chicago case");

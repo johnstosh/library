@@ -149,14 +149,17 @@ public class SearchService {
                 filterMsuAudio, filterMsuBook, filterMsuEbook,
                 filterWithoutMsuAudio, filterWithoutMsuBook, filterWithoutMsuEbook,
                 labels, statusFilters, readingDifficulties, userId, favoriteLists,
-                null, CatalogFilterService.DEFAULT_LIBRARY_CHECKED_OLDER_DAYS);
+                null, CatalogFilterService.DEFAULT_LIBRARY_CHECKED_OLDER_DAYS, null);
     }
 
     /**
-     * Same search, plus a library-data age filter. {@code libraryCheckedOlder} is
-     * YDL, EMU, ACLA, WCC, or MSU. A null or unknown code is off. Any stored last
-     * check counts, including not-held and lookup errors. Never-checked titles
-     * do not. {@code libraryCheckedOlderDays} below 1 uses 90.
+     * Same search, plus library-data filters. {@code libraryCheckedOlder} is
+     * YDL, EMU, ACLA, WCC, or MSU. A null or unknown code is off. A missing
+     * last check matches. A stored check matches when it is older than the
+     * cutoff, including not-held and lookup errors. {@code libraryCheckedOlderDays}
+     * below 1 uses 90. {@code libraryLookupError} is the same library codes and
+     * keeps titles whose stored message for that library starts with
+     * {@code Error:}. Not-held and not-ready messages stay out.
      */
     @Transactional(readOnly = true)
     public SearchResponseDto search(String query, int bookPageNumber, int authorPageNumber, int size,
@@ -183,7 +186,8 @@ public class SearchService {
             Long userId,
             List<String> favoriteLists,
             String libraryCheckedOlder,
-            int libraryCheckedOlderDays) {
+            int libraryCheckedOlderDays,
+            String libraryLookupError) {
 
         String trimmedQuery = (query == null) ? "" : query.trim();
         Pageable bookPageable = PageRequest.of(bookPageNumber, size);
@@ -253,7 +257,9 @@ public class SearchService {
         filter.favoriteAuthorIds = favoriteAuthorIds;
         filter.libraryCheckedOlder = libraryCheckedOlder;
         filter.libraryCheckedOlderDays = libraryCheckedOlderDays;
+        filter.libraryLookupError = libraryLookupError;
         CatalogFilterService.applyLibraryCheckedOlder(filter);
+        CatalogFilterService.applyLibraryLookupError(filter);
         if (filterMostRecent) {
             LocalDateTime max = bookRepository.findMaxDateAddedToLibrary();
             filter.mostRecentCutoff = (max != null)
@@ -283,6 +289,7 @@ public class SearchService {
                 || filterMsuAudio || filterMsuBook || filterMsuEbook
                 || filterWithoutMsuAudio || filterWithoutMsuBook || filterWithoutMsuEbook
                 || filter.libraryCheckedOlder != null
+                || filter.libraryLookupError != null
                 || hasLabels || hasReadingDifficulties;
         Page<Author> authorPage;
         if (hasBookFilters) {

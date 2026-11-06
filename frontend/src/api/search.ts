@@ -88,6 +88,7 @@ export function useSearch(
   selectedStatuses?: string[],
   libraryCheckedOlder?: string,
   libraryCheckedOlderDays?: number,
+  libraryLookupError?: string,
 ) {
   const hasLabels = selectedLabels != null && selectedLabels.length > 0
   const labelsParam = hasLabels ? `&labels=${encodeURIComponent((selectedLabels ?? []).join(','))}` : ''
@@ -108,9 +109,13 @@ export function useSearch(
   const libraryDays = libraryCheckedOlderDays != null && libraryCheckedOlderDays >= 1
     ? libraryCheckedOlderDays
     : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
-  const libraryParam = library
-    ? `&libraryCheckedOlder=${encodeURIComponent(library)}&libraryCheckedOlderDays=${libraryDays}`
-    : ''
+  const lookupError = libraryCheckedOlderCode(libraryLookupError)
+  const libraryParam = [
+    library
+      ? `&libraryCheckedOlder=${encodeURIComponent(library)}&libraryCheckedOlderDays=${libraryDays}`
+      : '',
+    lookupError ? `&libraryLookupError=${encodeURIComponent(lookupError)}` : '',
+  ].join('')
   return useQuery({
     queryKey: [
       'search',
@@ -125,6 +130,7 @@ export function useSearch(
       selectedStatuses ?? [],
       library,
       library ? libraryDays : 0,
+      lookupError,
     ],
     queryFn: () =>
       api.get<SearchResponse>(

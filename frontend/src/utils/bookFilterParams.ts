@@ -135,6 +135,11 @@ export function libraryCheckedOlderDaysFromSearchParams(params: URLSearchParams)
   return Number.isFinite(n) && n >= 1 ? n : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
 }
 
+/** Blank when the value is not one of the five library codes. */
+export function libraryLookupErrorFromSearchParams(params: URLSearchParams): string {
+  return libraryCheckedOlderCode(params.get('libraryLookupError'))
+}
+
 export function labelsFromSearchParams(params: URLSearchParams): string[] {
   const raw = params.get('labels')
   if (!raw) return []
@@ -163,6 +168,7 @@ export function isBooksIntakeConstrained(
   statuses: string[] = [],
   bindings: string[] = [],
   libraryCheckedOlder = '',
+  libraryLookupError = '',
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
@@ -172,7 +178,8 @@ export function isBooksIntakeConstrained(
     statuses.length > 0 ||
     bindings.length > 0 ||
     q.trim().length > 0 ||
-    libraryCheckedOlderCode(libraryCheckedOlder) !== ''
+    libraryCheckedOlderCode(libraryCheckedOlder) !== '' ||
+    libraryCheckedOlderCode(libraryLookupError) !== ''
   )
 }
 
@@ -197,6 +204,7 @@ export function chipsFromSearchParams(
     const favoriteLists = favoriteListsFromSearchParams(params)
     const bindings = bindingsFromSearchParams(params)
     const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(params)
+    const libraryLookupError = libraryLookupErrorFromSearchParams(params)
     const explicitMostRecent = params.get(CHIP_URL_KEYS.mostRecent)
     if (explicitMostRecent === 'true') {
       chips.mostRecent = true
@@ -211,6 +219,7 @@ export function chipsFromSearchParams(
       statuses,
       bindings,
       libraryCheckedOlder,
+      libraryLookupError,
     )) {
       chips.mostRecent = true
     } else {
@@ -236,6 +245,8 @@ export interface BookFilterUrlState {
   libraryCheckedOlder?: string
   /** Days for libraryCheckedOlder. Default 90 when a library is selected. */
   libraryCheckedOlderDays?: number
+  /** YDL, EMU, ACLA, WCC, or MSU. Blank leaves the lookup-error filter off. */
+  libraryLookupError?: string
   /** Desire-to-purchase chips (Prices page). */
   desireToPurchase?: DesireToPurchaseFilter[]
   /** When true, emit `q=` even if the query is blank (Search “has searched”). */
@@ -284,6 +295,7 @@ export function bookFilterParamsForUrl(
   }
 
   const libraryCheckedOlder = libraryCheckedOlderCode(state.libraryCheckedOlder)
+  const libraryLookupError = libraryCheckedOlderCode(state.libraryLookupError)
 
   if (mode === 'books') {
     const othersOn = isBooksIntakeConstrained(
@@ -295,6 +307,7 @@ export function bookFilterParamsForUrl(
       statuses,
       bindings,
       libraryCheckedOlder,
+      libraryLookupError,
     )
     // Always emit mostRecent state honestly (true or false) so it stays toggleable
     // and combinable. Omit only the default intake-on when nothing else is active.
@@ -327,6 +340,10 @@ export function bookFilterParamsForUrl(
     params.libraryCheckedOlderDays = String(days)
   }
 
+  if (libraryLookupError) {
+    params.libraryLookupError = libraryLookupError
+  }
+
   return params
 }
 
@@ -341,11 +358,13 @@ export function booksPathFromFilters(state: {
   q: string
   libraryCheckedOlder?: string
   libraryCheckedOlderDays?: number
+  libraryLookupError?: string
 }): string {
   const libraryCheckedOlder = libraryCheckedOlderCode(state.libraryCheckedOlder)
+  const libraryLookupError = libraryCheckedOlderCode(state.libraryLookupError)
   const discoveryChips: BookChipFilters = {
     ...defaultBookChipFilters,
-    mostRecent: state.chips.mostRecent || libraryCheckedOlder === '',
+    mostRecent: state.chips.mostRecent || (libraryCheckedOlder === '' && libraryLookupError === ''),
   }
   for (const key of SEARCH_VISIBLE_CHIPS) {
     if (key === 'mostRecent') continue
@@ -364,6 +383,7 @@ export function booksPathFromFilters(state: {
       q: state.q,
       libraryCheckedOlder,
       libraryCheckedOlderDays: state.libraryCheckedOlderDays,
+      libraryLookupError,
     },
     'books',
   )
@@ -384,6 +404,7 @@ export function pricesPathFromFilters(state: {
   desireToPurchase?: DesireToPurchaseFilter[]
   libraryCheckedOlder?: string
   libraryCheckedOlderDays?: number
+  libraryLookupError?: string
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -398,6 +419,7 @@ export function pricesPathFromFilters(state: {
       desireToPurchase: state.desireToPurchase,
       libraryCheckedOlder: state.libraryCheckedOlder,
       libraryCheckedOlderDays: state.libraryCheckedOlderDays,
+      libraryLookupError: state.libraryLookupError,
     },
     'prices',
   )
@@ -417,6 +439,7 @@ export function booksPathFromPriceFilters(state: {
   priceOlderDays?: number
   libraryCheckedOlder?: string
   libraryCheckedOlderDays?: number
+  libraryLookupError?: string
 }): string {
   const params = bookFilterParamsForUrl(
     {
@@ -430,6 +453,7 @@ export function booksPathFromPriceFilters(state: {
       priceOlderDays: state.priceOlderDays,
       libraryCheckedOlder: state.libraryCheckedOlder,
       libraryCheckedOlderDays: state.libraryCheckedOlderDays,
+      libraryLookupError: state.libraryLookupError,
     },
     'books',
   )

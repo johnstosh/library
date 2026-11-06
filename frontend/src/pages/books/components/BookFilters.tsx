@@ -96,8 +96,11 @@ interface BookFiltersProps {
   /** Blank means the library-data age filter is off. */
   libraryCheckedOlder?: string
   libraryCheckedOlderDays?: number
-  /** Books, Search, and Prices pass this. Savings and Authors do not. */
+  /** Blank means the library lookup-error filter is off. */
+  libraryLookupError?: string
+  /** Books, Search, and Prices pass these. Savings and Authors do not. */
   onLibraryCheckedOlderChange?: (library: string, days: number) => void
+  onLibraryLookupErrorChange?: (library: string) => void
 }
 
 export function BookFilters({
@@ -107,10 +110,13 @@ export function BookFilters({
   showCatalogerFilters = true,
   libraryCheckedOlder = '',
   libraryCheckedOlderDays = DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
+  libraryLookupError = '',
   onLibraryCheckedOlderChange,
+  onLibraryLookupErrorChange,
 }: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
   const selectedLibrary = libraryCheckedOlderCode(libraryCheckedOlder)
+  const selectedErrorLibrary = libraryCheckedOlderCode(libraryLookupError)
   const days = libraryCheckedOlderDays >= 1 ? libraryCheckedOlderDays : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
   const showLibraryAge = showAvailabilityFilters && onLibraryCheckedOlderChange != null
 
@@ -204,6 +210,26 @@ export function BookFilters({
             />
             days
           </label>
+          {onLibraryLookupErrorChange != null && (
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600">
+              Library lookup error
+              <select
+                value={selectedErrorLibrary}
+                onChange={(e) => onLibraryLookupErrorChange(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
+                data-test="filter-library-lookup-error"
+                aria-label="Library lookup error"
+                title="Titles whose lookup for that library failed. Not-held results stay out."
+              >
+                <option value="">Off</option>
+                {LIBRARY_CHECKED_OLDER_CODES.map((code) => (
+                  <option key={code} value={code} title={LIBRARY_FULL_NAMES[code]}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
 

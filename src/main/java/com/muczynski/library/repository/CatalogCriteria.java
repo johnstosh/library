@@ -272,6 +272,7 @@ public class CatalogCriteria {
                 filter.withoutMsuAudio, filter.withoutMsuBook, filter.withoutMsuEbook,
                 "msuAudioAvailable", "msuPaperAvailable", "msuEbookAvailable");
         addLibraryCheckedOlder(cb, book, filter, parts);
+        addLibraryLookupError(cb, book, filter, parts);
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
@@ -338,13 +339,14 @@ public class CatalogCriteria {
     }
 
     /**
-     * One public library's last check is present and strictly before the cutoff.
-     * Never-checked titles stay out. An unknown library code adds no predicate.
+     * A missing last check is older than any cutoff. A stored check matches
+     * only when it is strictly before the cutoff. An unknown library code
+     * adds no predicate.
      */
     private void addLibraryCheckedOlder(HibernateCriteriaBuilder cb, Root<Book> book,
             BookCatalogFilter filter, List<Predicate> parts) {
-        String code = CatalogFilterService.libraryCheckedOlderCode(filter.libraryCheckedOlder);
-        if (code == null) {
+        String field = lastCheckedField(filter.libraryCheckedOlder);
+        if (field == null) {
             return;
         }
         LocalDateTime cutoff = filter.libraryCheckedOlderCutoff;
@@ -354,7 +356,31 @@ public class CatalogCriteria {
                     : CatalogFilterService.DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
             cutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
         }
-        String field = switch (code) {
+        Path<LocalDateTime> checked = book.get(field);
+        parts.add(cb.or(cb.isNull(checked), cb.lessThan(checked, cutoff)));
+    }
+
+    /**
+     * One public library's stored failure, the messages that start with
+     * {@code Error:}. Not-held and not-ready results stay out. An unknown
+     * library code adds no predicate.
+     */
+    private void addLibraryLookupError(HibernateCriteriaBuilder cb, Root<Book> book,
+            BookCatalogFilter filter, List<Predicate> parts) {
+        String field = lookupErrorField(filter.libraryLookupError);
+        if (field == null) {
+            return;
+        }
+        Path<String> error = book.get(field);
+        parts.add(cb.like(error, CatalogFilterService.LIBRARY_LOOKUP_ERROR_PREFIX + "%"));
+    }
+
+    private static String lastCheckedField(String raw) {
+        String code = CatalogFilterService.libraryCheckedOlderCode(raw);
+        if (code == null) {
+            return null;
+        }
+        return switch (code) {
             case "YDL" -> "ydlLastChecked";
             case "EMU" -> "emuLastChecked";
             case "ACLA" -> "aclaLastChecked";
@@ -362,11 +388,21 @@ public class CatalogCriteria {
             case "MSU" -> "msuLastChecked";
             default -> null;
         };
-        if (field == null) {
-            return;
+    }
+
+    private static String lookupErrorField(String raw) {
+        String code = CatalogFilterService.libraryCheckedOlderCode(raw);
+        if (code == null) {
+            return null;
         }
-        Path<LocalDateTime> checked = book.get(field);
-        parts.add(cb.and(cb.isNotNull(checked), cb.lessThan(checked, cutoff)));
+        return switch (code) {
+            case "YDL" -> "ydlLookupError";
+            case "EMU" -> "emuLookupError";
+            case "ACLA" -> "aclaLookupError";
+            case "WCC" -> "wccLookupError";
+            case "MSU" -> "msuLookupError";
+            default -> null;
+        };
     }
 
     private Predicate mostRecent(HibernateCriteriaBuilder cb, Root<Book> book, BookCatalogFilter filter) {

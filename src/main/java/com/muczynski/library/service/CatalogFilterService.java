@@ -41,6 +41,11 @@ public class CatalogFilterService {
     private static final int DEFAULT_PRICE_OLDER_DAYS = 90;
     /** Days when a library is selected and the request omits a positive count. */
     public static final int DEFAULT_LIBRARY_CHECKED_OLDER_DAYS = 90;
+    /**
+     * Prefix written by {@link com.muczynski.library.util.LookupErrorMessages}.
+     * Not-held and not-ready messages do not use it.
+     */
+    public static final String LIBRARY_LOOKUP_ERROR_PREFIX = "Error:";
     private static final Set<String> LIBRARY_CHECKED_OLDER_CODES = Set.of("YDL", "EMU", "ACLA", "WCC", "MSU");
     private static final int ID_CHUNK = 500;
     private static final LocalDateTime UNMATCHABLE_MOST_RECENT_CUTOFF = LocalDateTime.of(9999, 12, 31, 0, 0);
@@ -92,6 +97,7 @@ public class CatalogFilterService {
         int days = filter.priceOlderDays > 0 ? filter.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS;
         filter.priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
         applyLibraryCheckedOlder(filter);
+        applyLibraryLookupError(filter);
         filter.hideRequested = !includeRequested;
 
         List<BookRepository.DatedBookSummaryProjection> rows = catalogCriteria.bookSummaries(filter);
@@ -179,8 +185,9 @@ public class CatalogFilterService {
 
     /**
      * Keeps a known library and sets the UTC cutoff. A null last-checked time
-     * does not match. Not-held and lookup-error rows match when that timestamp
-     * is strictly older than the cutoff.
+     * matches, because a title that was never looked up is older than any
+     * cutoff. Not-held and lookup-error rows match when that timestamp is
+     * strictly older than the cutoff.
      */
     public static void applyLibraryCheckedOlder(BookCatalogFilter filter) {
         String code = libraryCheckedOlderCode(filter.libraryCheckedOlder);
@@ -194,6 +201,15 @@ public class CatalogFilterService {
                 : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
         filter.libraryCheckedOlderDays = days;
         filter.libraryCheckedOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
+    }
+
+    /**
+     * Keeps a known library. A null or unknown code turns the lookup-error
+     * filter off. Matching rows are those whose message starts with
+     * {@link #LIBRARY_LOOKUP_ERROR_PREFIX}.
+     */
+    public static void applyLibraryLookupError(BookCatalogFilter filter) {
+        filter.libraryLookupError = libraryCheckedOlderCode(filter.libraryLookupError);
     }
 
     private BookSummaryDto toBookSummary(BookRepository.DatedBookSummaryProjection projection) {
@@ -263,10 +279,16 @@ public class CatalogFilterService {
         public int priceOlderDays = DEFAULT_PRICE_OLDER_DAYS;
         /**
          * YDL, EMU, ACLA, WCC, or MSU. Null means the library-data age filter is off.
-         * Any stored last check counts, including not-held and lookup errors.
+         * A missing last check matches. A stored check matches when it is older
+         * than the cutoff, including not-held and lookup errors.
          */
         public String libraryCheckedOlder;
         public int libraryCheckedOlderDays = DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
+        /**
+         * YDL, EMU, ACLA, WCC, or MSU. Null means the lookup-error filter is off.
+         * Matches a stored message that starts with {@link CatalogFilterService#LIBRARY_LOOKUP_ERROR_PREFIX}.
+         */
+        public String libraryLookupError;
         /** Search-page chip. Catalog summaries leave this off. */
         public boolean threeLetterLoc;
         public List<String> labels = List.of();

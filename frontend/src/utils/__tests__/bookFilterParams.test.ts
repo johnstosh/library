@@ -11,6 +11,7 @@ import {
   isSearchVisibleChip,
   labelsFromSearchParams,
   libraryCheckedOlderFromSearchParams,
+  libraryLookupErrorFromSearchParams,
   matchesBookQuery,
   pageFromSearchParams,
   priceOlderDaysFromSearchParams,
@@ -389,6 +390,8 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], ['in-library'])).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], 'MSU')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], 'nope')).toBe(false)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', 'WCC')).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', 'nope')).toBe(false)
   })
 })
 
@@ -447,5 +450,57 @@ describe('library data older than', () => {
       libraryCheckedOlder: 'ydl',
       libraryCheckedOlderDays: 12,
     })).toBe('libraryCheckedOlder=YDL&libraryCheckedOlderDays=12')
+  })
+})
+
+describe('library lookup error', () => {
+  it('reads a known library and ignores anything else', () => {
+    expect(libraryLookupErrorFromSearchParams(new URLSearchParams('libraryLookupError=emu'))).toBe('EMU')
+    expect(libraryLookupErrorFromSearchParams(new URLSearchParams('libraryLookupError=LOC'))).toBe('')
+  })
+
+  it('turns off the Books recent-arrivals default when a library is selected', () => {
+    const chips = chipsFromSearchParams(
+      new URLSearchParams('libraryLookupError=WCC'),
+      'books',
+    )
+    expect(chips.mostRecent).toBe(false)
+  })
+
+  it('emits the library only when one is selected', () => {
+    expect(bookFilterParamsForUrl({
+      chips: chips({ mostRecent: false }),
+      labels: [],
+      q: '',
+      libraryLookupError: 'msu',
+    }, 'search')).toEqual({
+      libraryLookupError: 'MSU',
+    })
+    expect(bookFilterParamsForUrl({
+      chips: chips(),
+      labels: [],
+      q: '',
+      libraryLookupError: 'nope',
+    }, 'search')).toEqual({})
+  })
+
+  it('copies the filter onto Books, Prices, and the summaries query', () => {
+    const shared = {
+      chips: chips({ mostRecent: false }),
+      labels: [] as string[],
+      q: '',
+      libraryLookupError: 'YDL',
+    }
+    expect(booksPathFromFilters(shared)).toBe(
+      '/books?mostRecent=false&libraryLookupError=YDL',
+    )
+    expect(pricesPathFromFilters(shared)).toBe('/prices?libraryLookupError=YDL')
+    expect(booksPathFromPriceFilters(shared)).toBe(
+      '/books?mostRecent=false&libraryLookupError=YDL',
+    )
+    expect(bookListFilterQuery({
+      chips: chips(),
+      libraryLookupError: 'acla',
+    })).toBe('libraryLookupError=ACLA')
   })
 })

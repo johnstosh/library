@@ -657,4 +657,25 @@ class SearchServiceTest {
         verify(catalogCriteria, never()).searchAuthorsByName(any(), any());
         verify(authorRepository, never()).findAll(any(Pageable.class));
     }
+
+    @Test
+    void searchWithLibraryLookupError_switchesAuthorsToMatchingBooks() {
+        String query = "test";
+        int page = 0, size = 20;
+        Pageable pageable = PageRequest.of(page, size);
+
+        stubBooks(emptyBookPage(pageable));
+        stubAuthorsOfBooks(emptyAuthorPage(pageable));
+
+        searchService.search(query, page, page, size, false, false, false, false,
+                false, false, false, false, false, false, false,
+                false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+                null, null, null, null, null, null, 90, "msu");
+
+        BookCatalogFilter filter = capturedBookFilter();
+        assertEquals("MSU", filter.libraryLookupError);
+        assertNull(filter.libraryCheckedOlder);
+        verify(catalogCriteria).searchAuthorsOfMatchingBooks(any(), any());
+        verify(catalogCriteria, never()).searchAuthorsByName(any(), any());
+    }
 }

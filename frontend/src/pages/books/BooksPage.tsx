@@ -31,6 +31,7 @@ import {
   labelsFromSearchParams,
   libraryCheckedOlderDaysFromSearchParams,
   libraryCheckedOlderFromSearchParams,
+  libraryLookupErrorFromSearchParams,
   priceOlderDaysFromSearchParams,
   pricesPathFromFilters,
 } from '@/utils/bookFilterParams'
@@ -53,6 +54,7 @@ export function BooksPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
+  const libraryLookupError = libraryLookupErrorFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedBindings = bindingsFromSearchParams(searchParams)
@@ -89,6 +91,7 @@ export function BooksPage() {
     priceOlderDays?: number
     libraryCheckedOlder?: string
     libraryCheckedOlderDays?: number
+    libraryLookupError?: string
   }) => {
     const q = next.q !== undefined ? next.q : urlQuery
     if (next.q !== undefined) ownQuery.current = q
@@ -107,6 +110,9 @@ export function BooksPage() {
             ? next.libraryCheckedOlder
             : libraryCheckedOlder,
           libraryCheckedOlderDays: next.libraryCheckedOlderDays ?? libraryCheckedOlderDays,
+          libraryLookupError: next.libraryLookupError !== undefined
+            ? next.libraryLookupError
+            : libraryLookupError,
         },
         'books',
       ),
@@ -123,6 +129,7 @@ export function BooksPage() {
     priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
     libraryCheckedOlder: libraryCheckedOlderFromSearchParams(searchParams),
     libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
+    libraryLookupError: libraryLookupErrorFromSearchParams(searchParams),
     chips: chipsFromSearchParams(searchParams, 'books'),
   }), [searchParams])
 
@@ -285,6 +292,7 @@ export function BooksPage() {
                 priceOlderDays,
                 libraryCheckedOlder,
                 libraryCheckedOlderDays,
+                libraryLookupError,
               })}
               leftIcon={<PiCurrencyDollar />}
               data-test="open-in-prices"
@@ -299,12 +307,23 @@ export function BooksPage() {
             showCatalogerFilters
             libraryCheckedOlder={libraryCheckedOlder}
             libraryCheckedOlderDays={libraryCheckedOlderDays}
+            libraryLookupError={libraryLookupError}
             onLibraryCheckedOlderChange={(library, days) => {
               const selecting = library !== '' && libraryCheckedOlder === ''
               const implicitRecent = searchParams.get('mostRecent') == null && chips.mostRecent
               writeUrl({
                 libraryCheckedOlder: library,
                 libraryCheckedOlderDays: days,
+                ...(selecting && implicitRecent
+                  ? { chips: { ...chips, mostRecent: false } }
+                  : {}),
+              })
+            }}
+            onLibraryLookupErrorChange={(library) => {
+              const selecting = library !== '' && libraryLookupError === ''
+              const implicitRecent = searchParams.get('mostRecent') == null && chips.mostRecent
+              writeUrl({
+                libraryLookupError: library,
                 ...(selecting && implicitRecent
                   ? { chips: { ...chips, mostRecent: false } }
                   : {}),
