@@ -404,27 +404,27 @@ class MsuLookupServiceTest {
 
     @Test
     void backoffMs_growsAndHonorsRetryAfter() {
-        assertEquals(0, MsuLookupService.backoffMs(1, 0, null));
-        assertEquals(2_000, MsuLookupService.backoffMs(1, 2_000, null));
-        assertEquals(4_000, MsuLookupService.backoffMs(2, 2_000, null));
-        assertEquals(8_000, MsuLookupService.backoffMs(3, 2_000, null));
-        assertEquals(16_000, MsuLookupService.backoffMs(4, 2_000, null));
-        assertEquals(32_000, MsuLookupService.backoffMs(5, 2_000, null));
-        assertEquals(60_000, MsuLookupService.backoffMs(6, 2_000, null));
-        assertEquals(30_000, MsuLookupService.backoffMs(1, 2_000, tooManyRequests("30")));
-        assertEquals(60_000, MsuLookupService.backoffMs(1, 2_000, tooManyRequests("600")));
-        assertEquals(2_000, MsuLookupService.backoffMs(1, 2_000, tooManyRequests("0")));
-        assertEquals(2_000, MsuLookupService.backoffMs(1, 2_000, tooManyRequests("nope")));
+        assertEquals(0, CatalogLookupRetry.backoffMs(1, 0, null));
+        assertEquals(2_000, CatalogLookupRetry.backoffMs(1, 2_000, null));
+        assertEquals(4_000, CatalogLookupRetry.backoffMs(2, 2_000, null));
+        assertEquals(8_000, CatalogLookupRetry.backoffMs(3, 2_000, null));
+        assertEquals(16_000, CatalogLookupRetry.backoffMs(4, 2_000, null));
+        assertEquals(32_000, CatalogLookupRetry.backoffMs(5, 2_000, null));
+        assertEquals(60_000, CatalogLookupRetry.backoffMs(6, 2_000, null));
+        assertEquals(30_000, CatalogLookupRetry.backoffMs(1, 2_000, tooManyRequests("30")));
+        assertEquals(60_000, CatalogLookupRetry.backoffMs(1, 2_000, tooManyRequests("600")));
+        assertEquals(2_000, CatalogLookupRetry.backoffMs(1, 2_000, tooManyRequests("0")));
+        assertEquals(2_000, CatalogLookupRetry.backoffMs(1, 2_000, tooManyRequests("nope")));
 
         String httpDate = DateTimeFormatter.RFC_1123_DATE_TIME.format(
                 ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(20));
-        long dated = MsuLookupService.backoffMs(1, 1_000, tooManyRequests(httpDate));
+        long dated = CatalogLookupRetry.backoffMs(1, 1_000, tooManyRequests(httpDate));
         assertTrue(dated >= 18_000 && dated <= 20_000, "Retry-After date wait was " + dated);
 
-        assertTrue(MsuLookupService.isRetryableStatus(429));
-        assertTrue(MsuLookupService.isRetryableStatus(503));
-        assertFalse(MsuLookupService.isRetryableStatus(400));
-        assertFalse(MsuLookupService.isRetryableStatus(404));
+        assertTrue(CatalogLookupRetry.isRetryableStatus(429));
+        assertTrue(CatalogLookupRetry.isRetryableStatus(503));
+        assertFalse(CatalogLookupRetry.isRetryableStatus(400));
+        assertFalse(CatalogLookupRetry.isRetryableStatus(404));
     }
 
     private static void assertClose(long expectedMs, long actualMs) {

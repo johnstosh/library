@@ -30,7 +30,7 @@ The service attempts multiple strategies to find LOC call numbers:
 4. **Truncated title-only**: Last resort (truncated title without author)
 5. **AI Suggest fallback**: If all LOC catalog strategies fail, automatically calls `AskGrok.suggestLocNumber()` to get an AI-generated LOC call number. Results are marked with `aiSuggested=true` in the response DTO. Wrapped in try-catch so failures (e.g., no API key) silently fall back to returning the original LOC failure message.
 
-Each strategy updates the book's `locNumber` and `lastModified` fields on success.
+Each strategy updates the book's `locNumber` and `lastModified` fields on success. HTTP 403/429/502/503/504 and I/O timeouts wait and retry (`loc.lookup.retries`, `loc.lookup.backoff-ms`, `loc.lookup.request-delay-ms`) before the next query. The wait is exponential and at least `Retry-After`, capped at 60 seconds.
 
 **Note**: The Book entity does not have an ISBN field. All lookups are based on title and author information, including each alternate author name.
 

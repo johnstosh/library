@@ -460,7 +460,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
 - HTTP and other lookup failures are stored on the book as `aclaLookupError` (max 255 characters) and returned as `success: false`. HTTP errors are recorded as `Error: HTTP {status}` without the response body, so a block/error page cannot overflow the column.
-- BiblioCommons 403/429/502/503/504 and I/O timeouts are retried with backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A short pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches so the Books-page bulk carousel does not trip the catalog CDN.
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches, and the last failed try reserves that wait so the next title does not go out immediately. YDL and EMU use the same `ydl.lookup.*` and `emu.lookup.*` settings.
 - Follow-up format searches that still fail after retries are skipped: holdings already found on the unfiltered title search are kept instead of recording `Error: HTTP 403 Forbidden` for the whole book.
 - Same pattern as `/api/ydl-lookup/lookup/{bookId}` and `/api/emu-lookup/lookup/{bookId}`
 
@@ -495,7 +495,8 @@ Looks up paper/ebook/audio holdings for one book at Washtenaw Community College'
 - Only local holdings (`context == "L"`) count. Central-index results are ignored
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by Washtenaw Community College`
-- HTTP and other lookup failures are stored on the book as `wccLookupError` (max 255 characters) and returned as `success: false`
+- HTTP and other lookup failures are stored on the book as `wccLookupError` (max 255 characters) and returned as `success: false` only after retries are exhausted
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`wcc.lookup.retries`, `wcc.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`wcc.lookup.request-delay-ms`) is inserted between outbound searches, and the last failed try reserves that wait for the next title.
 - Same pattern as `/api/emu-lookup/lookup/{bookId}`
 
 **Use Case:**

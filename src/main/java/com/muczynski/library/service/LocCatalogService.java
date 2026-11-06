@@ -1,13 +1,17 @@
+/*
+ * (c) Copyright 2025 by Muczynski
+ */
 package com.muczynski.library.service;
 
 import com.muczynski.library.model.LocCallNumberResponse;
 import com.muczynski.library.model.LocSearchRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.Record;
 import org.marc4j.marc.VariableField;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -24,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.LongConsumer;
 
 /**
  * Production-grade Spring Service for querying the Library of Congress SRU API
@@ -32,7 +37,10 @@ import java.util.Optional;
  * <p>Uses public SRU endpoint (no credentials required):
  * http://lx2.loc.gov:210/LCDB</p>
  *
- * <p>Note: Port 210 is the Z39.50/SRU port and uses HTTP, not HTTPS</p>
+ * <p>Note: Port 210 is the Z39.50/SRU port and uses HTTP, not HTTPS.</p>
+ *
+ * <p>HTTP 403/429/502/503/504 and I/O timeouts are retried by {@link CatalogLookupRetry}.
+ * Bulk lookup tries several queries per book, so a 429 waits before the next query.</p>
  *
  * <p>Dependencies (Gradle coordinates):</p>
  * <pre>
@@ -51,7 +59,6 @@ import java.util.Optional;
  * </pre>
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class LocCatalogService {
 
@@ -60,6 +67,24 @@ public class LocCatalogService {
     private static final int MAX_ALLOWED_RECORDS = 50;
 
     private final RestTemplate restTemplate;
+    private final CatalogLookupRetry http;
+
+    @Autowired
+    public LocCatalogService(RestTemplate restTemplate,
+                              @Value("${loc.lookup.retries:3}") int retries,
+                              @Value("${loc.lookup.backoff-ms:2000}") long backoffMs,
+                              @Value("${loc.lookup.request-delay-ms:1000}") long requestDelayMs) {
+        this(restTemplate, retries, backoffMs, requestDelayMs, null);
+    }
+
+    LocCatalogService(RestTemplate restTemplate,
+                      int retries,
+                      long backoffMs,
+                      long requestDelayMs,
+                      LongConsumer pauser) {
+        this.restTemplate = restTemplate;
+        this.http = new CatalogLookupRetry("LOC", retries, backoffMs, requestDelayMs, pauser);
+    }
 
     /**
      * Searches the LOC catalog by title and/or author and returns the first valid LOC call number.
@@ -75,7 +100,7 @@ public class LocCatalogService {
         String url = buildSruUrl(cqlQuery, DEFAULT_MAX_RECORDS);
 
         log.info("Querying LOC SRU API: {}", url);
-        String marcXmlResponse = restTemplate.getForObject(url, String.class);
+        String marcXmlResponse = http.call(url, () -> restTemplate.getForObject(url, String.class));
 
         if (marcXmlResponse == null || marcXmlResponse.trim().isEmpty()) {
             log.warn("Empty response from LOC API for query: {}", cqlQuery);

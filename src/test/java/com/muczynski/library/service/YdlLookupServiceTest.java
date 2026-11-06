@@ -7,15 +7,20 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.YdlLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,8 +41,12 @@ class YdlLookupServiceTest {
     @Mock
     private RestTemplate ydlRestTemplate;
 
-    @InjectMocks
     private YdlLookupService ydlLookupService;
+
+    @BeforeEach
+    void setUp() {
+        ydlLookupService = new YdlLookupService(bookRepository, ydlRestTemplate);
+    }
 
     private static final String RESPONSE_WITH_ALL_FORMATS = """
             {"totalPages":1,"page":0,"totalResults":1,"data":[
@@ -524,5 +533,36 @@ class YdlLookupServiceTest {
         assertTrue(result.getPaperAvailable());
         assertFalse(result.getAudioAvailable());
         assertFalse(result.getEbookAvailable());
+    }
+
+    @Test
+    void lookupAndUpdateBook_tooManyRequests_backsOffThenSucceeds() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        List<Long> pauses = new ArrayList<>();
+        YdlLookupService retrying = new YdlLookupService(bookRepository, ydlRestTemplate, 3, 2_000, 0, pauses::add);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any()))
+                .thenThrow(tooMany())
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = retrying.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertNull(book.getYdlLookupError());
+        verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
+        assertEquals(1, pauses.size());
+        assertTrue(Math.abs(pauses.get(0) - 2_000) <= 250, "pause was " + pauses.get(0));
+    }
+
+    private static HttpClientErrorException tooMany() {
+        return HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
+                new byte[0], StandardCharsets.UTF_8);
     }
 }
