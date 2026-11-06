@@ -532,7 +532,8 @@ Looks up paper/ebook/audio holdings for one book at Michigan State University Li
 - Title matching is exact after normalization (short title, full title, title before ` / `, or title before a subtitle colon). Short titles (4 words or fewer) also require an author last-name word match
 - A completed search that finds no match clears stale holdings and returns `Not held by Michigan State University`
 - An HTML block page or other non-JSON response is a lookup error, not a "not held" result
-- HTTP and other lookup failures are stored on the book as `msuLookupError` (max 255 characters) and returned as `success: false`
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`msu.lookup.retries`, `msu.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`msu.lookup.request-delay-ms`) is inserted between outbound searches so the Books-page bulk carousel does not keep tripping the catalog rate limit
+- HTTP and other lookup failures are stored on the book as `msuLookupError` (max 255 characters) and returned as `success: false` only after retries are exhausted
 - Same pattern as `/api/wcc-lookup/lookup/{bookId}`
 
 **Use Case:**

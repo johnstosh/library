@@ -12,18 +12,29 @@ import com.muczynski.library.dto.MsuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 /**
@@ -37,6 +48,14 @@ import java.util.regex.Pattern;
  * {@code eBook} or {@code Electronic} (those are ebooks, matching MSU's own material-type
  * rules). {@code Audio}, {@code CD}, {@code Cassette}, {@code Vinyl Record}, and
  * {@code Shellac Record} are audio.
+ *
+ * <p>The Books-page carousel looks up titles back-to-back, and each title can
+ * search more than once. VuFind answers that burst with HTTP 429. A 429 used
+ * to be stored on the first response, so the next title went out immediately
+ * and the catalog stayed limited. HTTP 403/429/502/503/504 and I/O timeouts
+ * are retried. The wait is exponential from {@code msu.lookup.backoff-ms} and
+ * at least the {@code Retry-After} value, capped at {@link #MAX_BACKOFF_MS}.
+ * A pause ({@code msu.lookup.request-delay-ms}) is inserted between searches.
  */
 @Service
 @Slf4j
@@ -44,7 +63,18 @@ import java.util.regex.Pattern;
 public class MsuLookupService {
 
     static final String SEARCH_URL = "https://catalog.lib.msu.edu/api/v1/search";
+    /** One retry waits at most this long, even when Retry-After is longer. */
+    static final long MAX_BACKOFF_MS = 60_000L;
     private static final String NOT_HELD = "Not held by Michigan State University";
+
+    private static final LongConsumer THREAD_SLEEP = millis -> {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new com.muczynski.library.exception.LibraryException("MSU lookup interrupted", ex);
+        }
+    };
 
     /**
      * Display labels from MSU Libraries catalog {@code format_map.properties}
@@ -60,11 +90,35 @@ public class MsuLookupService {
     private final BookRepository bookRepository;
     private final RestTemplate msuRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final int retries;
+    private final long backoffMs;
+    private final long requestDelayMs;
+    private final LongConsumer pauser;
+    private final Object paceLock = new Object();
+    /** Earliest time the next outbound search may start. Shared by every lookup on this instance. */
+    private long nextAllowedAtMs;
 
+    @Autowired
     public MsuLookupService(BookRepository bookRepository,
-                             @Qualifier("msuRestTemplate") RestTemplate msuRestTemplate) {
+                             @Qualifier("msuRestTemplate") RestTemplate msuRestTemplate,
+                             @Value("${msu.lookup.retries:3}") int retries,
+                             @Value("${msu.lookup.backoff-ms:2000}") long backoffMs,
+                             @Value("${msu.lookup.request-delay-ms:1000}") long requestDelayMs) {
+        this(bookRepository, msuRestTemplate, retries, backoffMs, requestDelayMs, THREAD_SLEEP);
+    }
+
+    MsuLookupService(BookRepository bookRepository,
+                     RestTemplate msuRestTemplate,
+                     int retries,
+                     long backoffMs,
+                     long requestDelayMs,
+                     LongConsumer pauser) {
         this.bookRepository = bookRepository;
         this.msuRestTemplate = msuRestTemplate;
+        this.retries = Math.max(0, retries);
+        this.backoffMs = Math.max(0, backoffMs);
+        this.requestDelayMs = Math.max(0, requestDelayMs);
+        this.pauser = pauser == null ? THREAD_SLEEP : pauser;
     }
 
     /**
@@ -216,7 +270,7 @@ public class MsuLookupService {
                 .queryParam("field[]", "title", "shortTitle", "formats", "authors", "id")
                 .build()
                 .toUri();
-        String response = msuRestTemplate.getForObject(uri, String.class);
+        String response = getWithRetry(uri);
         if (response == null || !response.trim().startsWith("{")) {
             throw new com.muczynski.library.exception.LibraryException(
                     "MSU catalog returned a non-JSON response");
@@ -233,6 +287,128 @@ public class MsuLookupService {
         } catch (Exception e) {
             throw new com.muczynski.library.exception.LibraryException("Failed to parse MSU response", e);
         }
+    }
+
+    /**
+     * GET with a pause between searches and backoff on rate-limit and gateway
+     * statuses. The wait is applied by {@link #pace()} on the next attempt, and
+     * is also reserved for the next book so a stored 429 does not immediately
+     * send another title.
+     */
+    String getWithRetry(URI uri) {
+        int attempts = retries + 1;
+        RuntimeException last = null;
+        for (int attempt = 1; attempt <= attempts; attempt++) {
+            pace();
+            try {
+                return msuRestTemplate.getForObject(uri, String.class);
+            } catch (RestClientResponseException e) {
+                last = e;
+                if (!isRetryableStatus(e.getStatusCode().value()) || attempt == attempts) {
+                    if (isRetryableStatus(e.getStatusCode().value())) {
+                        delayNextRequest(backoffMs(attempt, backoffMs, e));
+                    }
+                    throw e;
+                }
+                long wait = backoffMs(attempt, backoffMs, e);
+                log.warn("MSU HTTP {} for {} (attempt {}/{}); backing off {} ms",
+                        e.getStatusCode().value(), uri, attempt, attempts, wait);
+                delayNextRequest(wait);
+            } catch (ResourceAccessException e) {
+                last = e;
+                if (attempt == attempts) {
+                    delayNextRequest(backoffMs(attempt, backoffMs, null));
+                    throw e;
+                }
+                long wait = backoffMs(attempt, backoffMs, null);
+                log.warn("MSU I/O for {} (attempt {}/{}): {}; backing off {} ms",
+                        uri, attempt, attempts, e.getMessage(), wait);
+                delayNextRequest(wait);
+            }
+        }
+        throw last != null ? last
+                : new com.muczynski.library.exception.LibraryException("MSU lookup failed");
+    }
+
+    static boolean isRetryableStatus(int statusCode) {
+        return statusCode == 403 || statusCode == 429
+                || statusCode == 502 || statusCode == 503 || statusCode == 504;
+    }
+
+    /**
+     * Wait before another try. Exponential from {@code baseMs} on the first
+     * failure, doubled each further failure, and never shorter than Retry-After.
+     * A zero base and a missing Retry-After wait 0 — that is the bug that stored
+     * {@code Error: HTTP 429 Too Many Requests} and sent the next title at once.
+     */
+    static long backoffMs(int failedAttempt, long baseMs, RestClientResponseException exception) {
+        long exponential = 0;
+        if (baseMs > 0 && failedAttempt > 0) {
+            exponential = baseMs;
+            for (int i = 1; i < failedAttempt && exponential < MAX_BACKOFF_MS; i++) {
+                exponential = Math.min(MAX_BACKOFF_MS, exponential * 2);
+            }
+        }
+        return Math.max(exponential, retryAfterMs(exception));
+    }
+
+    static long retryAfterMs(RestClientResponseException exception) {
+        if (exception == null || exception.getResponseHeaders() == null) {
+            return 0;
+        }
+        String raw = exception.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        raw = raw.trim();
+        try {
+            long seconds = Long.parseLong(raw);
+            if (seconds <= 0) {
+                return 0;
+            }
+            return Math.min(seconds * 1000L, MAX_BACKOFF_MS);
+        } catch (NumberFormatException ignored) {
+            try {
+                ZonedDateTime when = ZonedDateTime.parse(raw, DateTimeFormatter.RFC_1123_DATE_TIME);
+                long ms = Duration.between(Instant.now(), when.toInstant()).toMillis();
+                if (ms <= 0) {
+                    return 0;
+                }
+                return Math.min(ms, MAX_BACKOFF_MS);
+            } catch (DateTimeParseException ex) {
+                return 0;
+            }
+        }
+    }
+
+    private void pace() {
+        long wait;
+        synchronized (paceLock) {
+            long now = System.currentTimeMillis();
+            wait = Math.max(0, nextAllowedAtMs - now);
+            long start = now + wait;
+            nextAllowedAtMs = start + requestDelayMs;
+        }
+        sleep(wait);
+    }
+
+    private void delayNextRequest(long waitMs) {
+        if (waitMs <= 0) {
+            return;
+        }
+        synchronized (paceLock) {
+            long until = System.currentTimeMillis() + waitMs;
+            if (until > nextAllowedAtMs) {
+                nextAllowedAtMs = until;
+            }
+        }
+    }
+
+    private void sleep(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        pauser.accept(ms);
     }
 
     private MatchBatch filterMatches(JsonNode records, String title, List<String> authorLastNames) {
