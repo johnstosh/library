@@ -89,6 +89,7 @@ public class SearchController {
             @RequestParam(required = false) String favoriteLists,
             @RequestParam(required = false) String libraryCheckedOlder,
             @RequestParam(defaultValue = "90") int libraryCheckedOlderDays,
+            @RequestParam(required = false) String libraryLookupError,
             Principal principal) {
         try {
             List<String> labelList = (labels == null || labels.isBlank())
@@ -139,7 +140,8 @@ public class SearchController {
                     userId,
                     favoriteList,
                     libraryCheckedOlder,
-                    libraryCheckedOlderDays);
+                    libraryCheckedOlderDays,
+                    libraryLookupError);
             return ResponseEntity.ok(results);
         } catch (Exception e) {
             logger.warn("Failed to perform search with query '{}', bookPage {}, authorPage {}, size {}: {}",

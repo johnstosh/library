@@ -36,6 +36,7 @@ import {
   labelsFromSearchParams,
   libraryCheckedOlderDaysFromSearchParams,
   libraryCheckedOlderFromSearchParams,
+  libraryLookupErrorFromSearchParams,
   priceOlderDaysFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
@@ -68,6 +69,7 @@ export function PricesPage() {
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
+  const libraryLookupError = libraryLookupErrorFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedBindings = bindingsFromSearchParams(searchParams)
@@ -107,6 +109,7 @@ export function PricesPage() {
     recentHours?: number
     libraryCheckedOlder?: string
     libraryCheckedOlderDays?: number
+    libraryLookupError?: string
   }) => {
     startTransition(() => {
       const bookParams = bookFilterParamsForUrl(
@@ -124,6 +127,9 @@ export function PricesPage() {
             ? next.libraryCheckedOlder
             : libraryCheckedOlder,
           libraryCheckedOlderDays: next.libraryCheckedOlderDays ?? libraryCheckedOlderDays,
+          libraryLookupError: next.libraryLookupError !== undefined
+            ? next.libraryLookupError
+            : libraryLookupError,
         },
         'prices',
       )
@@ -147,6 +153,7 @@ export function PricesPage() {
     priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
     libraryCheckedOlder: libraryCheckedOlderFromSearchParams(searchParams),
     libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
+    libraryLookupError: libraryLookupErrorFromSearchParams(searchParams),
     chips: chipsFromSearchParams(searchParams, 'prices'),
   }), [searchParams])
 
@@ -288,6 +295,7 @@ export function PricesPage() {
               priceOlderDays,
               libraryCheckedOlder,
               libraryCheckedOlderDays,
+              libraryLookupError,
             })}
             leftIcon={<PiBooks />}
             data-test="open-in-books"
@@ -308,8 +316,12 @@ export function PricesPage() {
             showCatalogerFilters
             libraryCheckedOlder={libraryCheckedOlder}
             libraryCheckedOlderDays={libraryCheckedOlderDays}
+            libraryLookupError={libraryLookupError}
             onLibraryCheckedOlderChange={(library, days) =>
               writeUrl({ libraryCheckedOlder: library, libraryCheckedOlderDays: days })
+            }
+            onLibraryLookupErrorChange={(library) =>
+              writeUrl({ libraryLookupError: library })
             }
           />
           <BookLabelFilters

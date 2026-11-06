@@ -137,7 +137,7 @@ class CatalogFilterServiceIntegrationTest {
     }
 
     @Test
-    void bookSummariesKeepLibraryChecksOlderThanTheCutoff() {
+    void bookSummariesKeepNeverCheckedAndLibraryChecksOlderThanTheCutoff() {
         String token = "Stale" + UUID.randomUUID().toString().replace("-", "");
         Author author = authorRepository.save(authorNamed("Author " + token));
         LocalDateTime old = LocalDateTime.now(ZoneOffset.UTC).minusDays(120);
@@ -172,9 +172,10 @@ class CatalogFilterServiceIntegrationTest {
         List<Long> matched = ids(catalogFilterService.bookSummaries(filter, null, true));
         assertTrue(matched.contains(staleHeld.getId()));
         assertTrue(matched.contains(staleNotHeld.getId()));
+        assertTrue(matched.contains(never.getId()));
+        // Checked at YDL only, so MSU has never been looked up.
+        assertTrue(matched.contains(otherLibrary.getId()));
         assertFalse(matched.contains(freshHeld.getId()));
-        assertFalse(matched.contains(never.getId()));
-        assertFalse(matched.contains(otherLibrary.getId()));
 
         CatalogFilterService.BookCatalogFilter unknown = query(token);
         unknown.libraryCheckedOlder = "NOPE";
@@ -182,6 +183,74 @@ class CatalogFilterServiceIntegrationTest {
         assertTrue(unconstrained.contains(never.getId()));
         assertTrue(unconstrained.contains(freshHeld.getId()));
         assertTrue(unconstrained.contains(otherLibrary.getId()));
+    }
+
+    @Test
+    void bookSummariesKeepLibraryLookupErrors() {
+        String token = "Err" + UUID.randomUUID().toString().replace("-", "");
+        Author author = authorRepository.save(authorNamed("Author " + token));
+        LocalDateTime old = LocalDateTime.now(ZoneOffset.UTC).minusDays(120);
+        LocalDateTime fresh = LocalDateTime.now(ZoneOffset.UTC).minusDays(2);
+
+        Book failed = book(token + " failed", author, null, null);
+        failed.setMsuLastChecked(fresh);
+        failed.setMsuLookupError("Error: HTTP 429 Too Many Requests");
+        failed = bookRepository.save(failed);
+
+        Book staleFailed = book(token + " stale failed", author, null, null);
+        staleFailed.setMsuLastChecked(old);
+        staleFailed.setMsuLookupError("Error: connection timed out");
+        staleFailed = bookRepository.save(staleFailed);
+
+        Book notHeld = book(token + " not held", author, null, null);
+        notHeld.setMsuLastChecked(old);
+        notHeld.setMsuLookupError("Not held by Michigan State University");
+        notHeld = bookRepository.save(notHeld);
+
+        Book notReady = book(token + " not ready", author, null, null);
+        notReady.setMsuLastChecked(old);
+        notReady.setMsuLookupError("Not Ready - Temporary title");
+        notReady = bookRepository.save(notReady);
+
+        Book blank = book(token + " blank", author, null, null);
+        blank.setMsuLastChecked(old);
+        blank.setMsuLookupError("   ");
+        blank = bookRepository.save(blank);
+
+        Book never = bookRepository.save(book(token + " never", author, null, null));
+
+        Book otherLibrary = book(token + " ydl", author, null, null);
+        otherLibrary.setYdlLastChecked(old);
+        otherLibrary.setYdlLookupError("Error: HTTP 500 Internal Server Error");
+        otherLibrary = bookRepository.save(otherLibrary);
+
+        CatalogFilterService.BookCatalogFilter errors = query(token);
+        errors.libraryLookupError = "msu";
+        List<Long> matched = ids(catalogFilterService.bookSummaries(errors, null, true));
+        assertTrue(matched.contains(failed.getId()));
+        assertTrue(matched.contains(staleFailed.getId()));
+        assertFalse(matched.contains(notHeld.getId()));
+        assertFalse(matched.contains(notReady.getId()));
+        assertFalse(matched.contains(blank.getId()));
+        assertFalse(matched.contains(never.getId()));
+        assertFalse(matched.contains(otherLibrary.getId()));
+
+        CatalogFilterService.BookCatalogFilter both = query(token);
+        both.libraryCheckedOlder = "MSU";
+        both.libraryCheckedOlderDays = 90;
+        both.libraryLookupError = "MSU";
+        List<Long> oldErrors = ids(catalogFilterService.bookSummaries(both, null, true));
+        assertTrue(oldErrors.contains(staleFailed.getId()));
+        assertFalse(oldErrors.contains(failed.getId()));
+        assertFalse(oldErrors.contains(never.getId()));
+        assertFalse(oldErrors.contains(notHeld.getId()));
+
+        CatalogFilterService.BookCatalogFilter unknown = query(token);
+        unknown.libraryLookupError = "NOPE";
+        List<Long> unconstrained = ids(catalogFilterService.bookSummaries(unknown, null, true));
+        assertTrue(unconstrained.contains(failed.getId()));
+        assertTrue(unconstrained.contains(never.getId()));
+        assertTrue(unconstrained.contains(notHeld.getId()));
     }
 
     @Test

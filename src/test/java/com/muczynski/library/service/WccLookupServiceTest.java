@@ -7,15 +7,20 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.WccLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,8 +40,12 @@ class WccLookupServiceTest {
     @Mock
     private RestTemplate wccRestTemplate;
 
-    @InjectMocks
     private WccLookupService wccLookupService;
+
+    @BeforeEach
+    void setUp() {
+        wccLookupService = new WccLookupService(bookRepository, wccRestTemplate);
+    }
 
     private static final String RESPONSE_WITH_ALL_FORMATS = """
             {"info":{"totalResultsLocal":3},"docs":[
@@ -479,5 +488,36 @@ class WccLookupServiceTest {
         assertTrue(result.getPaperAvailable());
         assertFalse(result.getAudioAvailable());
         assertFalse(result.getEbookAvailable());
+    }
+
+    @Test
+    void lookupAndUpdateBook_tooManyRequests_backsOffThenSucceeds() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        List<Long> pauses = new ArrayList<>();
+        WccLookupService retrying = new WccLookupService(bookRepository, wccRestTemplate, 3, 2_000, 0, pauses::add);
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(wccRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenThrow(tooMany())
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        WccLookupResultDto result = retrying.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertNull(book.getWccLookupError());
+        verify(wccRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
+        assertEquals(1, pauses.size());
+        assertTrue(Math.abs(pauses.get(0) - 2_000) <= 250, "pause was " + pauses.get(0));
+    }
+
+    private static HttpClientErrorException tooMany() {
+        return HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
+                new byte[0], StandardCharsets.UTF_8);
     }
 }

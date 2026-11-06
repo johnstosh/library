@@ -251,11 +251,11 @@ class AclaLookupServiceTest {
 
     @Test
     void isRetryableStatus_coversCdnThrottleAndGatewayErrors() {
-        assertTrue(AclaLookupService.isRetryableStatus(403));
-        assertTrue(AclaLookupService.isRetryableStatus(429));
-        assertTrue(AclaLookupService.isRetryableStatus(503));
-        assertFalse(AclaLookupService.isRetryableStatus(404));
-        assertFalse(AclaLookupService.isRetryableStatus(400));
+        assertTrue(CatalogLookupRetry.isRetryableStatus(403));
+        assertTrue(CatalogLookupRetry.isRetryableStatus(429));
+        assertTrue(CatalogLookupRetry.isRetryableStatus(503));
+        assertFalse(CatalogLookupRetry.isRetryableStatus(404));
+        assertFalse(CatalogLookupRetry.isRetryableStatus(400));
     }
 
     private static HttpClientErrorException forbiddenWithHugeBody() {

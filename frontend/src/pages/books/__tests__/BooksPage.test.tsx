@@ -170,6 +170,7 @@ describe('BooksPage Pricing filters', () => {
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
     expect(screen.getByTestId('filter-library-checked-older')).toBeInTheDocument()
     expect(screen.getByTestId('filter-library-checked-older-days')).toHaveValue(90)
+    expect(screen.getByTestId('filter-library-lookup-error')).toHaveValue('')
     expect(screen.queryByTestId('filter-price-hardcover')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-price-other-unknown')).not.toBeInTheDocument()
   })
@@ -195,6 +196,21 @@ describe('BooksPage library data age', () => {
     expect(lastBookFilters.current).toMatchObject({
       libraryCheckedOlder: 'MSU',
       libraryCheckedOlderDays: 90,
+    })
+  })
+
+  it('selecting a lookup error turns off the default recent-arrivals intake', () => {
+    librarianState.current = true
+    renderBooksPage('/books')
+
+    fireEvent.change(screen.getByTestId('filter-library-lookup-error'), { target: { value: 'WCC' } })
+
+    const location = screen.getByTestId('location').textContent ?? ''
+    expect(location).toContain('libraryLookupError=WCC')
+    expect(location).toContain('mostRecent=false')
+    expect(location).not.toContain('libraryCheckedOlder=')
+    expect(lastBookFilters.current).toMatchObject({
+      libraryLookupError: 'WCC',
     })
   })
 })

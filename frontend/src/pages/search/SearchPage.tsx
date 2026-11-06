@@ -19,6 +19,7 @@ import {
   labelsFromSearchParams,
   libraryCheckedOlderDaysFromSearchParams,
   libraryCheckedOlderFromSearchParams,
+  libraryLookupErrorFromSearchParams,
   pageFromSearchParams,
 } from '@/utils/bookFilterParams'
 import { bookBindingDisplay } from '@/utils/bookBinding'
@@ -75,6 +76,7 @@ export function SearchPage() {
   const selectedFavoriteLists = favoriteListsFromSearchParams(searchParams)
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
+  const libraryLookupError = libraryLookupErrorFromSearchParams(searchParams)
   const { data: favoriteSummary } = useFavoriteSummary()
   const favoriteChips = favoriteListChips(favoriteSummary?.lists, 'search')
 
@@ -93,6 +95,7 @@ export function SearchPage() {
     || selectedStatuses.length > 0
     || selectedFavoriteLists.length > 0
     || libraryCheckedOlder !== ''
+    || libraryLookupError !== ''
 
   const { data, isLoading, error } = useSearch(
     urlQuery,
@@ -107,6 +110,7 @@ export function SearchPage() {
     selectedStatuses,
     libraryCheckedOlder,
     libraryCheckedOlderDays,
+    libraryLookupError,
   )
   const isLibrarian = useIsLibrarian()
 
@@ -122,6 +126,7 @@ export function SearchPage() {
     authorPage?: number
     libraryCheckedOlder?: string
     libraryCheckedOlderDays?: number
+    libraryLookupError?: string
   }) => {
     const includeQ = next.includeQ ?? hasSearched
     setSearchParams(
@@ -140,6 +145,9 @@ export function SearchPage() {
             ? next.libraryCheckedOlder
             : libraryCheckedOlder,
           libraryCheckedOlderDays: next.libraryCheckedOlderDays ?? libraryCheckedOlderDays,
+          libraryLookupError: next.libraryLookupError !== undefined
+            ? next.libraryLookupError
+            : libraryLookupError,
         },
         'search',
       ),
@@ -216,6 +224,7 @@ export function SearchPage() {
     q: inputValue.trim() || urlQuery,
     libraryCheckedOlder,
     libraryCheckedOlderDays,
+    libraryLookupError,
   })
 
   const hasResults = data && (data.books.length > 0 || data.authors.length > 0)
@@ -276,8 +285,12 @@ export function SearchPage() {
               showCatalogerFilters={false}
               libraryCheckedOlder={libraryCheckedOlder}
               libraryCheckedOlderDays={libraryCheckedOlderDays}
+              libraryLookupError={libraryLookupError}
               onLibraryCheckedOlderChange={(library, days) =>
                 writeUrl({ libraryCheckedOlder: library, libraryCheckedOlderDays: days })
+              }
+              onLibraryLookupErrorChange={(library) =>
+                writeUrl({ libraryLookupError: library })
               }
             />
           </div>

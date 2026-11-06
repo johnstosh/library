@@ -12,7 +12,9 @@ import com.muczynski.library.dto.MsuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 /**
@@ -37,6 +40,15 @@ import java.util.regex.Pattern;
  * {@code eBook} or {@code Electronic} (those are ebooks, matching MSU's own material-type
  * rules). {@code Audio}, {@code CD}, {@code Cassette}, {@code Vinyl Record}, and
  * {@code Shellac Record} are audio.
+ *
+ * <p>The Books-page carousel looks up titles back-to-back, and each title can
+ * search more than once. VuFind answers that burst with HTTP 429. A 429 used
+ * to be stored on the first response, so the next title went out immediately
+ * and the catalog stayed limited. HTTP 403/429/502/503/504 and I/O timeouts
+ * are retried by {@link CatalogLookupRetry}. The wait is exponential from
+ * {@code msu.lookup.backoff-ms} and at least the {@code Retry-After} value,
+ * capped at {@link CatalogLookupRetry#MAX_BACKOFF_MS}. A pause
+ * ({@code msu.lookup.request-delay-ms}) is inserted between searches.
  */
 @Service
 @Slf4j
@@ -60,11 +72,26 @@ public class MsuLookupService {
     private final BookRepository bookRepository;
     private final RestTemplate msuRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CatalogLookupRetry http;
 
+    @Autowired
     public MsuLookupService(BookRepository bookRepository,
-                             @Qualifier("msuRestTemplate") RestTemplate msuRestTemplate) {
+                             @Qualifier("msuRestTemplate") RestTemplate msuRestTemplate,
+                             @Value("${msu.lookup.retries:3}") int retries,
+                             @Value("${msu.lookup.backoff-ms:2000}") long backoffMs,
+                             @Value("${msu.lookup.request-delay-ms:1000}") long requestDelayMs) {
+        this(bookRepository, msuRestTemplate, retries, backoffMs, requestDelayMs, null);
+    }
+
+    MsuLookupService(BookRepository bookRepository,
+                     RestTemplate msuRestTemplate,
+                     int retries,
+                     long backoffMs,
+                     long requestDelayMs,
+                     LongConsumer pauser) {
         this.bookRepository = bookRepository;
         this.msuRestTemplate = msuRestTemplate;
+        this.http = new CatalogLookupRetry("MSU", retries, backoffMs, requestDelayMs, pauser);
     }
 
     /**
@@ -216,7 +243,7 @@ public class MsuLookupService {
                 .queryParam("field[]", "title", "shortTitle", "formats", "authors", "id")
                 .build()
                 .toUri();
-        String response = msuRestTemplate.getForObject(uri, String.class);
+        String response = http.call(uri.toString(), () -> msuRestTemplate.getForObject(uri, String.class));
         if (response == null || !response.trim().startsWith("{")) {
             throw new com.muczynski.library.exception.LibraryException(
                     "MSU catalog returned a non-JSON response");

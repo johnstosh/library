@@ -12,7 +12,9 @@ import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.service.BooksFromFeedService;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -25,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 /**
@@ -32,7 +35,8 @@ import java.util.regex.Pattern;
  * search API used by its Ex Libris Primo VE catalog frontend, and stores the result on the
  * Book entity. Only "local" (context == "L", i.e. actually held/subscribed by EMU) results are
  * considered — the wider "PC" central-discovery-index results (e.g. journal articles indexed
- * but not held) are excluded.
+ * but not held) are excluded. HTTP 403/429/502/503/504 and I/O timeouts are
+ * retried by {@link CatalogLookupRetry}.
  */
 @Service
 @Slf4j
@@ -57,11 +61,31 @@ public class EmuLookupService {
     private final BookRepository bookRepository;
     private final RestTemplate emuRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CatalogLookupRetry http;
 
     public EmuLookupService(BookRepository bookRepository,
                              @Qualifier("emuRestTemplate") RestTemplate emuRestTemplate) {
+        this(bookRepository, emuRestTemplate, 0, 0, 0);
+    }
+
+    @Autowired
+    public EmuLookupService(BookRepository bookRepository,
+                             @Qualifier("emuRestTemplate") RestTemplate emuRestTemplate,
+                             @Value("${emu.lookup.retries:3}") int retries,
+                             @Value("${emu.lookup.backoff-ms:2000}") long backoffMs,
+                             @Value("${emu.lookup.request-delay-ms:1000}") long requestDelayMs) {
+        this(bookRepository, emuRestTemplate, retries, backoffMs, requestDelayMs, null);
+    }
+
+    EmuLookupService(BookRepository bookRepository,
+                     RestTemplate emuRestTemplate,
+                     int retries,
+                     long backoffMs,
+                     long requestDelayMs,
+                     LongConsumer pauser) {
         this.bookRepository = bookRepository;
         this.emuRestTemplate = emuRestTemplate;
+        this.http = new CatalogLookupRetry("EMU", retries, backoffMs, requestDelayMs, pauser);
     }
 
     /**
@@ -273,7 +297,8 @@ public class EmuLookupService {
         // template and re-encodes it via UriComponentsBuilder, which double-encodes the query
         // string we've already percent-encoded above and makes Primo reject the request with a
         // 400. A URI is used as-is, with no further encoding.
-        String response = emuRestTemplate.getForObject(URI.create(url), String.class);
+        URI uri = URI.create(url);
+        String response = http.call(uri.toString(), () -> emuRestTemplate.getForObject(uri, String.class));
         try {
             JsonNode root = objectMapper.readTree(response);
             return root.path("docs");

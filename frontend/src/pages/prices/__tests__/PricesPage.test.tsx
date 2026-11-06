@@ -277,6 +277,7 @@ describe('PricesPage', () => {
     expect(screen.getByTestId('filter-price-older')).toBeInTheDocument()
     expect(screen.getByTestId('filter-library-checked-older')).toHaveValue('')
     expect(screen.getByTestId('filter-library-checked-older-days')).toBeDisabled()
+    expect(screen.getByTestId('filter-library-lookup-error')).toHaveValue('')
     expect(screen.getByTestId('filter-lookup-errors')).toHaveTextContent('Lookup Errors')
     expect(screen.getByTestId('filter-price-recent')).toBeInTheDocument()
     expect(screen.getByTestId('filter-price-recent-hours')).toBeInTheDocument()

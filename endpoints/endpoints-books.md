@@ -151,8 +151,9 @@ Returns the same `BookSummaryDto` rows as `/summaries`, after every Books and Pr
 - `favoriteLists` — comma-separated list names for the signed-in user. A name that contains a comma is `~` plus a percent-encoded name. Applied only when those lists resolve to at least one book
 - `desireToPurchase` — comma-separated `0`–`10` and/or `unset` (Prices)
 - `priceOlderDays` — days for `priceOlder` (default 90)
-- `libraryCheckedOlder` — `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`. Keeps titles whose last check for that library is older than `libraryCheckedOlderDays`. A not-held result or a lookup error still counts. A title that has never been checked for that library does not match. Any other value is ignored.
-- `libraryCheckedOlderDays` — days for `libraryCheckedOlder` (default 90). The cutoff is now in UTC minus that many days, and the last check must be strictly earlier.
+- `libraryCheckedOlder` — `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`. Keeps titles whose last check for that library is older than `libraryCheckedOlderDays`. A not-held result or a lookup error still counts. A title that has never been checked for that library matches, because a missing check is older than any cutoff. Any other value is ignored.
+- `libraryCheckedOlderDays` — days for `libraryCheckedOlder` (default 90). The cutoff is now in UTC minus that many days, and a stored last check must be strictly earlier. A missing last check matches at any day count.
+- `libraryLookupError` — `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`. Keeps titles whose stored lookup message for that library starts with `Error:` (HTTP failures, timeouts, and other exceptions). Not-held messages and `Not Ready - Temporary title` stay out. A title that has never been checked stays out. Any other value is ignored. It ANDs with `libraryCheckedOlder`.
 - Boolean chips: `freeText`, `audio`, `mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `withoutProperPlotOrDescription`, `titleNotChicago`, `authorNotCanonical`, `hasYdlAudio`, `hasYdlBook`, `hasYdlEbook`, `hasEmuAudio`, `hasEmuBook`, `hasEmuEbook`, `hasAclaAudio`, `hasAclaBook`, `hasAclaEbook`, `withoutYdlAudio`, `withoutYdlBook`, `withoutYdlEbook`, `withoutEmuAudio`, `withoutEmuBook`, `withoutEmuEbook`, `withoutAclaAudio`, `withoutAclaBook`, `withoutAclaEbook`, `hasWccAudio`, `hasWccBook`, `hasWccEbook`, `withoutWccAudio`, `withoutWccBook`, `withoutWccEbook`, `hasMsuAudio`, `hasMsuBook`, `hasMsuEbook`, `withoutMsuAudio`, `withoutMsuBook`, `withoutMsuEbook`, `withPrices`, `noPrices`, `priceOlder`, `lookupErrors`
 
 **Response:** Array of BookSummaryDto
@@ -460,7 +461,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
 - HTTP and other lookup failures are stored on the book as `aclaLookupError` (max 255 characters) and returned as `success: false`. HTTP errors are recorded as `Error: HTTP {status}` without the response body, so a block/error page cannot overflow the column.
-- BiblioCommons 403/429/502/503/504 and I/O timeouts are retried with backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A short pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches so the Books-page bulk carousel does not trip the catalog CDN.
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches, and the last failed try reserves that wait so the next title does not go out immediately. YDL and EMU use the same `ydl.lookup.*` and `emu.lookup.*` settings.
 - Follow-up format searches that still fail after retries are skipped: holdings already found on the unfiltered title search are kept instead of recording `Error: HTTP 403 Forbidden` for the whole book.
 - Same pattern as `/api/ydl-lookup/lookup/{bookId}` and `/api/emu-lookup/lookup/{bookId}`
 
@@ -495,7 +496,8 @@ Looks up paper/ebook/audio holdings for one book at Washtenaw Community College'
 - Only local holdings (`context == "L"`) count. Central-index results are ignored
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by Washtenaw Community College`
-- HTTP and other lookup failures are stored on the book as `wccLookupError` (max 255 characters) and returned as `success: false`
+- HTTP and other lookup failures are stored on the book as `wccLookupError` (max 255 characters) and returned as `success: false` only after retries are exhausted
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`wcc.lookup.retries`, `wcc.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`wcc.lookup.request-delay-ms`) is inserted between outbound searches, and the last failed try reserves that wait for the next title.
 - Same pattern as `/api/emu-lookup/lookup/{bookId}`
 
 **Use Case:**
@@ -532,7 +534,8 @@ Looks up paper/ebook/audio holdings for one book at Michigan State University Li
 - Title matching is exact after normalization (short title, full title, title before ` / `, or title before a subtitle colon). Short titles (4 words or fewer) also require an author last-name word match
 - A completed search that finds no match clears stale holdings and returns `Not held by Michigan State University`
 - An HTML block page or other non-JSON response is a lookup error, not a "not held" result
-- HTTP and other lookup failures are stored on the book as `msuLookupError` (max 255 characters) and returned as `success: false`
+- HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`msu.lookup.retries`, `msu.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`msu.lookup.request-delay-ms`) is inserted between outbound searches so the Books-page bulk carousel does not keep tripping the catalog rate limit
+- HTTP and other lookup failures are stored on the book as `msuLookupError` (max 255 characters) and returned as `success: false` only after retries are exhausted
 - Same pattern as `/api/wcc-lookup/lookup/{bookId}`
 
 **Use Case:**

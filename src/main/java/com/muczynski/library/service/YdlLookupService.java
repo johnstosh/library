@@ -11,7 +11,9 @@ import com.muczynski.library.dto.YdlLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.util.LookupErrorMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
 /**
@@ -32,6 +35,7 @@ import java.util.regex.Pattern;
  * the public search API used by YDL's own Angular catalog frontend, and stores the result on
  * the Book entity. Interlibrary-loan-only offerings are not represented as material tabs in
  * this API, so any material tab present in a matched result is treated as a genuine holding.
+ * HTTP 403/429/502/503/504 and I/O timeouts are retried by {@link CatalogLookupRetry}.
  */
 @Service
 @Slf4j
@@ -55,11 +59,31 @@ public class YdlLookupService {
     private final BookRepository bookRepository;
     private final RestTemplate ydlRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CatalogLookupRetry http;
 
     public YdlLookupService(BookRepository bookRepository,
                              @Qualifier("ydlRestTemplate") RestTemplate ydlRestTemplate) {
+        this(bookRepository, ydlRestTemplate, 0, 0, 0);
+    }
+
+    @Autowired
+    public YdlLookupService(BookRepository bookRepository,
+                             @Qualifier("ydlRestTemplate") RestTemplate ydlRestTemplate,
+                             @Value("${ydl.lookup.retries:3}") int retries,
+                             @Value("${ydl.lookup.backoff-ms:2000}") long backoffMs,
+                             @Value("${ydl.lookup.request-delay-ms:1000}") long requestDelayMs) {
+        this(bookRepository, ydlRestTemplate, retries, backoffMs, requestDelayMs, null);
+    }
+
+    YdlLookupService(BookRepository bookRepository,
+                     RestTemplate ydlRestTemplate,
+                     int retries,
+                     long backoffMs,
+                     long requestDelayMs,
+                     LongConsumer pauser) {
         this.bookRepository = bookRepository;
         this.ydlRestTemplate = ydlRestTemplate;
+        this.http = new CatalogLookupRetry("YDL", retries, backoffMs, requestDelayMs, pauser);
     }
 
     /**
@@ -278,7 +302,9 @@ public class YdlLookupService {
         headers.set("iii-host-domain", CUSTOMER_DOMAIN);
         headers.set("Referer", "https://" + CUSTOMER_DOMAIN + "/");
 
-        String response = ydlRestTemplate.postForObject(SEARCH_URL, new HttpEntity<>(body, headers), String.class);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+        String response = http.call(SEARCH_URL,
+                () -> ydlRestTemplate.postForObject(SEARCH_URL, entity, String.class));
         try {
             JsonNode root = objectMapper.readTree(response);
             return root.path("data");

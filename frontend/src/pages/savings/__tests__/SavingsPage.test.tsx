@@ -93,6 +93,7 @@ describe('SavingsPage', () => {
     expect(screen.getByTestId('savings-search-button')).toHaveTextContent('Search')
     expect(screen.getByTestId('filter-most-recent')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-library-checked-older')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-library-lookup-error')).not.toBeInTheDocument()
     expect(screen.getByTestId('filter-with-prices')).toBeInTheDocument()
     expect(screen.getByTestId('book-label-filters')).toBeInTheDocument()
     expect(screen.getByTestId('table-count')).toHaveTextContent('2 books in this table')

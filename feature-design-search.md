@@ -196,12 +196,13 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 |------|-------------|
 | YDL / EMU / ACLA Audio, Book, Ebook, Without Audio, Without Book, Without Ebook | `filter-has-ydl-*`, `filter-without-ydl-*`, and the same for `emu` and `acla` |
 | Library data older than (YDL, EMU, ACLA, WCC, or MSU) plus a days field, default 90 | `filter-library-checked-older`, `filter-library-checked-older-days` |
+| Library lookup error (YDL, EMU, ACLA, WCC, or MSU) | `filter-library-lookup-error` |
 | Status (In-library, Electronic resource, Without LOC, Lost, Withdrawn, On Order, Requested) | `status-filter-<key>` |
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |
 | Genres | `label-filter-<genre>` |
 
-Note: When any filter chip, label, or library-data age is active, the author list shows only authors who have at least one book in the filtered book result set — not authors matching the search string by name. The age filter matches a title whose chosen library was last checked more than that many days ago, including a not-held or error result. A title with no check for that library stays out. A blank query with a library selected still searches. Open in Books keeps the library and days.
+Note: When any filter chip, label, library-data age, or library lookup error is active, the author list shows only authors who have at least one book in the filtered book result set — not authors matching the search string by name. The age filter matches a title whose chosen library was last checked more than that many days ago, including a not-held or error result, and a title that has never been checked for that library. The lookup-error filter matches a stored message that starts with `Error:` for the chosen library. Not-held and not-ready messages stay out. The two filters AND. A blank query with either library selected still searches. Open in Books keeps the library, the days, and the lookup-error library.
 
 #### 3. Results Display
 

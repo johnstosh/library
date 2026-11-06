@@ -35,6 +35,7 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-without-emu-audio')).toBeInTheDocument()
     expect(screen.getByTestId('filter-without-acla-ebook')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-library-checked-older')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-library-lookup-error')).not.toBeInTheDocument()
   })
 
   it('shows the library data age filter when the page opts in', () => {
@@ -59,6 +60,13 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-library-checked-older-days')).toBeEnabled()
     fireEvent.change(screen.getByTestId('filter-library-checked-older-days'), { target: { value: '14' } })
     expect(onLibraryCheckedOlderChange).toHaveBeenCalledWith('MSU', 14)
+
+    const onLibraryLookupErrorChange = vi.fn()
+    view.rerender(<BookFilters {...props} libraryCheckedOlder="MSU" onLibraryLookupErrorChange={onLibraryLookupErrorChange} />)
+    const errorSelect = screen.getByTestId('filter-library-lookup-error')
+    expect(errorSelect).toHaveValue('')
+    fireEvent.change(errorSelect, { target: { value: 'WCC' } })
+    expect(onLibraryLookupErrorChange).toHaveBeenCalledWith('WCC')
   })
 
   it('hides cataloger chips when showCatalogerFilters is false', () => {

@@ -36,6 +36,8 @@ export interface BookListFilters {
   /** YDL, EMU, ACLA, WCC, or MSU. Omitted or unknown leaves the age filter off. */
   libraryCheckedOlder?: string
   libraryCheckedOlderDays?: number
+  /** YDL, EMU, ACLA, WCC, or MSU. Omitted or unknown leaves the lookup-error filter off. */
+  libraryLookupError?: string
   chips: BookChipFilters
 }
 
@@ -120,6 +122,8 @@ export function bookListFilterQuery(filters: BookListFilters): string {
     params.set('libraryCheckedOlder', library)
     params.set('libraryCheckedOlderDays', String(days))
   }
+  const lookupError = libraryCheckedOlderCode(filters.libraryLookupError)
+  if (lookupError) params.set('libraryLookupError', lookupError)
   return params.toString()
 }
 
