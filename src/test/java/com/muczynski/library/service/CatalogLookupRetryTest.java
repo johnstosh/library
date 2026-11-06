@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.exception.LibraryException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -48,10 +49,11 @@ class CatalogLookupRetryTest {
         List<Long> pauses = new ArrayList<>();
         CatalogLookupRetry retry = new CatalogLookupRetry("EMU", 2, 2_000, 0, pauses::add);
 
-        assertThrows(HttpClientErrorException.class,
+        LibraryException exhausted = assertThrows(LibraryException.class,
                 () -> retry.call("search", () -> {
                     throw tooMany(null);
                 }));
+        assertEquals("HTTP 429 Too Many Requests after 3 attempts", exhausted.getMessage());
         assertEquals(2, pauses.size());
         assertClose(2_000, pauses.get(0));
         assertClose(4_000, pauses.get(1));
@@ -60,6 +62,25 @@ class CatalogLookupRetryTest {
         assertEquals("ok", retry.call("next", () -> "ok"));
         assertEquals(1, pauses.size());
         assertClose(8_000, pauses.get(0));
+    }
+
+    @Test
+    void call_exhaustedRetries_namesGoAwayWhenThatFilterAnswers() {
+        CatalogLookupRetry retry = new CatalogLookupRetry("MSU", 1, 0, 0, millis -> { });
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.VIA, "HTTP/1.1 git.gammaspectra.live/git/go-away@v0.7.1");
+        HttpClientErrorException limited = HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", headers,
+                new byte[0], StandardCharsets.UTF_8);
+
+        LibraryException exhausted = assertThrows(LibraryException.class,
+                () -> retry.call("search", () -> {
+                    throw limited;
+                }));
+
+        assertEquals(
+                "HTTP 429 Too Many Requests after 2 attempts (go-away filter)",
+                exhausted.getMessage());
     }
 
     @Test

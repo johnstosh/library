@@ -42,7 +42,8 @@ import java.util.regex.Pattern;
  * {@code Shellac Record} are audio.
  *
  * <p>The Books-page carousel looks up titles back-to-back, and each title can
- * search more than once. VuFind answers that burst with HTTP 429. A 429 used
+ * search more than once. The catalog is fronted by go-away (the response
+ * {@code Via} header names it), which answers that burst with HTTP 429. A 429 used
  * to be stored on the first response, so the next title went out immediately
  * and the catalog stayed limited. HTTP 403/429/502/503/504 and I/O timeouts
  * are retried by {@link CatalogLookupRetry}. The wait is exponential from
