@@ -558,7 +558,7 @@ Rewrites the selected books' titles into Chicago title case, including the subti
 - A title that would match another book's title is skipped (`success: false`) and left unchanged
 - `updatedBook` is present only when the title changed
 
-**Use Case:** Books page bulk-action carousel "Chicago Title Case"
+**Use Case:** Books page bulk-action carousel "Chicago Title Case". Data Management runs the same rewrite on every book, shows each change first, and saves only on Do It (`POST /api/maintenance/chicago-titles/preview`).
 
 Canonical author names are rewritten from the Authors page (`POST /api/authors/normalize-names-bulk`). The Books page keeps the `authorNotCanonical` filter.
 

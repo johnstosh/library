@@ -442,4 +442,25 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      */
     @Query("SELECT b.id, b.freeTextUrl FROM Book b WHERE b.id IN :ids")
     List<Object[]> findDuplicateTitleFreeText(@Param("ids") java.util.Collection<Long> ids);
+
+    /**
+     * Primary titles for the Data Management Chicago title-case preview.
+     * Essays and free-text URLs are not loaded.
+     */
+    interface TitleMaintenanceProjection {
+        Long getId();
+        String getTitle();
+    }
+
+    @Query("SELECT b.id as id, b.title as title FROM Book b ORDER BY b.id ASC")
+    List<TitleMaintenanceProjection> findAllTitlesForMaintenance();
+
+    /**
+     * Books with no real Grokipedia URL. "-" counts as missing, matching the catalog filter.
+     */
+    @Query("SELECT b.id FROM Book b WHERE b.grokipediaUrl IS NULL OR b.grokipediaUrl = '' OR b.grokipediaUrl = '-' ORDER BY b.id ASC")
+    List<Long> findIdsMissingGrokipediaUrl();
+
+    @Query("SELECT b.id FROM Book b ORDER BY b.id ASC")
+    List<Long> findAllIdsOrderById();
 }

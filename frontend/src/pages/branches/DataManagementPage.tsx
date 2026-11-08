@@ -37,6 +37,11 @@ import {
 import { useBranches } from '@/api/branches'
 import { useImportPhotosFromZipChunked, type PhotoZipImportResultDto } from '@/api/photos'
 import { useFavoriteStats } from '@/api/favorites'
+import {
+  ChicagoTitleMaintenanceRow,
+  FreeTextMaintenanceRow,
+  GrokipediaMaintenanceRow,
+} from './CatalogToolMaintenance'
 import { Spinner } from '@/components/progress/Spinner'
 import {
   PiDownload,
@@ -1243,6 +1248,9 @@ export function DataManagementPage() {
                     )}
                   </td>
                 </tr>
+                <GrokipediaMaintenanceRow />
+                <ChicagoTitleMaintenanceRow />
+                <FreeTextMaintenanceRow />
               </tbody>
             </table>
           </div>

@@ -791,3 +791,101 @@ export function useFixDuplicateTitles() {
 export function useUndoDuplicateTitleFix() {
   return useDuplicateTitleUndo('/maintenance/duplicate-titles/title-fixes/undo')
 }
+
+// Catalog tools on the Maintenance table (Issue #386).
+// Recalc previews every book. Do It writes that list. Undo restores it.
+
+export interface CatalogToolChangeDto {
+  bookId: number
+  title?: string
+  before?: string
+  after?: string
+  added?: string
+  reason?: string
+}
+
+export interface CatalogToolPreviewDto {
+  booksScanned: number
+  changeCount: number
+  message?: string
+  error?: string
+  changes: CatalogToolChangeDto[]
+  skipped: CatalogToolChangeDto[]
+}
+
+export interface CatalogToolApplyResultDto {
+  actionId?: number | null
+  actionKind?: string
+  applied: number
+  skipped: number
+  message?: string
+  error?: string
+  changes: CatalogToolChangeDto[]
+  skippedChanges: CatalogToolChangeDto[]
+}
+
+export interface CatalogToolCandidatesDto {
+  bookIds: number[]
+}
+
+export interface CatalogToolUndoableDto {
+  actionId?: number | null
+  changeCount?: number
+  summary?: string
+}
+
+export function previewChicago() {
+  return api.post<CatalogToolPreviewDto>('/maintenance/chicago-titles/preview')
+}
+
+export function applyChicago(changes: CatalogToolChangeDto[]) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/chicago-titles/apply', { changes })
+}
+
+export function undoChicago(actionId: number) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/chicago-titles/undo', { actionId })
+}
+
+export function fetchChicagoUndoable() {
+  return api.get<CatalogToolUndoableDto>('/maintenance/chicago-titles/undoable')
+}
+
+export function fetchGrokipediaCandidateIds() {
+  return api.get<CatalogToolCandidatesDto>('/maintenance/grokipedia/candidates')
+}
+
+export function previewGrokipedia(bookIds: number[]) {
+  return api.post<CatalogToolPreviewDto>('/maintenance/grokipedia/preview', { bookIds })
+}
+
+export function applyGrokipedia(changes: CatalogToolChangeDto[]) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/grokipedia/apply', { changes })
+}
+
+export function undoGrokipedia(actionId: number) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/grokipedia/undo', { actionId })
+}
+
+export function fetchGrokipediaUndoable() {
+  return api.get<CatalogToolUndoableDto>('/maintenance/grokipedia/undoable')
+}
+
+export function fetchFreeTextCandidateIds() {
+  return api.get<CatalogToolCandidatesDto>('/maintenance/free-text/candidates')
+}
+
+export function previewFreeText(bookIds: number[]) {
+  return api.post<CatalogToolPreviewDto>('/maintenance/free-text/preview', { bookIds })
+}
+
+export function applyFreeText(changes: CatalogToolChangeDto[]) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/free-text/apply', { changes })
+}
+
+export function undoFreeText(actionId: number) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/free-text/undo', { actionId })
+}
+
+export function fetchFreeTextUndoable() {
+  return api.get<CatalogToolUndoableDto>('/maintenance/free-text/undoable')
+}

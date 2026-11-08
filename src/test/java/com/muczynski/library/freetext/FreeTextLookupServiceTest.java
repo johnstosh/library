@@ -150,6 +150,20 @@ class FreeTextLookupServiceTest {
     }
 
     @Test
+    void discoverUrls_doesNotSaveTheBook() {
+        String title = "Uncached Title " + java.util.UUID.randomUUID();
+        when(mockProvider1.search(eq(title), eq("Jane Austen")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://example.com/book"));
+
+        FreeTextLookupService.Discovery discovery = service.discoverUrls(List.of(title), List.of("Jane Austen"));
+
+        assertEquals("https://example.com/book", discovery.getUrls());
+        assertEquals("Provider1", discovery.getProviderName());
+        verify(bookRepository, never()).save(any());
+        verify(mockProvider2, never()).search(anyString(), anyString());
+    }
+
+    @Test
     void lookupBooks_processesMultipleBooks() {
         Book book1 = createBook(1L, "Book One", "Author One");
         Book book2 = createBook(2L, "Book Two", "Author Two");

@@ -16,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -91,6 +92,28 @@ public class GrokipediaLookupService {
         }
 
         return results;
+    }
+
+    /**
+     * Quick lookup only. Returns the first usual page URL that answers 2xx, or null.
+     * Does not save a URL and does not save "-".
+     * A call through the Spring proxy runs outside a transaction.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public String findQuickUrl(List<String> titles) {
+        if (titles == null) {
+            return null;
+        }
+        for (String title : titles) {
+            if (title == null || title.isBlank()) {
+                continue;
+            }
+            String usualUrl = generateGrokipediaUrl(title);
+            if (checkUrlExists(usualUrl)) {
+                return usualUrl;
+            }
+        }
+        return null;
     }
 
     /**

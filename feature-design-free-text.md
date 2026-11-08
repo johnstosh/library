@@ -4,6 +4,8 @@
 
 This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site. Lookup tries the book's title and every alternate title with the author's name and each alternate name.
 
+The Books page carousel saves as it goes. Data Management → Maintenance runs the same search on every book, lists each title that would gain a link, and saves only when the librarian clicks Do It. That path adds links and does not replace or remove one. See `endpoints/endpoints-maintenance.md`.
+
 ## Architecture
 
 ### Class Hierarchy
