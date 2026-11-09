@@ -450,9 +450,11 @@ describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
     const results = screen.getByTestId('maintenance-illegal-genres-results')
     const lookedAtMatches = results.textContent?.match(/Looked at/g) ?? []
     expect(lookedAtMatches.length).toBe(0)
-    // Message appears exactly once in Results
+    // Message appears exactly once, in the Results cell, not in the stay-on-top banner.
     const msg = 'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.'
     expect(results.textContent?.split(msg).length - 1).toBe(1)
+    expect(screen.getAllByText(msg)).toHaveLength(1)
+    expect(document.querySelector('.fixed.top-16')).toBeNull()
   })
 
   it('shows Recalc success once without a duplicate secondary field (#366)', async () => {
