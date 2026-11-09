@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * DTO for illegal genres maintenance operations on the Data Management page.
  * Used for both recalc (count) and cleanup actions.
@@ -38,4 +40,13 @@ public class IllegalGenresMaintenanceDto {
 
     /** Optional error message if operation failed. */
     private String error;
+
+    /** Clean Genres row that Undo can reverse. Null when nothing was written. */
+    private Long actionId;
+
+    /**
+     * Recalc rows, drops first. Each row is one tag change.
+     * One to three titles are named. Larger groups are a count.
+     */
+    private List<GenreChangeLineDto> changes;
 }

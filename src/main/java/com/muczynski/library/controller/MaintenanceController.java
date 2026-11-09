@@ -8,6 +8,7 @@ import com.muczynski.library.dto.DuplicateTitleDismissalRequestDto;
 import com.muczynski.library.dto.DuplicateTitlePairActionRequestDto;
 import com.muczynski.library.dto.DuplicateTitleUndoRequestDto;
 import com.muczynski.library.dto.DuplicateTitlesResultDto;
+import com.muczynski.library.dto.CatalogToolUndoRequestDto;
 import com.muczynski.library.dto.IllegalGenresMaintenanceDto;
 import com.muczynski.library.service.MaintenanceService;
 import com.muczynski.library.service.duplicate.DuplicateTitleActionService;
@@ -66,6 +67,34 @@ public class MaintenanceController {
                     .message("Internal error during cleanup. Check logs for details.")
                     .build());
         }
+    }
+
+    /**
+     * Restores the genre tags from a Clean Genres action (Issue #385).
+     */
+    @PostMapping("/illegal-genres/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<IllegalGenresMaintenanceDto> undoIllegalGenres(
+            @RequestBody CatalogToolUndoRequestDto request) {
+        try {
+            return ResponseEntity.ok(maintenanceService.undoGenreCleanup(
+                    request == null ? null : request.getActionId()));
+        } catch (Exception e) {
+            log.error("Illegal genres undo failed", e);
+            return ResponseEntity.ok(IllegalGenresMaintenanceDto.builder()
+                    .error("Undo failed: " + e.getMessage())
+                    .message("Internal error during undo. Check logs for details.")
+                    .build());
+        }
+    }
+
+    /**
+     * Latest Clean Genres that has not been undone.
+     */
+    @GetMapping("/illegal-genres/undoable")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<IllegalGenresMaintenanceDto> undoableIllegalGenres() {
+        return ResponseEntity.ok(maintenanceService.undoableGenreCleanup());
     }
 
     /**

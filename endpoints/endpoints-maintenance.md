@@ -2,6 +2,26 @@
 
 Librarian tools on the Data Management page. Illegal-genre cleanup and duplicate-title actions are on `MaintenanceController`. The catalog tools below are on `CatalogToolMaintenanceController` (Issue #386).
 
+## Illegal genres
+
+### GET /api/maintenance/illegal-genres/count
+
+Recalc. Saves nothing. `booksAffected` is how many books would change. `changes` is the table, with drops first. A row names the titles when one, two, or three books share that change. A larger group is a count, for example `101 titles get children changed to childrens`.
+
+### POST /api/maintenance/illegal-genres/cleanup
+
+Rewrites every book onto the standard genre list. Drops tags that are not on the list. Records the previous tags on `catalog_maintenance_action` and returns `actionId` for Undo. That table is not part of JSON import/export.
+
+### POST /api/maintenance/illegal-genres/undo
+
+Body: `{ "actionId" }`
+
+Puts those genre lists back when the book still has the tags Clean Genres wrote. A second undo of the same action is refused.
+
+### GET /api/maintenance/illegal-genres/undoable
+
+The latest Clean Genres that has not been undone. `actionId` is null when there is nothing to undo.
+
 **Authentication:** Librarian (`hasAuthority('LIBRARIAN')`)
 
 ## Catalog tools

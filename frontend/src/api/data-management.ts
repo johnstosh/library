@@ -625,6 +625,14 @@ export function useUploadPhotoImage() {
 }
 
 // Maintenance types for Illegal Genres cleanup (Issue #347)
+export interface GenreChangeLineDto {
+  kind?: string
+  fromTag?: string
+  toTag?: string
+  titleCount?: number
+  summary: string
+}
+
 export interface IllegalGenresMaintenanceDto {
   booksAffected: number
   booksScanned?: number
@@ -633,6 +641,8 @@ export interface IllegalGenresMaintenanceDto {
   illegalRemoved?: number
   message?: string
   error?: string
+  actionId?: number | null
+  changes?: GenreChangeLineDto[]
 }
 
 // Maintenance hooks for DataManagementPage
@@ -654,6 +664,14 @@ export function useCleanupIllegalGenres() {
       queryClient.invalidateQueries({ queryKey: ['database-stats'] })
     },
   })
+}
+
+export function fetchIllegalGenresUndoable() {
+  return api.get<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/undoable')
+}
+
+export function undoIllegalGenres(actionId: number) {
+  return api.post<IllegalGenresMaintenanceDto>('/maintenance/illegal-genres/undo', { actionId })
 }
 
 // Duplicate catalog titles (Issue #351). WITHDRAWN books are excluded.

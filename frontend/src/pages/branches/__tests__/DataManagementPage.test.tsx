@@ -245,6 +245,10 @@ vi.mock('@/api/data-management', () => ({
     mutateAsync: vi.fn().mockResolvedValue({
       booksAffected: 3,
       message: '3 book(s) have illegal or mismatched genre tags.',
+      changes: [
+        { kind: 'DROP', summary: '4 titles drop not-a-genre' },
+        { kind: 'CHANGE', summary: 'The Hobbit and The Silmarillion get children changed to childrens' },
+      ],
     }),
     isPending: false,
   }),
@@ -255,9 +259,17 @@ vi.mock('@/api/data-management', () => ({
       booksUpdated: 5,
       pluralCorrections: 7,
       illegalRemoved: 12,
+      actionId: 81,
       message: 'Scanned 42 books. Updated 5. Corrected 7 plural/spelling variants. Removed 12 illegal tags.',
     }),
     isPending: false,
+  }),
+  fetchIllegalGenresUndoable: vi.fn().mockResolvedValue({ actionId: null }),
+  undoIllegalGenres: vi.fn().mockResolvedValue({
+    booksAffected: 0,
+    booksUpdated: 5,
+    message: 'Restored 5 books.',
+    changes: [],
   }),
   // Duplicate titles mocks for Issue #351
   useFindDuplicateTitles: () => ({
@@ -416,6 +428,7 @@ describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
     expect(row).toBeInTheDocument()
     expect(within(row).getByText('Clean Genres')).toBeInTheDocument()
     expect(within(row).getByText('Recalc')).toBeInTheDocument()
+    expect(screen.getByTestId('undo-illegal-genres')).toBeDisabled()
     expect(screen.getByText(/Fixes genre names that use the wrong plural/)).toBeInTheDocument()
     // Count shows "-" before any Recalc (per spec)
     expect(within(row).getByText('-')).toBeInTheDocument()
@@ -452,6 +465,22 @@ describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
     expect(success.querySelector('svg')).toBeNull()
     const results = screen.getByTestId('maintenance-illegal-genres-results')
     expect(results.textContent?.match(/Looked at/g) ?? []).toHaveLength(0)
+    const drop = screen.getByTestId('maintenance-illegal-genres-change-0')
+    const rename = screen.getByTestId('maintenance-illegal-genres-change-1')
+    expect(drop).toHaveTextContent('4 titles drop not-a-genre')
+    expect(rename).toHaveTextContent('The Hobbit and The Silmarillion get children changed to childrens')
+    expect(drop.compareDocumentPosition(rename) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByTestId('maintenance-illegal-genres-changes')).toHaveTextContent('What would change')
+  })
+
+  it('enables Undo after Clean Genres and posts the action id', async () => {
+    renderPage()
+
+    expect(screen.getByTestId('undo-illegal-genres')).toBeDisabled()
+    fireEvent.click(screen.getByTestId('cleanup-illegal-genres'))
+    expect(await screen.findByTestId('undo-illegal-genres')).toBeEnabled()
+    fireEvent.click(screen.getByTestId('undo-illegal-genres'))
+    expect(await screen.findByTestId('maintenance-illegal-genres-success')).toHaveTextContent('Restored 5 books.')
   })
 })
 

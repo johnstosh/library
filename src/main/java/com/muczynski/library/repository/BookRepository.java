@@ -399,14 +399,15 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      */
     interface IllegalGenreTagsProjection {
         Long getId();
+        String getTitle();
         List<String> getTagsList();
     }
 
     /**
-     * Returns all books' id + tagsList only. Used by MaintenanceService to avoid
+     * Returns all books' id, title, and tagsList. Used by MaintenanceService to avoid
      * loading LOBs or full entities. See comment on BookZipImportProjection.
      */
-    @Query("SELECT b.id as id, b.tagsList as tagsList FROM Book b")
+    @Query("SELECT b.id as id, b.title as title, b.tagsList as tagsList FROM Book b")
     List<IllegalGenreTagsProjection> findAllForGenreMaintenance();
 
     /**

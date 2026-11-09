@@ -178,6 +178,12 @@ public class DataManagementUITest {
         assertThat(page.locator("[data-test='apply-chicago']")).isDisabled();
         assertThat(page.locator("[data-test='recalc-free-text']")).isVisible();
         assertThat(page.locator("[data-test='apply-free-text']")).isDisabled();
+        assertThat(page.locator("[data-test='undo-illegal-genres']")).isDisabled();
+        assertThat(page.locator("[data-test='maintenance-row-illegal-genres']")).containsText("Drops are at the top");
+        page.locator("[data-test='recalc-illegal-genres']").click();
+        assertThat(page.locator("[data-test='maintenance-illegal-genres-results']"))
+                .not().containsText("Click Recalc or Clean Genres to see results here.");
+
         assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("Quick Grokipedia lookup");
         assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("alternate title");
         assertThat(page.locator("[data-test='recalc-grokipedia-authors']")).isVisible();
