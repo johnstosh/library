@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { SuccessMessage } from '@/components/ui/SuccessMessage'
@@ -19,6 +19,8 @@ import {
   usePhotoZipParts,
   useRecalcIllegalGenres,
   useCleanupIllegalGenres,
+  fetchIllegalGenresUndoable,
+  undoIllegalGenres,
   useFindDuplicateTitles,
   useDismissDuplicateTitlePair,
   useRestoreDuplicateTitlePair,
@@ -56,6 +58,7 @@ import {
   PiStar,
   PiWrench,
   PiArrowClockwise,
+  PiArrowCounterClockwise,
   PiTrash,
   PiMagnifyingGlass,
   PiCopy,
@@ -188,8 +191,11 @@ export function DataManagementPage() {
   // Maintenance state (Issue #347 - Illegal genre names)
   const [illegalGenresCount, setIllegalGenresCount] = useState<number | null>(null)
   const [illegalGenresResult, setIllegalGenresResult] = useState<IllegalGenresMaintenanceDto | null>(null)
+  const [genrePhase, setGenrePhase] = useState<'idle' | 'preview' | 'done'>('idle')
+  const [genreUndoId, setGenreUndoId] = useState<number | null>(null)
   const [isRecalcing, setIsRecalcing] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
+  const [isUndoingGenres, setIsUndoingGenres] = useState(false)
 
   // Duplicate titles (Issue #351). Marks stay on the row until the next Find.
   const [duplicateTitlesResult, setDuplicateTitlesResult] = useState<DuplicateTitlesResultDto | null>(null)
@@ -220,6 +226,22 @@ export function DataManagementPage() {
 
   const recalcIllegalGenres = useRecalcIllegalGenres()
   const cleanupIllegalGenres = useCleanupIllegalGenres()
+
+  useEffect(() => {
+    let cancelled = false
+    fetchIllegalGenresUndoable()
+      .then((result) => {
+        if (!cancelled && result.actionId != null) {
+          setGenreUndoId(result.actionId)
+        }
+      })
+      .catch(() => {
+        // Undo stays off when the lookup fails. Recalc and Clean Genres still work.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const findDuplicateTitles = useFindDuplicateTitles()
   const dismissDuplicateTitlePair = useDismissDuplicateTitlePair()
   const restoreDuplicateTitlePair = useRestoreDuplicateTitlePair()
@@ -346,6 +368,7 @@ export function DataManagementPage() {
       const result = await recalcIllegalGenres.mutateAsync()
       setIllegalGenresCount(result.booksAffected)
       setIllegalGenresResult(result)
+      setGenrePhase('preview')
       if (result.error) {
         setErrorMessage(result.error)
       }
@@ -367,6 +390,10 @@ export function DataManagementPage() {
       const result = await cleanupIllegalGenres.mutateAsync()
       setIllegalGenresCount(result.booksAffected ?? 0)
       setIllegalGenresResult(result)
+      setGenrePhase('done')
+      if (result.actionId != null) {
+        setGenreUndoId(result.actionId)
+      }
       if (result.error) {
         setErrorMessage(result.error || result.message || 'Cleanup encountered an error')
       } else if (result.message) {
@@ -379,6 +406,30 @@ export function DataManagementPage() {
       setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
     } finally {
       setIsCleaning(false)
+    }
+  }
+
+  const handleUndoIllegalGenres = async () => {
+    if (genreUndoId == null) return
+    setIsUndoingGenres(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      const result = await undoIllegalGenres(genreUndoId)
+      setIllegalGenresResult(result)
+      setGenrePhase('done')
+      setGenreUndoId(null)
+      if (result.error) {
+        setErrorMessage(result.error)
+      } else if (result.message) {
+        setSuccessMessage(result.message)
+      }
+    } catch (error) {
+      console.error('Failed to undo genre cleanup:', error)
+      const msg = error instanceof Error ? error.message : 'Undo failed'
+      setErrorMessage(msg)
+    } finally {
+      setIsUndoingGenres(false)
     }
   }
 
@@ -1221,12 +1272,27 @@ export function DataManagementPage() {
                       >
                         Clean Genres
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUndoIllegalGenres}
+                        isLoading={isUndoingGenres}
+                        disabled={genreUndoId == null || isRecalcing || isCleaning || isUndoingGenres}
+                        leftIcon={<PiArrowCounterClockwise className="w-4 h-4" />}
+                        data-test="undo-illegal-genres"
+                      >
+                        Undo
+                      </Button>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     Fixes genre names that use the wrong plural (for example, histories becomes history,
                     or biographies becomes biography) and other near-miss spellings so they match the
                     standard list. Drops any genre that is not on that list. Updates books in place.
+                    Recalc lists every change before anything is saved. Drops are at the top.
+                    One, two, or three titles are named. Larger groups are a count, such as
+                    "101 titles get children changed to childrens". Undo puts the previous genres back.
                     The count is how many books still have at least one bad genre tag.
                   </td>
                   <td className="px-6 py-4 text-sm" data-test="maintenance-illegal-genres-results">
@@ -1247,6 +1313,24 @@ export function DataManagementPage() {
                     ) : (
                       <span className="text-gray-400 text-sm">Click Recalc or Clean Genres to see results here.</span>
                     )}
+                    {(illegalGenresResult?.changes?.length ?? 0) > 0 ? (
+                      <table className="mt-3 min-w-full text-sm" data-test="maintenance-illegal-genres-changes">
+                        <thead>
+                          <tr>
+                            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider pb-1">
+                              {genrePhase === 'preview' ? 'What would change' : 'What changed'}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {illegalGenresResult?.changes?.map((line, index) => (
+                            <tr key={`${line.kind}-${line.summary}`} data-test={`maintenance-illegal-genres-change-${index}`}>
+                              <td className="py-1 text-gray-800 break-words">{line.summary}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : null}
                   </td>
                 </tr>
                 <GrokipediaMaintenanceRow />
