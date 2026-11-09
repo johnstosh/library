@@ -23,6 +23,11 @@ const {
   applyGrokipedia,
   undoGrokipedia,
   fetchGrokipediaUndoable,
+  fetchGrokipediaAuthorCandidateIds,
+  previewGrokipediaAuthors,
+  applyGrokipediaAuthors,
+  undoGrokipediaAuthors,
+  fetchGrokipediaAuthorUndoable,
   fetchFreeTextCandidateIds,
   previewFreeText,
   applyFreeText,
@@ -117,6 +122,37 @@ const {
     skippedChanges: [],
   }),
   fetchGrokipediaUndoable: vi.fn().mockResolvedValue({ actionId: null }),
+  fetchGrokipediaAuthorCandidateIds: vi.fn().mockResolvedValue({ authorIds: [8] }),
+  previewGrokipediaAuthors: vi.fn().mockResolvedValue({
+    booksScanned: 1,
+    changeCount: 1,
+    changes: [{
+      authorId: 8,
+      title: 'Jane Austen',
+      before: 'https://grokipedia.com/page/Jane_Austen',
+      after: 'https://grokipedia.com/page/Jane_Austen https://grokipedia.com/page/Jane_Austen_novelist',
+      added: 'https://grokipedia.com/page/Jane_Austen_novelist',
+    }],
+    skipped: [],
+    message: '1 author would gain a Grokipedia link.',
+  }),
+  applyGrokipediaAuthors: vi.fn().mockResolvedValue({
+    actionId: 71,
+    applied: 1,
+    skipped: 0,
+    message: 'Added Grokipedia links on 1 author.',
+    changes: [{ authorId: 8, title: 'Jane Austen', added: 'https://grokipedia.com/page/Jane_Austen_novelist' }],
+    skippedChanges: [],
+  }),
+  undoGrokipediaAuthors: vi.fn().mockResolvedValue({
+    actionId: 72,
+    applied: 1,
+    skipped: 0,
+    message: 'Restored 1 author.',
+    changes: [],
+    skippedChanges: [],
+  }),
+  fetchGrokipediaAuthorUndoable: vi.fn().mockResolvedValue({ actionId: null }),
   fetchFreeTextCandidateIds: vi.fn().mockResolvedValue({ bookIds: [9] }),
   previewFreeText: vi.fn().mockResolvedValue({
     booksScanned: 1,
@@ -272,6 +308,11 @@ vi.mock('@/api/data-management', () => ({
   applyGrokipedia,
   undoGrokipedia,
   fetchGrokipediaUndoable,
+  fetchGrokipediaAuthorCandidateIds,
+  previewGrokipediaAuthors,
+  applyGrokipediaAuthors,
+  undoGrokipediaAuthors,
+  fetchGrokipediaAuthorUndoable,
   fetchFreeTextCandidateIds,
   previewFreeText,
   applyFreeText,
@@ -626,14 +667,15 @@ describe('DataManagementPage catalog tools (Issue #386)', () => {
   it('shows Recalc, Do It, and Undo for the three tools, with Do It and Undo off', () => {
     renderPage()
 
-    for (const key of ['grokipedia', 'chicago', 'free-text']) {
+    for (const key of ['grokipedia', 'grokipedia-authors', 'chicago', 'free-text']) {
       const row = screen.getByTestId(`maintenance-row-${key}`)
       expect(within(row).getByText('Recalc')).toBeInTheDocument()
       expect(screen.getByTestId(`apply-${key}`)).toBeDisabled()
       expect(screen.getByTestId(`undo-${key}`)).toBeDisabled()
       expect(screen.getByTestId(`maintenance-${key}-count`)).toHaveTextContent('-')
     }
-    expect(screen.getByText(/Adds a Grokipedia URL only when the book does not already have one/)).toBeInTheDocument()
+    expect(screen.getByText(/each alternate title/)).toBeInTheDocument()
+    expect(screen.getByText(/each alternate name/)).toBeInTheDocument()
     expect(screen.getByText(/lists each title that will change/)).toBeInTheDocument()
     expect(screen.getByText(/Does not replace or remove a link/)).toBeInTheDocument()
   })
@@ -655,7 +697,7 @@ describe('DataManagementPage catalog tools (Issue #386)', () => {
     fireEvent.click(screen.getByTestId('recalc-grokipedia'))
 
     expect(await screen.findByTestId('maintenance-grokipedia-change-3')).toHaveTextContent(
-      'The Hobbit: https://grokipedia.com/page/The_Hobbit',
+      'The Hobbit: add https://grokipedia.com/page/The_Hobbit',
     )
     expect(fetchGrokipediaCandidateIds).toHaveBeenCalled()
     expect(previewGrokipedia).toHaveBeenCalledWith([3, 4])
@@ -674,6 +716,32 @@ describe('DataManagementPage catalog tools (Issue #386)', () => {
     await waitFor(() => {
       expect(undoGrokipedia).toHaveBeenCalledWith(51)
     })
+  })
+
+  it('adds an author Grokipedia page without dropping the name that already has one', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-grokipedia-authors'))
+
+    expect(await screen.findByTestId('maintenance-grokipedia-authors-change-8')).toHaveTextContent(
+      'Jane Austen: add https://grokipedia.com/page/Jane_Austen_novelist',
+    )
+    expect(screen.getByTestId('maintenance-grokipedia-authors-change-8')).toHaveTextContent(
+      'https://grokipedia.com/page/Jane_Austen',
+    )
+    expect(previewGrokipediaAuthors).toHaveBeenCalledWith([8])
+
+    fireEvent.click(screen.getByTestId('apply-grokipedia-authors'))
+    expect(await screen.findByTestId('maintenance-grokipedia-authors-success')).toHaveTextContent(
+      'Added Grokipedia links on 1 author.',
+    )
+    expect(applyGrokipediaAuthors).toHaveBeenCalledWith([
+      expect.objectContaining({
+        authorId: 8,
+        added: 'https://grokipedia.com/page/Jane_Austen_novelist',
+        before: 'https://grokipedia.com/page/Jane_Austen',
+      }),
+    ])
   })
 
   it('lists the free-text link that would be added and does not replace the old one', async () => {

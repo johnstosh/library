@@ -7,6 +7,7 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.dto.CatalogToolApplyResultDto;
+import com.muczynski.library.dto.CatalogToolCandidatesDto;
 import com.muczynski.library.dto.CatalogToolChangeDto;
 import com.muczynski.library.dto.CatalogToolPreviewDto;
 import com.muczynski.library.repository.AuthorRepository;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -170,6 +172,72 @@ class CatalogToolMaintenanceServiceTest {
     }
 
     @Test
+    void grokipediaCandidatesIncludeBooksThatAlreadyHaveAUrl() {
+        String token = token();
+        Author author = authorRepository.save(author("Author " + token));
+        Book empty = bookRepository.save(book("Empty " + token, author));
+        Book linked = book("Linked " + token, author);
+        linked.setGrokipediaUrl("https://grokipedia.com/page/Linked_" + token);
+        linked = bookRepository.save(linked);
+
+        List<Long> ids = service.grokipediaCandidateIds().getBookIds();
+
+        assertTrue(ids.contains(empty.getId()));
+        assertTrue(ids.contains(linked.getId()));
+    }
+
+    @Test
+    void grokipediaApplyAddsAnAlternateUrlWithoutRemovingTheExistingOne() {
+        String token = token();
+        Author author = authorRepository.save(author("Author " + token));
+        Book book = book("Linked " + token, author);
+        String kept = "https://grokipedia.com/page/Linked_" + token;
+        String added = "https://grokipedia.com/page/Alt_" + token;
+        book.setGrokipediaUrl(kept);
+        book = bookRepository.save(book);
+        String after = kept + " " + added;
+
+        CatalogToolApplyResultDto applied = service.applyGrokipedia(List.of(
+                change(book.getId(), book.getTitle(), kept, after)));
+
+        assertEquals(1, applied.getApplied());
+        assertEquals(after, bookRepository.findById(book.getId()).orElseThrow().getGrokipediaUrl());
+        assertEquals(added, applied.getChanges().get(0).getAdded());
+
+        service.undoGrokipedia(applied.getActionId());
+        assertEquals(kept, bookRepository.findById(book.getId()).orElseThrow().getGrokipediaUrl());
+    }
+
+    @Test
+    void authorGrokipediaApplyAddsOnlyAndUndoRestoresThePreviousValue() {
+        String token = token();
+        Author empty = authorRepository.save(author("Empty " + token));
+        Author linked = author("Linked " + token);
+        String kept = "https://grokipedia.com/page/Linked_" + token;
+        linked.setGrokipediaUrl(kept);
+        linked = authorRepository.save(linked);
+        String added = "https://grokipedia.com/page/Empty_" + token;
+        String alternate = "https://grokipedia.com/page/Pen_" + token;
+
+        CatalogToolCandidatesDto candidates = service.grokipediaAuthorCandidateIds();
+        assertTrue(candidates.getAuthorIds().contains(empty.getId()));
+        assertTrue(candidates.getAuthorIds().contains(linked.getId()));
+
+        CatalogToolApplyResultDto applied = service.applyGrokipediaAuthors(List.of(
+                authorChange(empty.getId(), empty.getName(), "", added),
+                authorChange(linked.getId(), linked.getName(), kept, kept + " " + alternate),
+                authorChange(linked.getId(), linked.getName(), kept, "https://grokipedia.com/page/Replaced_" + token)));
+
+        assertEquals(2, applied.getApplied());
+        assertEquals(added, authorRepository.findById(empty.getId()).orElseThrow().getGrokipediaUrl());
+        assertEquals(kept + " " + alternate, authorRepository.findById(linked.getId()).orElseThrow().getGrokipediaUrl());
+
+        service.undoGrokipediaAuthors(applied.getActionId());
+        assertNull(authorRepository.findById(empty.getId()).orElseThrow().getGrokipediaUrl());
+        assertEquals(kept, authorRepository.findById(linked.getId()).orElseThrow().getGrokipediaUrl());
+    }
+
+    @Test
     void freeTextApplyAddsLinksAndUndoRemovesOnlyThoseLinks() {
         String token = token();
         Author author = authorRepository.save(author("Author " + token));
@@ -192,6 +260,13 @@ class CatalogToolMaintenanceServiceTest {
 
         service.undoFreeText(applied.getActionId());
         assertEquals(before, bookRepository.findById(book.getId()).orElseThrow().getFreeTextUrl());
+    }
+
+    @Test
+    @WithMockUser(authorities = "USER")
+    void authorGrokipediaRequiresLibrarian() throws Exception {
+        mockMvc.perform(get("/api/maintenance/grokipedia-authors/candidates"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -224,6 +299,15 @@ class CatalogToolMaintenanceServiceTest {
         return CatalogToolChangeDto.builder()
                 .bookId(bookId)
                 .title(title)
+                .before(before)
+                .after(after)
+                .build();
+    }
+
+    private static CatalogToolChangeDto authorChange(Long authorId, String name, String before, String after) {
+        return CatalogToolChangeDto.builder()
+                .authorId(authorId)
+                .title(name)
                 .before(before)
                 .after(after)
                 .build();

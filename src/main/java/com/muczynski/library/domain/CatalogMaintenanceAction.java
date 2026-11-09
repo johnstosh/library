@@ -34,9 +34,11 @@ public class CatalogMaintenanceAction {
 
     public static final String CHICAGO_TITLES = "CHICAGO_TITLES";
     public static final String GROKIPEDIA_URLS = "GROKIPEDIA_URLS";
+    public static final String GROKIPEDIA_AUTHOR_URLS = "GROKIPEDIA_AUTHOR_URLS";
     public static final String FREE_TEXT_URLS = "FREE_TEXT_URLS";
     public static final String UNDO_CHICAGO_TITLES = "UNDO_CHICAGO_TITLES";
     public static final String UNDO_GROKIPEDIA_URLS = "UNDO_GROKIPEDIA_URLS";
+    public static final String UNDO_GROKIPEDIA_AUTHOR_URLS = "UNDO_GROKIPEDIA_AUTHOR_URLS";
     public static final String UNDO_FREE_TEXT_URLS = "UNDO_FREE_TEXT_URLS";
 
     @Id

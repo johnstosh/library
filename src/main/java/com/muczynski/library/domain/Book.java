@@ -78,6 +78,11 @@ public class Book {
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String detailedDescription;
 
+    /**
+     * Space-separated Grokipedia page URLs for the primary title and alternate titles.
+     * {@code text} so more than one page fits. {@code ddl-auto=update} does not widen varchar.
+     */
+    @Column(columnDefinition = "text")
     private String grokipediaUrl;
 
     /**

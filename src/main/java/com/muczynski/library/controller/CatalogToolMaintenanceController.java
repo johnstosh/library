@@ -90,6 +90,41 @@ public class CatalogToolMaintenanceController {
         return ResponseEntity.ok(catalogToolMaintenanceService.undoableGrokipedia());
     }
 
+    @GetMapping("/grokipedia-authors/candidates")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<CatalogToolCandidatesDto> grokipediaAuthorCandidates() {
+        return ResponseEntity.ok(catalogToolMaintenanceService.grokipediaAuthorCandidateIds());
+    }
+
+    @PostMapping("/grokipedia-authors/preview")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<CatalogToolPreviewDto> previewGrokipediaAuthors(
+            @RequestBody(required = false) CatalogToolCandidatesDto request) {
+        return preview("Author Grokipedia", () -> catalogToolMaintenanceService.previewGrokipediaAuthors(
+                request == null || request.getAuthorIds() == null ? List.of() : request.getAuthorIds()));
+    }
+
+    @PostMapping("/grokipedia-authors/apply")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<CatalogToolApplyResultDto> applyGrokipediaAuthors(
+            @RequestBody(required = false) CatalogToolApplyRequestDto request) {
+        return apply("Author Grokipedia", () -> catalogToolMaintenanceService.applyGrokipediaAuthors(changes(request)));
+    }
+
+    @PostMapping("/grokipedia-authors/undo")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<CatalogToolApplyResultDto> undoGrokipediaAuthors(
+            @RequestBody CatalogToolUndoRequestDto request) {
+        return apply("Author Grokipedia undo",
+                () -> catalogToolMaintenanceService.undoGrokipediaAuthors(request.getActionId()));
+    }
+
+    @GetMapping("/grokipedia-authors/undoable")
+    @PreAuthorize("hasAuthority('LIBRARIAN')")
+    public ResponseEntity<CatalogToolUndoableDto> undoableGrokipediaAuthors() {
+        return ResponseEntity.ok(catalogToolMaintenanceService.undoableGrokipediaAuthors());
+    }
+
     @GetMapping("/free-text/candidates")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
     public ResponseEntity<CatalogToolCandidatesDto> freeTextCandidates() {

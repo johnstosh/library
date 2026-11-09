@@ -20,4 +20,6 @@ import java.util.List;
 public class CatalogToolCandidatesDto {
 
     private List<Long> bookIds;
+    /** Author ids for the author Grokipedia tool. Book tools leave this empty. */
+    private List<Long> authorIds;
 }

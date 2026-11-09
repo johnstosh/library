@@ -31,7 +31,7 @@ import {
 import { FavoriteListFilters } from '@/pages/books/components/FavoriteListFilters'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
 import type { ReadingDifficulty } from '@/types/enums'
-import { formatBookStatus, parseSpaceSeparatedUrls, extractDomain, isValidUrl, isFreeAudioUrl } from '@/utils/formatters'
+import { formatBookStatus, parseSpaceSeparatedUrls, grokipediaUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
 import { PiMagnifyingGlass, PiBook, PiBooks, PiUser } from 'react-icons/pi'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { bookStatusTone } from '@/utils/status'
@@ -517,16 +517,17 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                     book.author
                   )}
                 </span>
-                {isValidUrl(book.authorGrokipediaUrl) && (
+                {grokipediaUrls(book.authorGrokipediaUrl).map((url, index) => (
                   <IconButton
-                    href={book.authorGrokipediaUrl}
+                    key={url}
+                    href={url}
                     icon={<GrokipediaIcon />}
                     label={`View ${book.author} on Grokipedia`}
                     tone="warning"
-                    data-test={`book-result-author-grokipedia-${book.id}`}
+                    data-test={index === 0 ? `book-result-author-grokipedia-${book.id}` : `book-result-author-grokipedia-${book.id}-${index}`}
                     className="!p-0.5"
                   />
-                )}
+                ))}
               </p>
               <div className="text-sm text-gray-500 mt-1" data-test={`book-result-reading-difficulty-${book.id}`}>
                 {readingDifficultyLabel(book.readingDifficulty)}
@@ -555,7 +556,7 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
             <StatusBadge tone={bookStatusTone(book.status)}>
               {formatBookStatus(book.status)}
             </StatusBadge>
-            {(freeTextUrls.length > 0 || isValidUrl(book.grokipediaUrl)) && (
+            {(freeTextUrls.length > 0 || grokipediaUrls(book.grokipediaUrl).length > 0) && (
               <div className="flex gap-1">
                 {freeTextUrls.map((url, index) => {
                   const audio = isFreeAudioUrl(url)
@@ -570,15 +571,16 @@ function BookResult({ book, isLibrarian }: BookResultProps) {
                   />
                   )
                 })}
-                {isValidUrl(book.grokipediaUrl) && (
+                {grokipediaUrls(book.grokipediaUrl).map((url, index) => (
                   <IconButton
-                    href={book.grokipediaUrl}
+                    key={url}
+                    href={url}
                     icon={<GrokipediaIcon />}
                     label="View on Grokipedia"
                     tone="warning"
-                    data-test={`book-result-grokipedia-${book.id}`}
+                    data-test={index === 0 ? `book-result-grokipedia-${book.id}` : `book-result-grokipedia-${book.id}-${index}`}
                   />
-                )}
+                ))}
               </div>
             )}
             <div className="flex gap-1 items-center">
@@ -700,15 +702,16 @@ function AuthorResult({ author, isLibrarian }: AuthorResultProps) {
                 label="View Details"
                 data-test={`author-result-view-${author.id}`}
               />
-              {isValidUrl(author.grokipediaUrl) && (
+              {grokipediaUrls(author.grokipediaUrl).map((url, index) => (
                 <IconButton
-                  href={author.grokipediaUrl}
+                  key={url}
+                  href={url}
                   icon={<GrokipediaIcon />}
                   label="View on Grokipedia"
                   tone="warning"
-                  data-test={`author-result-grokipedia-${author.id}`}
+                  data-test={index === 0 ? `author-result-grokipedia-${author.id}` : `author-result-grokipedia-${author.id}-${index}`}
                 />
-              )}
+              ))}
               <IconButton
                 to={`/authors/${author.id}`}
                 icon={<BooksIcon />}

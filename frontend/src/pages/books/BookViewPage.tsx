@@ -9,7 +9,7 @@ import { useLookupSingleEmu } from '@/api/emu-lookup'
 import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { useLookupSingleWcc } from '@/api/wcc-lookup'
 import { useLookupSingleMsu } from '@/api/msu-lookup'
-import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, extractDomain, isValidUrl } from '@/utils/formatters'
+import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, grokipediaUrls, extractDomain } from '@/utils/formatters'
 import { formatBookLabel } from './components/BookLabelFilters'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
@@ -260,17 +260,18 @@ export function BookViewPage() {
                   ) : (
                     <p className="text-gray-900">{book.author}</p>
                   )}
-                  {isValidUrl(book.authorGrokipediaUrl) && (
+                  {grokipediaUrls(book.authorGrokipediaUrl).map((url, index) => (
                     <a
-                      href={book.authorGrokipediaUrl}
+                      key={url}
+                      href={url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={TEXT_LINK_UNDERLINE_CLASS}
-                      data-test="book-author-grokipedia-link"
+                      data-test={index === 0 ? 'book-author-grokipedia-link' : `book-author-grokipedia-link-${index}`}
                     >
                       Grokipedia
                     </a>
-                  )}
+                  ))}
                 </div>
               </div>
               <div>
@@ -311,18 +312,23 @@ export function BookViewPage() {
                   <p className="text-gray-900 font-mono">{book.locNumber}</p>
                 </div>
               )}
-              {isValidUrl(book.grokipediaUrl) && (
+              {grokipediaUrls(book.grokipediaUrl).length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
-                  <a
-                    href={book.grokipediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={TEXT_LINK_UNDERLINE_CLASS}
-                    data-test="book-grokipedia-link"
-                  >
-                    View on Grokipedia
-                  </a>
+                  <div className="flex flex-col gap-1">
+                    {grokipediaUrls(book.grokipediaUrl).map((url, index) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={TEXT_LINK_UNDERLINE_CLASS}
+                        data-test={index === 0 ? 'book-grokipedia-link' : `book-grokipedia-link-${index}`}
+                      >
+                        View on Grokipedia
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
               {book.freeTextUrl && parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 && (

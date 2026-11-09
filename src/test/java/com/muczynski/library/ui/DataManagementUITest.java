@@ -179,6 +179,11 @@ public class DataManagementUITest {
         assertThat(page.locator("[data-test='recalc-free-text']")).isVisible();
         assertThat(page.locator("[data-test='apply-free-text']")).isDisabled();
         assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("Quick Grokipedia lookup");
+        assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("alternate title");
+        assertThat(page.locator("[data-test='recalc-grokipedia-authors']")).isVisible();
+        assertThat(page.locator("[data-test='apply-grokipedia-authors']")).isDisabled();
+        assertThat(page.locator("[data-test='undo-grokipedia-authors']")).isDisabled();
+        assertThat(page.locator("[data-test='maintenance-row-grokipedia-authors']")).containsText("alternate name");
         assertThat(page.locator("[data-test='maintenance-row-chicago']")).containsText("Chicago Title Case");
         assertThat(page.locator("[data-test='maintenance-row-free-text']")).containsText("Find Links to Free Online Text");
 

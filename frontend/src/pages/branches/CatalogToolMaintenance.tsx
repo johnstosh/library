@@ -7,17 +7,22 @@ import {
   applyChicago,
   applyFreeText,
   applyGrokipedia,
+  applyGrokipediaAuthors,
   fetchChicagoUndoable,
   fetchFreeTextCandidateIds,
   fetchFreeTextUndoable,
+  fetchGrokipediaAuthorCandidateIds,
   fetchGrokipediaCandidateIds,
+  fetchGrokipediaAuthorUndoable,
   fetchGrokipediaUndoable,
   previewChicago,
   previewFreeText,
   previewGrokipedia,
+  previewGrokipediaAuthors,
   undoChicago,
   undoFreeText,
   undoGrokipedia,
+  undoGrokipediaAuthors,
   type CatalogToolApplyResultDto,
   type CatalogToolChangeDto,
   type CatalogToolPreviewDto,
@@ -230,9 +235,9 @@ function CatalogToolRow({ tool }: { tool: ToolCopy }) {
           <div className="max-h-64 overflow-y-auto space-y-1">
             {changes.map((change) => (
               <p
-                key={change.bookId}
+                key={changeKey(change)}
                 className="text-sm text-gray-800 break-words"
-                data-test={`maintenance-${tool.testKey}-change-${change.bookId}`}
+                data-test={`maintenance-${tool.testKey}-change-${change.bookId ?? change.authorId}`}
               >
                 {tool.formatChange(change)}
               </p>
@@ -243,11 +248,11 @@ function CatalogToolRow({ tool }: { tool: ToolCopy }) {
           <div className="max-h-40 overflow-y-auto space-y-1 mt-2">
             {skipped.map((change) => (
               <p
-                key={`skip-${change.bookId}`}
+                key={`skip-${changeKey(change)}`}
                 className="text-sm text-gray-500 break-words"
-                data-test={`maintenance-${tool.testKey}-skipped-${change.bookId}`}
+                data-test={`maintenance-${tool.testKey}-skipped-${change.bookId ?? change.authorId}`}
               >
-                {(change.title || change.before || `Book ${change.bookId}`)}: {change.reason}
+                {(change.title || change.before || `Book ${change.bookId ?? change.authorId}`)}: {change.reason}
               </p>
             ))}
           </div>
@@ -260,8 +265,13 @@ function CatalogToolRow({ tool }: { tool: ToolCopy }) {
   )
 }
 
+function changeKey(change: CatalogToolChangeDto): string {
+  if (change.authorId != null) return `author-${change.authorId}`
+  return `book-${change.bookId}`
+}
+
 async function previewInBatches(
-  loadIds: () => Promise<{ bookIds: number[] }>,
+  loadIds: () => Promise<{ bookIds?: number[]; authorIds?: number[] }>,
   previewBatch: (bookIds: number[]) => Promise<CatalogToolPreviewDto>,
   batchSize: number,
   emptyMessage: string,
@@ -269,7 +279,7 @@ async function previewInBatches(
   onProgress: (text: string) => void,
 ): Promise<CatalogToolPreviewDto> {
   const candidates = await loadIds()
-  const ids = candidates.bookIds ?? []
+  const ids = candidates.authorIds ?? candidates.bookIds ?? []
   if (ids.length === 0) {
     return {
       booksScanned: 0,
@@ -314,19 +324,38 @@ const grokipediaTool: ToolCopy = {
   testKey: 'grokipedia',
   name: 'Quick Grokipedia lookup',
   description:
-    'Checks every book, including withdrawn copies. Adds a Grokipedia URL only when the book does not already have one. Does not replace or remove an existing URL, and does not store a dash when no page is found. Recalc lists every URL that would be added. Do It writes that list. Undo removes only those added URLs.',
-  formatChange: (change) => `${bookLabel(change)}: ${change.after}`,
+    'Checks every book, including withdrawn copies and books that already have a Grokipedia URL. Looks up the primary title and each alternate title. Adds any new Grokipedia page it finds. Does not replace or remove a stored URL, and does not store a dash when no page is found. Recalc lists every URL that would be added. Do It writes that list. Undo removes only those added URLs.',
+  formatChange: (change) => `${bookLabel(change)}: add ${change.added || change.after}`,
   recalc: (onProgress) => previewInBatches(
     fetchGrokipediaCandidateIds,
     previewGrokipedia,
     GROKIPEDIA_BATCH,
-    'Every book already has a Grokipedia URL.',
-    (count) => `${count} ${count === 1 ? 'book would gain a Grokipedia URL.' : 'books would gain a Grokipedia URL.'}`,
+    'No books to check.',
+    (count) => `${count} ${count === 1 ? 'book would gain a Grokipedia link.' : 'books would gain a Grokipedia link.'}`,
     onProgress,
   ),
   apply: applyGrokipedia,
   undo: undoGrokipedia,
   undoable: fetchGrokipediaUndoable,
+}
+
+const grokipediaAuthorTool: ToolCopy = {
+  testKey: 'grokipedia-authors',
+  name: 'Quick Grokipedia lookup for authors',
+  description:
+    'Checks every author, including authors who already have a Grokipedia URL. Looks up the primary name and each alternate name. Adds any new Grokipedia page it finds. Does not replace or remove a stored URL, and does not store a dash when no page is found. Recalc lists every URL that would be added. Do It writes that list. Undo removes only those added URLs.',
+  formatChange: (change) => `${bookLabel(change)}: add ${change.added || change.after}`,
+  recalc: (onProgress) => previewInBatches(
+    fetchGrokipediaAuthorCandidateIds,
+    previewGrokipediaAuthors,
+    GROKIPEDIA_BATCH,
+    'No authors to check.',
+    (count) => `${count} ${count === 1 ? 'author would gain a Grokipedia link.' : 'authors would gain a Grokipedia link.'}`,
+    onProgress,
+  ),
+  apply: applyGrokipediaAuthors,
+  undo: undoGrokipediaAuthors,
+  undoable: fetchGrokipediaAuthorUndoable,
 }
 
 const chicagoTool: ToolCopy = {
@@ -365,6 +394,10 @@ const freeTextTool: ToolCopy = {
 
 export function GrokipediaMaintenanceRow() {
   return <CatalogToolRow tool={grokipediaTool} />
+}
+
+export function GrokipediaAuthorMaintenanceRow() {
+  return <CatalogToolRow tool={grokipediaAuthorTool} />
 }
 
 export function ChicagoTitleMaintenanceRow() {

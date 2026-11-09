@@ -14,7 +14,7 @@ import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FavoriteStar } from '@/components/favorites/FavoriteStar'
 import { useIsAuthenticated, useIsLibrarian } from '@/stores/authStore'
-import { isValidUrl } from '@/utils/formatters'
+import { grokipediaUrls } from '@/utils/formatters'
 
 export function AuthorViewPage() {
   const navigate = useNavigate()
@@ -148,18 +148,23 @@ export function AuthorViewPage() {
                   <p className="text-gray-900">{author.religiousAffiliation}</p>
                 </div>
               )}
-              {isValidUrl(author.grokipediaUrl) && (
+              {grokipediaUrls(author.grokipediaUrl).length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-gray-500">Grokipedia</p>
-                  <a
-                    href={author.grokipediaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary-600 hover:text-primary-800 underline"
-                    data-test="author-grokipedia-link"
-                  >
-                    View on Grokipedia
-                  </a>
+                  <div className="flex flex-col gap-1">
+                    {grokipediaUrls(author.grokipediaUrl).map((url, index) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-600 hover:text-primary-800 underline"
+                        data-test={index === 0 ? 'author-grokipedia-link' : `author-grokipedia-link-${index}`}
+                      >
+                        View on Grokipedia
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

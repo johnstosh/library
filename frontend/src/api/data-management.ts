@@ -796,7 +796,8 @@ export function useUndoDuplicateTitleFix() {
 // Recalc previews every book. Do It writes that list. Undo restores it.
 
 export interface CatalogToolChangeDto {
-  bookId: number
+  bookId?: number
+  authorId?: number
   title?: string
   before?: string
   after?: string
@@ -825,7 +826,8 @@ export interface CatalogToolApplyResultDto {
 }
 
 export interface CatalogToolCandidatesDto {
-  bookIds: number[]
+  bookIds?: number[]
+  authorIds?: number[]
 }
 
 export interface CatalogToolUndoableDto {
@@ -868,6 +870,26 @@ export function undoGrokipedia(actionId: number) {
 
 export function fetchGrokipediaUndoable() {
   return api.get<CatalogToolUndoableDto>('/maintenance/grokipedia/undoable')
+}
+
+export function fetchGrokipediaAuthorCandidateIds() {
+  return api.get<CatalogToolCandidatesDto>('/maintenance/grokipedia-authors/candidates')
+}
+
+export function previewGrokipediaAuthors(authorIds: number[]) {
+  return api.post<CatalogToolPreviewDto>('/maintenance/grokipedia-authors/preview', { authorIds })
+}
+
+export function applyGrokipediaAuthors(changes: CatalogToolChangeDto[]) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/grokipedia-authors/apply', { changes })
+}
+
+export function undoGrokipediaAuthors(actionId: number) {
+  return api.post<CatalogToolApplyResultDto>('/maintenance/grokipedia-authors/undo', { actionId })
+}
+
+export function fetchGrokipediaAuthorUndoable() {
+  return api.get<CatalogToolUndoableDto>('/maintenance/grokipedia-authors/undoable')
 }
 
 export function fetchFreeTextCandidateIds() {

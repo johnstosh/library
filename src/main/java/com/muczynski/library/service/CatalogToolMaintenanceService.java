@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.CatalogMaintenanceAction;
@@ -16,6 +17,7 @@ import com.muczynski.library.dto.CatalogToolSnapshotDto;
 import com.muczynski.library.dto.CatalogToolUndoableDto;
 import com.muczynski.library.freetext.FreeTextLookupCache;
 import com.muczynski.library.freetext.FreeTextLookupService;
+import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.repository.CatalogMaintenanceActionRepository;
 import com.muczynski.library.util.ChicagoTitleCase;
@@ -48,6 +50,7 @@ public class CatalogToolMaintenanceService {
     private static final int APPLY_LIMIT = 20000;
 
     private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
     private final CatalogMaintenanceActionRepository actionRepository;
     private final GrokipediaLookupService grokipediaLookupService;
     private final FreeTextLookupService freeTextLookupService;
@@ -98,7 +101,14 @@ public class CatalogToolMaintenanceService {
     @Transactional(readOnly = true)
     public CatalogToolCandidatesDto grokipediaCandidateIds() {
         return CatalogToolCandidatesDto.builder()
-                .bookIds(bookRepository.findIdsMissingGrokipediaUrl())
+                .bookIds(bookRepository.findAllIdsOrderById())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public CatalogToolCandidatesDto grokipediaAuthorCandidateIds() {
+        return CatalogToolCandidatesDto.builder()
+                .authorIds(authorRepository.findAllIdsOrderById())
                 .build();
     }
 
@@ -126,27 +136,43 @@ public class CatalogToolMaintenanceService {
                 skipped.add(missing(bookId));
                 continue;
             }
-            if (!missingGrokipediaUrl(book.getGrokipediaUrl())) {
-                continue;
+            String existing = book.getGrokipediaUrl();
+            CatalogToolChangeDto change = grokipediaAddition(
+                    book.getId(), null, book.getTitle(), existing, Book.titlesToSearch(book));
+            if (change != null) {
+                changes.add(change);
             }
-            List<String> titles = Book.titlesToSearch(book);
-            if (titles.isEmpty()) {
-                continue;
-            }
-            String found = grokipediaLookupService.findQuickUrl(titles);
-            if (found == null || found.isBlank()) {
-                continue;
-            }
-            String before = book.getGrokipediaUrl();
-            changes.add(CatalogToolChangeDto.builder()
-                    .bookId(book.getId())
-                    .title(book.getTitle())
-                    .before(before == null ? "" : before)
-                    .after(found)
-                    .build());
         }
         return preview(ids.size(), changes, skipped, countMessage(
-                changes.size(), "book would gain a Grokipedia URL.", "books would gain a Grokipedia URL."));
+                changes.size(), "book would gain a Grokipedia link.", "books would gain a Grokipedia link."));
+    }
+
+    @Transactional(readOnly = true)
+    public CatalogToolPreviewDto previewGrokipediaAuthors(List<Long> authorIds) {
+        List<Long> ids = distinctIds(authorIds);
+        if (ids.isEmpty()) {
+            return preview(0, List.of(), List.of(), "No authors in this batch.");
+        }
+        if (ids.size() > GROKIPEDIA_BATCH_LIMIT) {
+            return errorPreview("Preview at most " + GROKIPEDIA_BATCH_LIMIT + " authors at a time.");
+        }
+        List<CatalogToolChangeDto> changes = new ArrayList<>();
+        List<CatalogToolChangeDto> skipped = new ArrayList<>();
+        for (Long authorId : ids) {
+            Author author = authorRepository.findById(authorId).orElse(null);
+            if (author == null) {
+                skipped.add(missingAuthor(authorId));
+                continue;
+            }
+            String existing = author.getGrokipediaUrl();
+            CatalogToolChangeDto change = grokipediaAddition(
+                    null, author.getId(), author.getName(), existing, Author.namesToSearch(author));
+            if (change != null) {
+                changes.add(change);
+            }
+        }
+        return preview(ids.size(), changes, skipped, countMessage(
+                changes.size(), "author would gain a Grokipedia link.", "authors would gain a Grokipedia link."));
     }
 
     @Transactional(readOnly = true)
@@ -281,27 +307,66 @@ public class CatalogToolMaintenanceService {
                 skipped.add(missing(change.getBookId()));
                 continue;
             }
-            String after = change.getAfter() == null ? "" : change.getAfter().trim();
-            if (!GrokipediaLookupService.isGrokipediaPageUrl(after)) {
-                skipped.add(skip(book, "Not a Grokipedia page URL"));
+            String current = book.getGrokipediaUrl();
+            String after = change.getAfter();
+            String reason = grokipediaRejectReason(current, change.getBefore(), after);
+            if (reason != null) {
+                skipped.add(skip(book, reason));
                 continue;
             }
-            if (!missingGrokipediaUrl(book.getGrokipediaUrl())) {
-                skipped.add(skip(book, "Already has a Grokipedia URL"));
-                continue;
-            }
-            String previous = book.getGrokipediaUrl();
             book.setGrokipediaUrl(after);
             bookRepository.save(book);
             applied.add(CatalogToolChangeDto.builder()
                     .bookId(book.getId())
                     .title(book.getTitle())
-                    .before(previous)
+                    .before(current)
                     .after(after)
+                    .added(addedUrls(current, after))
                     .build());
         }
         return finish(CatalogMaintenanceAction.GROKIPEDIA_URLS, applied, skipped,
-                applyMessage("Added a Grokipedia URL on", applied.size(), "book", "books", ".", skipped.size()));
+                applyMessage("Added Grokipedia links on", applied.size(), "book", "books", ".", skipped.size()));
+    }
+
+    @Transactional
+    public CatalogToolApplyResultDto applyGrokipediaAuthors(List<CatalogToolChangeDto> requested) {
+        List<CatalogToolChangeDto> changes = limit(requested);
+        if (changes == null) {
+            return errorApply("Do It accepts at most " + APPLY_LIMIT + " changes at a time.");
+        }
+        if (changes.isEmpty()) {
+            return nothingToDo();
+        }
+        List<CatalogToolChangeDto> applied = new ArrayList<>();
+        List<CatalogToolChangeDto> skipped = new ArrayList<>();
+        for (CatalogToolChangeDto change : changes) {
+            if (change == null || change.getAuthorId() == null) {
+                continue;
+            }
+            Author author = authorRepository.findById(change.getAuthorId()).orElse(null);
+            if (author == null) {
+                skipped.add(missingAuthor(change.getAuthorId()));
+                continue;
+            }
+            String current = author.getGrokipediaUrl();
+            String after = change.getAfter();
+            String reason = grokipediaRejectReason(current, change.getBefore(), after);
+            if (reason != null) {
+                skipped.add(skipAuthor(author, reason));
+                continue;
+            }
+            author.setGrokipediaUrl(after);
+            authorRepository.save(author);
+            applied.add(CatalogToolChangeDto.builder()
+                    .authorId(author.getId())
+                    .title(author.getName())
+                    .before(current)
+                    .after(after)
+                    .added(addedUrls(current, after))
+                    .build());
+        }
+        return finish(CatalogMaintenanceAction.GROKIPEDIA_AUTHOR_URLS, applied, skipped,
+                applyMessage("Added Grokipedia links on", applied.size(), "author", "authors", ".", skipped.size()));
     }
 
     @Transactional
@@ -399,9 +464,20 @@ public class CatalogToolMaintenanceService {
         return undoable(CatalogMaintenanceAction.CHICAGO_TITLES);
     }
 
+    @Transactional
+    public CatalogToolApplyResultDto undoGrokipediaAuthors(Long actionId) {
+        return undoAuthors(actionId, CatalogMaintenanceAction.GROKIPEDIA_AUTHOR_URLS,
+                CatalogMaintenanceAction.UNDO_GROKIPEDIA_AUTHOR_URLS);
+    }
+
     @Transactional(readOnly = true)
     public CatalogToolUndoableDto undoableGrokipedia() {
         return undoable(CatalogMaintenanceAction.GROKIPEDIA_URLS);
+    }
+
+    @Transactional(readOnly = true)
+    public CatalogToolUndoableDto undoableGrokipediaAuthors() {
+        return undoable(CatalogMaintenanceAction.GROKIPEDIA_AUTHOR_URLS);
     }
 
     @Transactional(readOnly = true)
@@ -456,10 +532,7 @@ public class CatalogToolMaintenanceService {
                     .skippedChanges(skipped)
                     .build();
         }
-        String summary = "Restored " + applied.size() + (applied.size() == 1 ? " book." : " books.");
-        if (!skipped.isEmpty()) {
-            summary += " " + skipped.size() + (skipped.size() == 1 ? " book was" : " books were") + " left alone.";
-        }
+        String summary = restoredSummary(applied.size(), skipped.size(), "book", "books");
         Long id = record(undoKind, summary, applied, actionId);
         return CatalogToolApplyResultDto.builder()
                 .actionId(id)
@@ -470,6 +543,132 @@ public class CatalogToolMaintenanceService {
                 .changes(applied)
                 .skippedChanges(skipped)
                 .build();
+    }
+
+    private CatalogToolApplyResultDto undoAuthors(Long actionId, String forwardKind, String undoKind) {
+        if (actionId == null) {
+            return errorApply("Missing action.");
+        }
+        CatalogMaintenanceAction action = actionRepository.findById(actionId).orElse(null);
+        if (action == null || !forwardKind.equals(action.getActionKind())) {
+            return errorApply("That action cannot be undone.");
+        }
+        if (actionRepository.existsByReversesActionId(actionId)) {
+            return errorApply("Already undone.");
+        }
+        CatalogToolSnapshotDto snapshot = read(action);
+        List<CatalogToolChangeDto> applied = new ArrayList<>();
+        List<CatalogToolChangeDto> skipped = new ArrayList<>();
+        for (CatalogToolChangeDto change : snapshot.getChanges()) {
+            if (change == null || change.getAuthorId() == null) {
+                continue;
+            }
+            Author author = authorRepository.findById(change.getAuthorId()).orElse(null);
+            if (author == null) {
+                skipped.add(missingAuthor(change.getAuthorId()));
+                continue;
+            }
+            if (!sameText(author.getGrokipediaUrl(), change.getAfter())) {
+                CatalogToolChangeDto skip = skipAuthor(author, "URL is no longer the one that was added");
+                skip.setBefore(change.getBefore());
+                skip.setAfter(change.getAfter());
+                skipped.add(skip);
+                continue;
+            }
+            author.setGrokipediaUrl(storedGrokipedia(change.getBefore()));
+            authorRepository.save(author);
+            applied.add(CatalogToolChangeDto.builder()
+                    .authorId(author.getId())
+                    .title(author.getName())
+                    .before(change.getAfter())
+                    .after(change.getBefore())
+                    .build());
+        }
+        if (applied.isEmpty()) {
+            return CatalogToolApplyResultDto.builder()
+                    .applied(0)
+                    .skipped(skipped.size())
+                    .message(skipped.isEmpty() ? "Nothing to undo." : "Nothing was restored.")
+                    .changes(List.of())
+                    .skippedChanges(skipped)
+                    .build();
+        }
+        String summary = restoredSummary(applied.size(), skipped.size(), "author", "authors");
+        Long id = record(undoKind, summary, applied, actionId);
+        return CatalogToolApplyResultDto.builder()
+                .actionId(id)
+                .actionKind(undoKind)
+                .applied(applied.size())
+                .skipped(skipped.size())
+                .message(summary)
+                .changes(applied)
+                .skippedChanges(skipped)
+                .build();
+    }
+
+    private static String restoredSummary(int restored, int leftAlone, String one, String many) {
+        String summary = "Restored " + restored + " " + (restored == 1 ? one : many) + ".";
+        if (leftAlone > 0) {
+            summary += " " + leftAlone + (leftAlone == 1 ? " " + one + " was" : " " + many + " were") + " left alone.";
+        }
+        return summary;
+    }
+
+    /**
+     * A Grokipedia page for one of {@code names} that is not already stored.
+     * Reads the names before the lookup so the HTTP call does not keep a database session.
+     */
+    private CatalogToolChangeDto grokipediaAddition(Long bookId, Long authorId, String label,
+                                                     String existing, List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return null;
+        }
+        List<String> found = grokipediaLookupService.findQuickUrls(names);
+        if (found.isEmpty()) {
+            return null;
+        }
+        String merged = FreeTextLookupCache.mergeUrls(existing, String.join(" ", found));
+        if (sameText(merged, existing)) {
+            return null;
+        }
+        String added = addedUrls(existing, merged);
+        if (added.isBlank()) {
+            return null;
+        }
+        return CatalogToolChangeDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .title(label)
+                .before(existing == null ? "" : existing)
+                .after(merged)
+                .added(added)
+                .build();
+    }
+
+    /**
+     * @return a skip reason, or null when {@code after} only adds Grokipedia page URLs
+     */
+    private static String grokipediaRejectReason(String current, String before, String after) {
+        if (!sameText(current, before)) {
+            return "Links changed since Recalc";
+        }
+        if (!addsOnly(current, after)) {
+            return "Would replace or remove an existing link";
+        }
+        List<String> known = FreeTextLookupCache.extractUrls(current);
+        for (String url : FreeTextLookupCache.extractUrls(after)) {
+            boolean already = false;
+            for (String existing : known) {
+                if (existing.equalsIgnoreCase(url)) {
+                    already = true;
+                    break;
+                }
+            }
+            if (!already && !GrokipediaLookupService.isGrokipediaPageUrl(url)) {
+                return "Not a Grokipedia page URL";
+            }
+        }
+        return null;
     }
 
     private CatalogToolUndoableDto undoable(String kind) {
@@ -652,6 +851,21 @@ public class CatalogToolMaintenanceService {
         return CatalogToolChangeDto.builder()
                 .bookId(bookId)
                 .reason("Book not found")
+                .build();
+    }
+
+    private static CatalogToolChangeDto missingAuthor(Long authorId) {
+        return CatalogToolChangeDto.builder()
+                .authorId(authorId)
+                .reason("Author not found")
+                .build();
+    }
+
+    private static CatalogToolChangeDto skipAuthor(Author author, String reason) {
+        return CatalogToolChangeDto.builder()
+                .authorId(author.getId())
+                .title(author.getName())
+                .reason(reason)
                 .build();
     }
 

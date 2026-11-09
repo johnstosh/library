@@ -40,6 +40,7 @@ import { useFavoriteStats } from '@/api/favorites'
 import {
   ChicagoTitleMaintenanceRow,
   FreeTextMaintenanceRow,
+  GrokipediaAuthorMaintenanceRow,
   GrokipediaMaintenanceRow,
 } from './CatalogToolMaintenance'
 import { Spinner } from '@/components/progress/Spinner'
@@ -1249,6 +1250,7 @@ export function DataManagementPage() {
                   </td>
                 </tr>
                 <GrokipediaMaintenanceRow />
+                <GrokipediaAuthorMaintenanceRow />
                 <ChicagoTitleMaintenanceRow />
                 <FreeTextMaintenanceRow />
               </tbody>

@@ -18,10 +18,12 @@ import lombok.NoArgsConstructor;
 public class CatalogToolChangeDto {
 
     private Long bookId;
+    /** Set by the author Grokipedia tool. Book tools leave this empty. */
+    private Long authorId;
     private String title;
     private String before;
     private String after;
-    /** Free-text URLs that would be added. Empty for the other tools. */
+    /** URLs that would be added. Empty when the change is a title rewrite. */
     private String added;
     /** Why this book was left alone. Empty when the change will be applied. */
     private String reason;
