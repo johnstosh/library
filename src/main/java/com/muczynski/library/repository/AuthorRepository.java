@@ -66,6 +66,10 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     @Query("SELECT a.id FROM Author a WHERE a.id > :lastId ORDER BY a.id ASC")
     List<Long> findAuthorIdsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 
+    /** Every author, including those who already have a Grokipedia URL. */
+    @Query("SELECT a.id FROM Author a ORDER BY a.id ASC")
+    List<Long> findAllIdsOrderById();
+
     /**
      * Authors for the book form. The term is already trimmed and lowercased.
      * A canonical or alternate name that contains it scores 10, and an exact

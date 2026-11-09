@@ -11,6 +11,10 @@ ALTER TABLE IF EXISTS users DROP CONSTRAINT IF EXISTS users_library_card_design_
 ALTER TABLE IF EXISTS book DROP CONSTRAINT IF EXISTS book_status_check;
 ALTER TABLE book ADD CONSTRAINT book_status_check CHECK (status IN ('ACTIVE', 'LOST', 'WITHDRAWN', 'ON_ORDER', 'REQUESTED'));
 
+-- Hibernate ddl-auto=update does not widen varchar(255). Grokipedia fields store one URL per title or name.
+ALTER TABLE IF EXISTS book ALTER COLUMN grokipedia_url TYPE text;
+ALTER TABLE IF EXISTS author ALTER COLUMN grokipedia_url TYPE text;
+
 -- Hibernate ddl-auto=update does not widen CHECK constraints on enum columns. Widen book_price_cover_check for all BookCoverType values (fixes #341).
 ALTER TABLE IF EXISTS book_price DROP CONSTRAINT IF EXISTS book_price_cover_check;
 ALTER TABLE book_price ADD CONSTRAINT book_price_cover_check CHECK (cover IN ('HARDCOVER', 'SOFTCOVER', 'LIBRARY_BINDING', 'OTHER', 'UNKNOWN'));

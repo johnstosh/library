@@ -16,12 +16,14 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -91,6 +93,51 @@ public class GrokipediaLookupService {
         }
 
         return results;
+    }
+
+    /**
+     * Quick lookup only. Returns the first usual page URL that answers 2xx, or null.
+     * Does not save a URL and does not save "-".
+     * A call through the Spring proxy runs outside a transaction.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public String findQuickUrl(List<String> titles) {
+        if (titles == null) {
+            return null;
+        }
+        for (String title : titles) {
+            if (title == null || title.isBlank()) {
+                continue;
+            }
+            String usualUrl = generateGrokipediaUrl(title);
+            if (checkUrlExists(usualUrl)) {
+                return usualUrl;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Quick lookup for every name. Returns each usual page URL that answers 2xx.
+     * Does not stop at the first hit, does not save a URL, and does not save "-".
+     * A call through the Spring proxy runs outside a transaction.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public List<String> findQuickUrls(List<String> titles) {
+        LinkedHashSet<String> found = new LinkedHashSet<>();
+        if (titles == null) {
+            return List.of();
+        }
+        for (String title : titles) {
+            if (title == null || title.isBlank()) {
+                continue;
+            }
+            String usualUrl = generateGrokipediaUrl(title);
+            if (checkUrlExists(usualUrl)) {
+                found.add(usualUrl);
+            }
+        }
+        return new ArrayList<>(found);
     }
 
     /**

@@ -4,7 +4,7 @@ import { DataTable } from '@/components/table/DataTable'
 import type { Column } from '@/components/table/DataTable'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useDeleteAuthor } from '@/api/authors'
-import { truncate, isValidUrl } from '@/utils/formatters'
+import { truncate, grokipediaUrls } from '@/utils/formatters'
 import type { AuthorDto } from '@/types/dtos'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { FavoriteStar } from '@/components/favorites/FavoriteStar'
@@ -107,16 +107,17 @@ export function AuthorTable({
               onClick={(e) => e.stopPropagation()}
               data-test={`view-author-${author.id}`}
             />
-            {isValidUrl(author.grokipediaUrl) && (
+            {grokipediaUrls(author.grokipediaUrl).map((url, index) => (
               <IconButton
-                href={author.grokipediaUrl}
+                key={url}
+                href={url}
                 icon={<GrokipediaIcon />}
                 label="View on Grokipedia"
                 tone="warning"
                 onClick={(e) => e.stopPropagation()}
-                data-test={`grokipedia-author-${author.id}`}
+                data-test={index === 0 ? `grokipedia-author-${author.id}` : `grokipedia-author-${author.id}-${index}`}
               />
-            )}
+            ))}
             <IconButton
               to={`/authors/${author.id}`}
               icon={<BooksIcon />}

@@ -22,6 +22,7 @@ This folder contains the complete API endpoint documentation for the Library Man
 
 ### Data Management
 - **[endpoints-import-export.md](endpoints-import-export.md)** - JSON database export/import for backup and migration
+- **[endpoints-maintenance.md](endpoints-maintenance.md)** - Illegal genres, duplicate titles, and whole-catalog Recalc / Do It / Undo tools
 
 ### User Management
 - **[endpoints-users.md](endpoints-users.md)** - User account creation, updates, and deletion (librarian functions)

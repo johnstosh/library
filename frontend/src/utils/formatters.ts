@@ -179,6 +179,11 @@ export function parseSpaceSeparatedUrls(urls: string | undefined | null): string
   return urls.split(/\s+/).filter((url) => isValidUrl(url))
 }
 
+/** Grokipedia page URLs stored in one field, primary title or name first. */
+export function grokipediaUrls(value: string | undefined | null): string[] {
+  return parseSpaceSeparatedUrls(value).filter((url) => url.includes('grokipedia.com/page/'))
+}
+
 export function isFreeAudioUrl(url: string): boolean {
   return url.toLowerCase().includes('librivox')
 }

@@ -73,6 +73,54 @@ class GrokipediaLookupServiceTest {
     }
 
     @Test
+    void findQuickUrl_returnsTheFirstWorkingPageAndDoesNotSave() {
+        when(restTemplate.exchange(eq("https://grokipedia.com/page/Missing"), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+        when(restTemplate.exchange(eq("https://grokipedia.com/page/Little_Women"), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+
+        String url = grokipediaLookupService.findQuickUrl(List.of("Missing", "Little Women"));
+
+        assertEquals("https://grokipedia.com/page/Little_Women", url);
+        verify(bookRepository, never()).save(any());
+        verify(authorRepository, never()).save(any());
+    }
+
+    @Test
+    void findQuickUrl_returnsNullWhenNoPageExists() {
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+
+        assertNull(grokipediaLookupService.findQuickUrl(List.of("Missing Title")));
+        verify(bookRepository, never()).save(any());
+    }
+
+    @Test
+    void findQuickUrls_returnsEveryWorkingPageIncludingAnAlternateTitle() {
+        when(restTemplate.exchange(eq("https://grokipedia.com/page/Little_Women"), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+        when(restTemplate.exchange(eq("https://grokipedia.com/page/Good_Wives"), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
+                .thenReturn(new ResponseEntity<>(HttpStatus.OK));
+
+        List<String> urls = grokipediaLookupService.findQuickUrls(List.of("Little Women", "Good Wives"));
+
+        assertEquals(List.of(
+                "https://grokipedia.com/page/Little_Women",
+                "https://grokipedia.com/page/Good_Wives"), urls);
+        verify(bookRepository, never()).save(any());
+        verify(authorRepository, never()).save(any());
+    }
+
+    @Test
+    void namesToSearch_keepsThePrimaryNameAndEachDistinctAlternate() {
+        Author author = new Author();
+        author.setName("Mark Twain");
+        author.setAlternateNames(List.of("Mark Twain", "Samuel Clemens"));
+
+        assertEquals(List.of("Mark Twain", "Samuel Clemens"), Author.namesToSearch(author));
+    }
+
+    @Test
     void checkUrlExists_returnsFalseFor404() {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class)))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));

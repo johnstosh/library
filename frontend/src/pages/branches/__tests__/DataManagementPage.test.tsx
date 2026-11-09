@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { DataManagementPage } from '../DataManagementPage'
@@ -14,6 +14,25 @@ const {
   fixTitles,
   undoFixTitles,
   duplicateFindResult,
+  previewChicago,
+  applyChicago,
+  undoChicagoTitles,
+  fetchChicagoUndoable,
+  fetchGrokipediaCandidateIds,
+  previewGrokipedia,
+  applyGrokipedia,
+  undoGrokipedia,
+  fetchGrokipediaUndoable,
+  fetchGrokipediaAuthorCandidateIds,
+  previewGrokipediaAuthors,
+  applyGrokipediaAuthors,
+  undoGrokipediaAuthors,
+  fetchGrokipediaAuthorUndoable,
+  fetchFreeTextCandidateIds,
+  previewFreeText,
+  applyFreeText,
+  undoFreeText,
+  fetchFreeTextUndoable,
 } = vi.hoisted(() => ({
   dismissDuplicatePair: vi.fn().mockResolvedValue(undefined),
   restoreDuplicatePair: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +72,112 @@ const {
     representativesCompared: 9,
     message: '1 pairs found.',
   },
+  previewChicago: vi.fn().mockResolvedValue({
+    booksScanned: 2,
+    changeCount: 1,
+    changes: [{ bookId: 7, title: 'the hobbit', before: 'the hobbit', after: 'The Hobbit' }],
+    skipped: [{ bookId: 8, title: 'the silmarillion', before: 'the silmarillion', after: 'The Silmarillion', reason: 'Chicago form "The Silmarillion" is already used by another book' }],
+    message: '1 title will change. 1 title was left alone because the Chicago form is already used.',
+  }),
+  applyChicago: vi.fn().mockResolvedValue({
+    actionId: 41,
+    actionKind: 'CHICAGO_TITLES',
+    applied: 1,
+    skipped: 0,
+    message: 'Rewrote 1 title into Chicago title case.',
+    changes: [{ bookId: 7, title: 'the hobbit', before: 'the hobbit', after: 'The Hobbit' }],
+    skippedChanges: [],
+  }),
+  undoChicagoTitles: vi.fn().mockResolvedValue({
+    actionId: 42,
+    applied: 1,
+    skipped: 0,
+    message: 'Restored 1 book.',
+    changes: [{ bookId: 7, before: 'The Hobbit', after: 'the hobbit' }],
+    skippedChanges: [],
+  }),
+  fetchChicagoUndoable: vi.fn().mockResolvedValue({ actionId: null }),
+  fetchGrokipediaCandidateIds: vi.fn().mockResolvedValue({ bookIds: [3, 4] }),
+  previewGrokipedia: vi.fn().mockResolvedValue({
+    booksScanned: 2,
+    changeCount: 1,
+    changes: [{ bookId: 3, title: 'The Hobbit', before: '', after: 'https://grokipedia.com/page/The_Hobbit' }],
+    skipped: [],
+    message: '1 book would gain a Grokipedia URL.',
+  }),
+  applyGrokipedia: vi.fn().mockResolvedValue({
+    actionId: 51,
+    applied: 1,
+    skipped: 0,
+    message: 'Added a Grokipedia URL on 1 book.',
+    changes: [{ bookId: 3, title: 'The Hobbit', before: null, after: 'https://grokipedia.com/page/The_Hobbit' }],
+    skippedChanges: [],
+  }),
+  undoGrokipedia: vi.fn().mockResolvedValue({
+    actionId: 52,
+    applied: 1,
+    skipped: 0,
+    message: 'Restored 1 book.',
+    changes: [],
+    skippedChanges: [],
+  }),
+  fetchGrokipediaUndoable: vi.fn().mockResolvedValue({ actionId: null }),
+  fetchGrokipediaAuthorCandidateIds: vi.fn().mockResolvedValue({ authorIds: [8] }),
+  previewGrokipediaAuthors: vi.fn().mockResolvedValue({
+    booksScanned: 1,
+    changeCount: 1,
+    changes: [{
+      authorId: 8,
+      title: 'Jane Austen',
+      before: 'https://grokipedia.com/page/Jane_Austen',
+      after: 'https://grokipedia.com/page/Jane_Austen https://grokipedia.com/page/Jane_Austen_novelist',
+      added: 'https://grokipedia.com/page/Jane_Austen_novelist',
+    }],
+    skipped: [],
+    message: '1 author would gain a Grokipedia link.',
+  }),
+  applyGrokipediaAuthors: vi.fn().mockResolvedValue({
+    actionId: 71,
+    applied: 1,
+    skipped: 0,
+    message: 'Added Grokipedia links on 1 author.',
+    changes: [{ authorId: 8, title: 'Jane Austen', added: 'https://grokipedia.com/page/Jane_Austen_novelist' }],
+    skippedChanges: [],
+  }),
+  undoGrokipediaAuthors: vi.fn().mockResolvedValue({
+    actionId: 72,
+    applied: 1,
+    skipped: 0,
+    message: 'Restored 1 author.',
+    changes: [],
+    skippedChanges: [],
+  }),
+  fetchGrokipediaAuthorUndoable: vi.fn().mockResolvedValue({ actionId: null }),
+  fetchFreeTextCandidateIds: vi.fn().mockResolvedValue({ bookIds: [9] }),
+  previewFreeText: vi.fn().mockResolvedValue({
+    booksScanned: 1,
+    changeCount: 1,
+    changes: [{ bookId: 9, title: 'The Hobbit', before: 'https://a.example/old', after: 'https://a.example/old https://b.example/new', added: 'https://b.example/new' }],
+    skipped: [],
+    message: '1 book would gain a free-text link.',
+  }),
+  applyFreeText: vi.fn().mockResolvedValue({
+    actionId: 61,
+    applied: 1,
+    skipped: 0,
+    message: 'Added free-text links on 1 book.',
+    changes: [{ bookId: 9, title: 'The Hobbit', added: 'https://b.example/new' }],
+    skippedChanges: [],
+  }),
+  undoFreeText: vi.fn().mockResolvedValue({
+    actionId: 62,
+    applied: 1,
+    skipped: 0,
+    message: 'Restored 1 book.',
+    changes: [],
+    skippedChanges: [],
+  }),
+  fetchFreeTextUndoable: vi.fn().mockResolvedValue({ actionId: null }),
 }))
 
 vi.mock('@/api/data-management', () => ({
@@ -174,6 +299,25 @@ vi.mock('@/api/data-management', () => ({
     mutateAsync: undoFixTitles,
     isPending: false,
   }),
+  previewChicago,
+  applyChicago,
+  undoChicago: undoChicagoTitles,
+  fetchChicagoUndoable,
+  fetchGrokipediaCandidateIds,
+  previewGrokipedia,
+  applyGrokipedia,
+  undoGrokipedia,
+  fetchGrokipediaUndoable,
+  fetchGrokipediaAuthorCandidateIds,
+  previewGrokipediaAuthors,
+  applyGrokipediaAuthors,
+  undoGrokipediaAuthors,
+  fetchGrokipediaAuthorUndoable,
+  fetchFreeTextCandidateIds,
+  previewFreeText,
+  applyFreeText,
+  undoFreeText,
+  fetchFreeTextUndoable,
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -268,13 +412,14 @@ describe('DataManagementPage Maintenance Section (Issue #347 / #366)', () => {
     renderPage()
 
     expect(screen.getByTestId('maintenance-section')).toHaveTextContent('Maintenance')
-    expect(screen.getByTestId('maintenance-row-illegal-genres')).toBeInTheDocument()
-    expect(screen.getByText('Clean Genres')).toBeInTheDocument()
-    expect(screen.getByText('Recalc')).toBeInTheDocument()
+    const row = screen.getByTestId('maintenance-row-illegal-genres')
+    expect(row).toBeInTheDocument()
+    expect(within(row).getByText('Clean Genres')).toBeInTheDocument()
+    expect(within(row).getByText('Recalc')).toBeInTheDocument()
     expect(screen.getByText(/Fixes genre names that use the wrong plural/)).toBeInTheDocument()
     // Count shows "-" before any Recalc (per spec)
-    expect(screen.getByText('-')).toBeInTheDocument()
-    expect(screen.getByText(/Click Recalc or Clean Genres to see results here/)).toBeInTheDocument()
+    expect(within(row).getByText('-')).toBeInTheDocument()
+    expect(within(row).getByText(/Click Recalc or Clean Genres to see results here/)).toBeInTheDocument()
   })
 
   it('shows Clean Genres success once in the green box without bullet or duplicate secondary text (#366)', async () => {
@@ -515,5 +660,108 @@ describe('DataManagementPage Duplicate catalog entries (Issue #351)', () => {
     expect(fix).toHaveTextContent('Fix titles')
     expect(screen.queryByTestId('dup-merge-authors-3-4')).not.toBeInTheDocument()
     expect(screen.queryByTestId('dup-merge-titles-3-4')).not.toBeInTheDocument()
+  })
+})
+
+describe('DataManagementPage catalog tools (Issue #386)', () => {
+  it('shows Recalc, Do It, and Undo for the three tools, with Do It and Undo off', () => {
+    renderPage()
+
+    for (const key of ['grokipedia', 'grokipedia-authors', 'chicago', 'free-text']) {
+      const row = screen.getByTestId(`maintenance-row-${key}`)
+      expect(within(row).getByText('Recalc')).toBeInTheDocument()
+      expect(screen.getByTestId(`apply-${key}`)).toBeDisabled()
+      expect(screen.getByTestId(`undo-${key}`)).toBeDisabled()
+      expect(screen.getByTestId(`maintenance-${key}-count`)).toHaveTextContent('-')
+    }
+    expect(screen.getByText(/each alternate title/)).toBeInTheDocument()
+    expect(screen.getByText(/each alternate name/)).toBeInTheDocument()
+    expect(screen.getByText(/lists each title that will change/)).toBeInTheDocument()
+    expect(screen.getByText(/Does not replace or remove a link/)).toBeInTheDocument()
+  })
+
+  it('lists every Chicago title change and the title that will be left alone', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-chicago'))
+
+    expect(await screen.findByTestId('maintenance-chicago-change-7')).toHaveTextContent('the hobbit → The Hobbit')
+    expect(screen.getByTestId('maintenance-chicago-skipped-8')).toHaveTextContent('already used')
+    expect(screen.getByTestId('maintenance-chicago-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('apply-chicago')).toBeEnabled()
+  })
+
+  it('sends the Grokipedia preview to Do It and then undoes that action', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-grokipedia'))
+
+    expect(await screen.findByTestId('maintenance-grokipedia-change-3')).toHaveTextContent(
+      'The Hobbit: add https://grokipedia.com/page/The_Hobbit',
+    )
+    expect(fetchGrokipediaCandidateIds).toHaveBeenCalled()
+    expect(previewGrokipedia).toHaveBeenCalledWith([3, 4])
+
+    fireEvent.click(screen.getByTestId('apply-grokipedia'))
+    expect(await screen.findByTestId('maintenance-grokipedia-success')).toHaveTextContent(
+      'Added a Grokipedia URL on 1 book.',
+    )
+    expect(applyGrokipedia).toHaveBeenCalledWith([
+      { bookId: 3, title: 'The Hobbit', before: '', after: 'https://grokipedia.com/page/The_Hobbit' },
+    ])
+    expect(screen.getByTestId('apply-grokipedia')).toBeDisabled()
+    expect(screen.getByTestId('undo-grokipedia')).toBeEnabled()
+
+    fireEvent.click(screen.getByTestId('undo-grokipedia'))
+    await waitFor(() => {
+      expect(undoGrokipedia).toHaveBeenCalledWith(51)
+    })
+  })
+
+  it('adds an author Grokipedia page without dropping the name that already has one', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-grokipedia-authors'))
+
+    expect(await screen.findByTestId('maintenance-grokipedia-authors-change-8')).toHaveTextContent(
+      'Jane Austen: add https://grokipedia.com/page/Jane_Austen_novelist',
+    )
+    expect(screen.getByTestId('maintenance-grokipedia-authors-change-8')).toHaveTextContent(
+      'https://grokipedia.com/page/Jane_Austen',
+    )
+    expect(previewGrokipediaAuthors).toHaveBeenCalledWith([8])
+
+    fireEvent.click(screen.getByTestId('apply-grokipedia-authors'))
+    expect(await screen.findByTestId('maintenance-grokipedia-authors-success')).toHaveTextContent(
+      'Added Grokipedia links on 1 author.',
+    )
+    expect(applyGrokipediaAuthors).toHaveBeenCalledWith([
+      expect.objectContaining({
+        authorId: 8,
+        added: 'https://grokipedia.com/page/Jane_Austen_novelist',
+        before: 'https://grokipedia.com/page/Jane_Austen',
+      }),
+    ])
+  })
+
+  it('lists the free-text link that would be added and does not replace the old one', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('recalc-free-text'))
+
+    expect(await screen.findByTestId('maintenance-free-text-change-9')).toHaveTextContent(
+      'The Hobbit: add https://b.example/new',
+    )
+    expect(screen.getByTestId('maintenance-free-text-change-9')).not.toHaveTextContent('replace')
+    fireEvent.click(screen.getByTestId('apply-free-text'))
+    await waitFor(() => {
+      expect(applyFreeText).toHaveBeenCalledWith([
+        expect.objectContaining({
+          bookId: 9,
+          added: 'https://b.example/new',
+          before: 'https://a.example/old',
+        }),
+      ])
+    })
   })
 })

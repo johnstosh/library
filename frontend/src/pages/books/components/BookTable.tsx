@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { CoverThumbnail } from '@/components/ui/CoverThumbnail'
 import { usePhoneLayout } from '@/hooks/usePhoneLayout'
 import { useDeleteBook } from '@/api/books'
-import { formatBookStatus, truncate, isValidUrl, formatDateTime, parseSpaceSeparatedUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
+import { formatBookStatus, truncate, formatDateTime, parseSpaceSeparatedUrls, grokipediaUrls, extractDomain, isFreeAudioUrl } from '@/utils/formatters'
 import { formatBookLabel } from './BookLabelFilters'
 import { bookBindingDisplay } from '@/utils/bookBinding'
 import { readingDifficultyLabel } from '@/utils/readingDifficulty'
@@ -97,17 +97,18 @@ export function BookTable({
               ) : (
                 <span className="text-gray-500">{truncate(book.author, 40)}</span>
               )}
-              {isValidUrl(book.authorGrokipediaUrl) && (
+              {grokipediaUrls(book.authorGrokipediaUrl).map((url, index) => (
                 <IconButton
-                  href={book.authorGrokipediaUrl}
+                  key={url}
+                  href={url}
                   icon={<GrokipediaIcon />}
                   label={`View ${book.author} on Grokipedia`}
                   tone="warning"
                   onClick={(e) => e.stopPropagation()}
-                  data-test={`book-author-grokipedia-${book.id}`}
+                  data-test={index === 0 ? `book-author-grokipedia-${book.id}` : `book-author-grokipedia-${book.id}-${index}`}
                   className="!p-0.5 shrink-0"
                 />
-              )}
+              ))}
             </div>
           )}
           <div className="text-sm text-gray-500" data-test={`book-reading-difficulty-${book.id}`}>
@@ -171,7 +172,7 @@ export function BookTable({
 
   const renderActions = (book: BookDto, stacked: boolean) => (
     <div className={stacked ? 'flex flex-col gap-1 items-end' : 'flex flex-row flex-wrap items-center gap-2'}>
-      {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || isValidUrl(book.grokipediaUrl)) && (
+      {(parseSpaceSeparatedUrls(book.freeTextUrl).length > 0 || grokipediaUrls(book.grokipediaUrl).length > 0) && (
         <div
           className={stacked ? 'flex flex-wrap gap-1 justify-end' : 'flex flex-wrap gap-1'}
           style={stacked ? { maxWidth: '108px' } : undefined}
@@ -190,16 +191,17 @@ export function BookTable({
                   />
                   )
                 })}
-                {isValidUrl(book.grokipediaUrl) && (
+                {grokipediaUrls(book.grokipediaUrl).map((url, index) => (
                   <IconButton
-                    href={book.grokipediaUrl}
+                    key={url}
+                    href={url}
                     icon={<GrokipediaIcon />}
                     label="View on Grokipedia"
                     tone="warning"
                     onClick={(e) => e.stopPropagation()}
-                    data-test={`grokipedia-book-${book.id}`}
+                    data-test={index === 0 ? `grokipedia-book-${book.id}` : `grokipedia-book-${book.id}-${index}`}
                   />
-                )}
+                ))}
               </div>
             )}
             {/* Line 2: view, author */}
@@ -295,17 +297,18 @@ export function BookTable({
                       ) : (
                         <span className="text-gray-500">{book.author}</span>
                       )}
-                      {isValidUrl(book.authorGrokipediaUrl) && (
+                      {grokipediaUrls(book.authorGrokipediaUrl).map((url, index) => (
                         <IconButton
-                          href={book.authorGrokipediaUrl}
+                          key={url}
+                          href={url}
                           icon={<GrokipediaIcon />}
                           label={`View ${book.author} on Grokipedia`}
                           tone="warning"
                           onClick={(event) => event.stopPropagation()}
-                          data-test={`book-author-grokipedia-${book.id}`}
+                          data-test={index === 0 ? `book-author-grokipedia-${book.id}` : `book-author-grokipedia-${book.id}-${index}`}
                           className="!p-0.5 shrink-0"
                         />
-                      )}
+                      ))}
                     </div>
                   )}
                   <div className="text-sm text-gray-500" data-test={`book-reading-difficulty-${book.id}`}>

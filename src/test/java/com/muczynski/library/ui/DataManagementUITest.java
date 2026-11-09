@@ -162,4 +162,33 @@ public class DataManagementUITest {
                 "Prices should appear after Favorites, favorites.x=" + favoritesBox.x
                         + " prices.x=" + pricesBox.x);
     }
+
+    @Test
+    @DisplayName("Maintenance lists the three catalog tools and Chicago Recalc fills the count")
+    void testCatalogToolRowsPreviewChicago() {
+        loginAsLibrarian();
+        openDataManagement();
+
+        Locator grokipedia = page.locator("[data-test='maintenance-row-grokipedia']");
+        grokipedia.scrollIntoViewIfNeeded();
+        assertThat(page.locator("[data-test='recalc-grokipedia']")).isVisible();
+        assertThat(page.locator("[data-test='apply-grokipedia']")).isDisabled();
+        assertThat(page.locator("[data-test='undo-grokipedia']")).isDisabled();
+        assertThat(page.locator("[data-test='recalc-chicago']")).isVisible();
+        assertThat(page.locator("[data-test='apply-chicago']")).isDisabled();
+        assertThat(page.locator("[data-test='recalc-free-text']")).isVisible();
+        assertThat(page.locator("[data-test='apply-free-text']")).isDisabled();
+        assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("Quick Grokipedia lookup");
+        assertThat(page.locator("[data-test='maintenance-row-grokipedia']")).containsText("alternate title");
+        assertThat(page.locator("[data-test='recalc-grokipedia-authors']")).isVisible();
+        assertThat(page.locator("[data-test='apply-grokipedia-authors']")).isDisabled();
+        assertThat(page.locator("[data-test='undo-grokipedia-authors']")).isDisabled();
+        assertThat(page.locator("[data-test='maintenance-row-grokipedia-authors']")).containsText("alternate name");
+        assertThat(page.locator("[data-test='maintenance-row-chicago']")).containsText("Chicago Title Case");
+        assertThat(page.locator("[data-test='maintenance-row-free-text']")).containsText("Find Links to Free Online Text");
+
+        page.locator("[data-test='recalc-chicago']").click();
+        assertThat(page.locator("[data-test='maintenance-chicago-count']")).not().hasText("-");
+        assertThat(page.locator("[data-test='maintenance-chicago-results']")).not().containsText("Click Recalc to see every change here.");
+    }
 }

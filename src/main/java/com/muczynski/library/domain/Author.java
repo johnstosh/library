@@ -58,6 +58,11 @@ public class Author {
     @Column(name = "brief_biography")
     private String biographicalEssay;
 
+    /**
+     * Space-separated Grokipedia page URLs for the primary name and alternate names.
+     * {@code text} so more than one page fits. {@code ddl-auto=update} does not widen varchar.
+     */
+    @Column(columnDefinition = "text")
     private String grokipediaUrl;
 
     private LocalDateTime lastModified;
@@ -72,5 +77,41 @@ public class Author {
     @PrePersist
     protected void onUpdate() {
         lastModified = LocalDateTime.now();
+    }
+
+    /**
+     * Names to search: the primary name first, then each distinct alternate.
+     * A case-insensitive repeat is skipped.
+     */
+    public static List<String> namesToSearch(Author author) {
+        List<String> names = new ArrayList<>();
+        if (author == null) {
+            return names;
+        }
+        if (author.getName() != null && !author.getName().isBlank()) {
+            names.add(author.getName().trim());
+        }
+        if (author.getAlternateNames() != null) {
+            for (String alternate : author.getAlternateNames()) {
+                if (alternate == null || alternate.isBlank()) {
+                    continue;
+                }
+                String trimmed = alternate.trim();
+                if (containsIgnoreCase(names, trimmed)) {
+                    continue;
+                }
+                names.add(trimmed);
+            }
+        }
+        return names;
+    }
+
+    private static boolean containsIgnoreCase(List<String> names, String candidate) {
+        for (String name : names) {
+            if (name.equalsIgnoreCase(candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

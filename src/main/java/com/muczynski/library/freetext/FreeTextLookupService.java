@@ -13,6 +13,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
@@ -81,16 +82,56 @@ public class FreeTextLookupService {
         }
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
-        List<String> authorNames = AuthorNames.lookupNames(book.getAuthor());
         String primaryTitle = book.getTitle();
+        Discovery discovery = discoverUrls(titles, AuthorNames.lookupNames(book.getAuthor()));
+        if (discovery.getUrls() != null && !discovery.getUrls().isBlank()) {
+            String merged = applyFoundUrls(book, discovery.getUrls());
+            log.info("Found free text for book {}: {} via {}", bookId, merged, discovery.getProviderName());
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(primaryTitle)
+                    .authorName(authorName)
+                    .success(true)
+                    .freeTextUrl(merged)
+                    .providerName(discovery.getProviderName())
+                    .providersSearched(discovery.getProvidersSearched())
+                    .build();
+        }
 
-        // Check cache for every title and every author name. Only cached URLs count.
-        // A cached "not found" entry is a snapshot from an old run; it must never stop
-        // a librarian who runs the tool now from searching the providers again.
+        log.info("No free text found for book {} '{}' after searching {} providers with {} titles",
+                bookId, primaryTitle, discovery.getProvidersSearched().size(), titles.size());
+
+        return FreeTextBulkLookupResultDto.builder()
+                .bookId(bookId)
+                .bookTitle(primaryTitle)
+                .authorName(authorName)
+                .success(false)
+                .errorMessage("Not found in any provider")
+                .providersSearched(discovery.getProvidersSearched())
+                .build();
+    }
+
+    /**
+     * Search the cache and providers without writing the book.
+     * {@link Discovery#getUrls()} is null when nothing is found.
+     * A call through the Spring proxy runs outside a transaction so the HTTP
+     * work does not keep a database connection. {@link #lookupBook(Long)} still
+     * saves after this returns.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Discovery discoverUrls(List<String> titles, List<String> authorNames) {
+        List<String> names = authorNames == null || authorNames.isEmpty()
+                ? List.of((String) null)
+                : authorNames;
+        if (titles == null || titles.isEmpty()) {
+            return new Discovery(null, null, List.of());
+        }
+
+        // Only cached URLs count. A cached "not found" must not stop a later search.
         List<String> allCached = new ArrayList<>();
-        for (String t : titles) {
-            for (String lookupAuthor : authorNames) {
-                String cached = FreeTextLookupCache.lookup(lookupAuthor, t);
+        for (String title : titles) {
+            for (String lookupAuthor : names) {
+                String cached = FreeTextLookupCache.lookup(lookupAuthor, title);
                 if (cached != null && !cached.isBlank()) {
                     allCached.add(cached);
                 }
@@ -98,35 +139,19 @@ public class FreeTextLookupService {
         }
         String combinedCache = String.join(" ", allCached).trim();
         if (!combinedCache.isBlank()) {
-            String merged = applyFoundUrls(book, combinedCache);
-            log.info("Found free text for book {} in cache: {}", bookId, merged);
-            return FreeTextBulkLookupResultDto.builder()
-                    .bookId(bookId)
-                    .bookTitle(primaryTitle)
-                    .authorName(authorName)
-                    .success(true)
-                    .freeTextUrl(merged)
-                    .providerName("Cache")
-                    .providersSearched(List.of("Cache"))
-                    .build();
+            return new Discovery(combinedCache, "Cache", List.of("Cache"));
         }
 
         List<String> searchedProviders = new ArrayList<>();
-
-        boolean anySuccess = false;
         for (FreeTextProvider provider : providers) {
             searchedProviders.add(provider.getProviderName());
-
             for (String searchTitle : titles) {
-                for (String lookupAuthor : authorNames) {
+                for (String lookupAuthor : names) {
                     try {
-                        log.debug("Searching {} for title '{}' (primary '{}') by '{}'",
-                                provider.getProviderName(), searchTitle, primaryTitle, lookupAuthor);
-
+                        log.debug("Searching {} for title '{}' by '{}'",
+                                provider.getProviderName(), searchTitle, lookupAuthor);
                         FreeTextLookupResult result = provider.search(searchTitle, lookupAuthor);
-
-                        if (result.isFound()) {
-                            // Validate domain if provider specifies expected domains
+                        if (result != null && result.isFound()) {
                             List<String> expectedDomains = provider.getExpectedDomains();
                             if (!expectedDomains.isEmpty()) {
                                 String urlDomain = extractDomain(result.getUrl());
@@ -138,47 +163,19 @@ public class FreeTextLookupService {
                                     continue;
                                 }
                             }
-
-                            // Merge the found URL(s) into any URLs already stored on the book
-                            String merged = applyFoundUrls(book, result.getUrl());
-                            anySuccess = true;
-
-                            log.info("Found free text for book {}: {} via {} using title '{}'",
-                                    bookId, merged, provider.getProviderName(), searchTitle);
-
-                            return FreeTextBulkLookupResultDto.builder()
-                                    .bookId(bookId)
-                                    .bookTitle(primaryTitle)
-                                    .authorName(authorName)
-                                    .success(true)
-                                    .freeTextUrl(merged)
-                                    .providerName(provider.getProviderName())
-                                    .providersSearched(searchedProviders)
-                                    .build();
-                        } else {
-                            log.debug("Provider {} did not find '{}': {}",
-                                    provider.getProviderName(), searchTitle, result.getErrorMessage());
+                            return new Discovery(result.getUrl(), provider.getProviderName(), List.copyOf(searchedProviders));
                         }
+                        log.debug("Provider {} did not find '{}': {}",
+                                provider.getProviderName(), searchTitle,
+                                result == null ? "no result" : result.getErrorMessage());
                     } catch (Exception e) {
-                        log.warn("Provider {} failed for book {} title '{}': {}",
-                                provider.getProviderName(), bookId, searchTitle, e.getMessage());
+                        log.warn("Provider {} failed for title '{}': {}",
+                                provider.getProviderName(), searchTitle, e.getMessage());
                     }
                 }
             }
         }
-
-        // No provider found a match for either title
-        log.info("No free text found for book {} '{}' after searching {} providers with {} titles",
-                bookId, primaryTitle, searchedProviders.size(), titles.size());
-
-        return FreeTextBulkLookupResultDto.builder()
-                .bookId(bookId)
-                .bookTitle(primaryTitle)
-                .authorName(authorName)
-                .success(anySuccess)  // true if any URL was merged from either title
-                .errorMessage("Not found in any provider")
-                .providersSearched(searchedProviders)
-                .build();
+        return new Discovery(null, null, List.copyOf(searchedProviders));
     }
 
     /**
@@ -250,6 +247,33 @@ public class FreeTextLookupService {
         } catch (Exception e) {
             log.warn("Failed to extract domain from URL: {}", url);
             return null;
+        }
+    }
+
+    /**
+     * URLs found for one book before they are merged into the stored field.
+     */
+    public static final class Discovery {
+        private final String urls;
+        private final String providerName;
+        private final List<String> providersSearched;
+
+        public Discovery(String urls, String providerName, List<String> providersSearched) {
+            this.urls = urls;
+            this.providerName = providerName;
+            this.providersSearched = providersSearched == null ? List.of() : providersSearched;
+        }
+
+        public String getUrls() {
+            return urls;
+        }
+
+        public String getProviderName() {
+            return providerName;
+        }
+
+        public List<String> getProvidersSearched() {
+            return providersSearched;
         }
     }
 }
