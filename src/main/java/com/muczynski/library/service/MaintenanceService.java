@@ -56,7 +56,7 @@ public class MaintenanceService {
      */
     @Transactional(readOnly = true)
     public IllegalGenresMaintenanceDto countIllegalGenres() {
-        Plan plan = buildPlan(bookRepository.findAllForGenreMaintenance());
+        Plan plan = buildPlan(bookRepository.findGenreMaintenanceRows());
         String message = plan.books.isEmpty()
                 ? "All genres are clean. No books have illegal or mismatched tags."
                 : plan.books.size() + " book(s) have illegal or mismatched genre tags.";
@@ -74,19 +74,17 @@ public class MaintenanceService {
      */
     @Transactional
     public IllegalGenresMaintenanceDto cleanupIllegalGenres() {
-        Plan plan = buildPlan(bookRepository.findAllForGenreMaintenance());
+        Plan plan = buildPlan(bookRepository.findGenreMaintenanceRows());
 
         AtomicLong booksUpdated = new AtomicLong(0);
-        AtomicLong pluralCorrections = new AtomicLong(0);
-        AtomicLong illegalRemoved = new AtomicLong(0);
+        AtomicLong pluralCorrections = new AtomicLong(plan.corrections);
+        AtomicLong illegalRemoved = new AtomicLong(plan.removed);
         List<GenreCleanupSnapshotDto.BookTags> written = new ArrayList<>();
 
         int batchSize = DEFAULT_BATCH_SIZE;
         for (int i = 0; i < plan.books.size(); i += batchSize) {
             int end = Math.min(i + batchSize, plan.books.size());
             for (BookChange change : plan.books.subList(i, end)) {
-                pluralCorrections.addAndGet(countCorrections(change.before, change.after));
-                illegalRemoved.addAndGet(Math.max(0, change.before.size() - change.after.size()));
                 Book book = bookRepository.findById(change.bookId).orElse(null);
                 if (book == null) {
                     continue;
@@ -112,9 +110,12 @@ public class MaintenanceService {
                     null);
         }
 
+        long removed = illegalRemoved.get();
         String message = String.format(
-                "Looked at %d genres. Updated %d. Corrected %d plural or spelling variants. Removed %d tags that were not on the standard list.",
-                plan.scanned, booksUpdated.get(), pluralCorrections.get(), illegalRemoved.get());
+                "Looked at %d books. Updated %d. Corrected %d plural or spelling %s. Removed %d %s that %s not on the standard list.",
+                plan.scanned, booksUpdated.get(), pluralCorrections.get(),
+                pluralCorrections.get() == 1 ? "variant" : "variants",
+                removed, removed == 1 ? "tag" : "tags", removed == 1 ? "was" : "were");
         log.info("Genre maintenance completed: {}", message);
 
         return IllegalGenresMaintenanceDto.builder()
@@ -196,19 +197,34 @@ public class MaintenanceService {
                 .build();
     }
 
-    private Plan buildPlan(List<BookRepository.IllegalGenreTagsProjection> projections) {
-        Map<String, Group> groups = new LinkedHashMap<>();
-        List<BookChange> books = new ArrayList<>();
-        for (BookRepository.IllegalGenreTagsProjection proj : projections) {
-            List<String> original = proj.getTagsList() == null ? List.of() : new ArrayList<>(proj.getTagsList());
-            List<String> cleaned = BookLabels.cleanupTags(original);
-            if (original.equals(cleaned)) {
+    private Plan buildPlan(List<Object[]> rows) {
+        Map<Long, Assembled> byId = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            if (row == null || row[0] == null) {
                 continue;
             }
-            String title = proj.getTitle() == null || proj.getTitle().isBlank()
-                    ? "Book " + proj.getId()
-                    : proj.getTitle();
-            books.add(new BookChange(proj.getId(), title, original, cleaned));
+            Long id = ((Number) row[0]).longValue();
+            String title = row[1] == null ? null : row[1].toString();
+            Assembled book = byId.computeIfAbsent(id, ignored -> new Assembled(id, title));
+            if (row[2] != null) {
+                book.tags.add(row[2].toString());
+            }
+        }
+        Map<String, Group> groups = new LinkedHashMap<>();
+        List<BookChange> books = new ArrayList<>();
+        long corrections = 0;
+        long removed = 0;
+        for (Assembled book : byId.values()) {
+            List<String> original = book.tags;
+            List<String> cleaned = BookLabels.cleanupTags(original);
+            EditCounts edits = editCounts(original);
+            corrections += edits.corrections;
+            removed += edits.removed;
+            if (sameContents(original, cleaned)) {
+                continue;
+            }
+            String title = book.title == null || book.title.isBlank() ? "Book " + book.id : book.title;
+            books.add(new BookChange(book.id, title, new ArrayList<>(original), cleaned));
             Set<String> seen = new HashSet<>();
             for (String tag : original) {
                 if (tag == null || tag.isBlank()) {
@@ -233,7 +249,50 @@ public class MaintenanceService {
                 groups.computeIfAbsent(key, ignored -> group).titles.add(title);
             }
         }
-        return new Plan(projections.size(), books, lines(groups));
+        return new Plan(byId.size(), corrections, removed, books, lines(groups));
+    }
+
+    /**
+     * A tag that is not on the standard list is a removal. A tag that maps to a
+     * different canonical form is a spelling or plural correction. A removal is
+     * not also a correction.
+     */
+    static EditCounts editCounts(List<String> tags) {
+        long corrections = 0;
+        long removed = 0;
+        if (tags == null) {
+            return new EditCounts(0, 0);
+        }
+        for (String tag : tags) {
+            if (tag == null || tag.isBlank()) {
+                continue;
+            }
+            String canonical = BookLabels.getCanonicalLabel(tag);
+            if (canonical == null) {
+                removed++;
+            } else if (!canonical.equals(tag.trim())) {
+                corrections++;
+            }
+        }
+        return new EditCounts(corrections, removed);
+    }
+
+    private static boolean sameContents(List<String> original, List<String> cleaned) {
+        return counts(original).equals(counts(cleaned));
+    }
+
+    private static Map<String, Integer> counts(List<String> tags) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        if (tags == null) {
+            return counts;
+        }
+        for (String tag : tags) {
+            if (tag == null) {
+                continue;
+            }
+            counts.merge(tag, 1, Integer::sum);
+        }
+        return counts;
     }
 
     private static List<GenreChangeLineDto> lines(Map<String, Group> groups) {
@@ -313,26 +372,25 @@ public class MaintenanceService {
                 .build();
     }
 
-    /**
-     * Counts how many tags were changed (for reporting purposes).
-     * Simple heuristic: size difference + any that mapped differently.
-     * Matches behavior from #347.
-     */
-    private long countCorrections(List<String> original, List<String> cleaned) {
-        if (original == null || cleaned == null) {
-            return 0;
+    private static final class Assembled {
+        private final Long id;
+        private final String title;
+        private final List<String> tags = new ArrayList<>();
+
+        private Assembled(Long id, String title) {
+            this.id = id;
+            this.title = title;
         }
-        long corrections = 0;
-        int minSize = Math.min(original.size(), cleaned.size());
-        for (int i = 0; i < minSize; i++) {
-            String origNorm = BookLabels.normalizeTag(original.get(i));
-            String cleanNorm = cleaned.get(i);
-            if (origNorm == null || !origNorm.equals(cleanNorm)) {
-                corrections++;
-            }
+    }
+
+    static final class EditCounts {
+        final long corrections;
+        final long removed;
+
+        EditCounts(long corrections, long removed) {
+            this.corrections = corrections;
+            this.removed = removed;
         }
-        corrections += Math.abs(original.size() - cleaned.size());
-        return corrections;
     }
 
     private static final class Group {
@@ -364,11 +422,16 @@ public class MaintenanceService {
 
     private static final class Plan {
         private final int scanned;
+        private final long corrections;
+        private final long removed;
         private final List<BookChange> books;
         private final List<GenreChangeLineDto> lines;
 
-        private Plan(int scanned, List<BookChange> books, List<GenreChangeLineDto> lines) {
+        private Plan(int scanned, long corrections, long removed, List<BookChange> books,
+                     List<GenreChangeLineDto> lines) {
             this.scanned = scanned;
+            this.corrections = corrections;
+            this.removed = removed;
             this.books = books;
             this.lines = lines;
         }

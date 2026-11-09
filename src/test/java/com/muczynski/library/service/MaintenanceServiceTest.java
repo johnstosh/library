@@ -20,7 +20,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +49,17 @@ class MaintenanceServiceTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Test
+    void aRemovedTagIsNotAlsoASpellingCorrection() {
+        MaintenanceService.EditCounts removed = MaintenanceService.editCounts(List.of("fiction", "devotional"));
+        assertEquals(0, removed.corrections);
+        assertEquals(1, removed.removed);
+
+        MaintenanceService.EditCounts renamed = MaintenanceService.editCounts(List.of("children"));
+        assertEquals(1, renamed.corrections);
+        assertEquals(0, renamed.removed);
+    }
 
     @Test
     void recalcListsDropsBeforeRenamesAndNamesOnlySmallGroups() {
@@ -79,12 +92,20 @@ class MaintenanceServiceTest {
         Book renamed = bookRepository.save(book("GenreAlpha " + token, author, List.of("children")));
         Book dropped = bookRepository.save(book("GenreDrop A " + token, author, List.of("zzz-" + token)));
         Book kept = bookRepository.save(book("GenreReady " + token, author, List.of("fiction")));
+        String illegal = "zzz-" + token;
+        Book mixed = bookRepository.save(book("GenreMixed " + token, author, List.of("fiction", illegal)));
+        MaintenanceService.EditCounts expected = expectedEdits();
 
         IllegalGenresMaintenanceDto cleaned = service.cleanupIllegalGenres();
         assertNotNull(cleaned.getActionId());
+        assertEquals(bookRepository.count(), cleaned.getBooksScanned());
+        assertTrue(cleaned.getMessage().startsWith("Looked at " + cleaned.getBooksScanned() + " books."));
+        assertEquals(expected.corrections, cleaned.getPluralCorrections());
+        assertEquals(expected.removed, cleaned.getIllegalRemoved());
         assertEquals(List.of("childrens"), bookRepository.findById(renamed.getId()).orElseThrow().getTagsList());
         assertEquals(List.of(), bookRepository.findById(dropped.getId()).orElseThrow().getTagsList());
         assertEquals(List.of("fiction"), bookRepository.findById(kept.getId()).orElseThrow().getTagsList());
+        assertEquals(List.of("fiction"), bookRepository.findById(mixed.getId()).orElseThrow().getTagsList());
 
         Book stale = bookRepository.findById(renamed.getId()).orElseThrow();
         stale.setTagsList(new ArrayList<>(List.of("history")));
@@ -106,6 +127,25 @@ class MaintenanceServiceTest {
                         .contentType("application/json")
                         .content("{\"actionId\":1}"))
                 .andExpect(status().isForbidden());
+    }
+
+    private MaintenanceService.EditCounts expectedEdits() {
+        long corrections = 0;
+        long removed = 0;
+        Map<Long, List<String>> tags = new LinkedHashMap<>();
+        for (Object[] row : bookRepository.findGenreMaintenanceRows()) {
+            Long id = ((Number) row[0]).longValue();
+            tags.computeIfAbsent(id, ignored -> new ArrayList<>());
+            if (row[2] != null) {
+                tags.get(id).add(row[2].toString());
+            }
+        }
+        for (List<String> bookTags : tags.values()) {
+            MaintenanceService.EditCounts counts = MaintenanceService.editCounts(bookTags);
+            corrections += counts.corrections;
+            removed += counts.removed;
+        }
+        return new MaintenanceService.EditCounts(corrections, removed);
     }
 
     private static GenreChangeLineDto line(IllegalGenresMaintenanceDto preview, String fragment) {

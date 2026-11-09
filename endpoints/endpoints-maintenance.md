@@ -10,7 +10,7 @@ Recalc. Saves nothing. `booksAffected` is how many books would change. `changes`
 
 ### POST /api/maintenance/illegal-genres/cleanup
 
-Rewrites every book onto the standard genre list. Drops tags that are not on the list. Records the previous tags on `catalog_maintenance_action` and returns `actionId` for Undo. That table is not part of JSON import/export.
+Rewrites every book onto the standard genre list. Drops tags that are not on the list. A book is cleaned once, with all of its tags. The result says how many books were looked at. A removed tag is not also counted as a spelling correction. Records the previous tags on `catalog_maintenance_action` and returns `actionId` for Undo. That table is not part of JSON import/export.
 
 ### POST /api/maintenance/illegal-genres/undo
 

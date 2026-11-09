@@ -392,23 +392,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     List<BookZipImportProjection> findBy();
 
     /**
-     * Lightweight projection for maintenance genre cleanup.
-     * Loads only id and tagsList (ElementCollection). Avoids all @Lob columns
-     * (plotEssay, detailedDescription, freeTextUrl, etc.) and associations.
-     * Critical for memory safety with ~2k book catalog.
+     * One row per genre tag, without loading book essays or other large columns.
+     * A book with no tags has one row and a null tag. The service groups rows by
+     * book id. Selecting the collection itself returned one partial list per tag,
+     * so a book was counted once per genre and cleaned as if that genre were its
+     * whole list.
      */
-    interface IllegalGenreTagsProjection {
-        Long getId();
-        String getTitle();
-        List<String> getTagsList();
-    }
-
-    /**
-     * Returns all books' id, title, and tagsList. Used by MaintenanceService to avoid
-     * loading LOBs or full entities. See comment on BookZipImportProjection.
-     */
-    @Query("SELECT b.id as id, b.title as title, b.tagsList as tagsList FROM Book b")
-    List<IllegalGenreTagsProjection> findAllForGenreMaintenance();
+    @Query("SELECT b.id, b.title, t FROM Book b LEFT JOIN b.tagsList t")
+    List<Object[]> findGenreMaintenanceRows();
 
     /**
      * Lightweight projection for duplicate-title scan (Issue #351).
