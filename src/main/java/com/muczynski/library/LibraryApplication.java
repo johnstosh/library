@@ -30,6 +30,10 @@ import java.util.Set;
 public class LibraryApplication {
 
     public static void main(String[] args) {
+        // Validate every pooled connection on borrow. The default 500ms bypass
+        // hands Spring Session the socket just used to stamp a book, and a
+        // socket the Auth Proxy already closed fails that update.
+        System.setProperty("com.zaxxer.hikari.aliveBypassWindowMs", "0");
         SpringApplication.run(LibraryApplication.class, args);
     }
 
