@@ -77,6 +77,7 @@ class BookServiceUpdateTest {
         book.setAclaLastChecked(checked);
         book.setWccLastChecked(checked);
         book.setMsuLastChecked(checked);
+        book.setFreeTextLastSearched(checked);
         book.setYdlLookupError("ydl down");
         book.setEmuLookupError("emu down");
         book.setAclaLookupError("acla down");
@@ -105,6 +106,7 @@ class BookServiceUpdateTest {
         incoming.setMsuAudioAvailable(false);
         incoming.setMsuPaperAvailable(false);
         incoming.setMsuEbookAvailable(true);
+        incoming.setFreeTextLastSearched(LocalDateTime.of(1999, 1, 1, 0, 0));
 
         bookService.updateBook(1L, incoming);
 
@@ -133,6 +135,7 @@ class BookServiceUpdateTest {
         assertEquals(checked, result.getAclaLastChecked());
         assertEquals(checked, result.getWccLastChecked());
         assertEquals(checked, result.getMsuLastChecked());
+        assertEquals(checked, result.getFreeTextLastSearched());
         assertEquals("ydl down", result.getYdlLookupError());
         assertEquals("emu down", result.getEmuLookupError());
         assertEquals("acla down", result.getAclaLookupError());

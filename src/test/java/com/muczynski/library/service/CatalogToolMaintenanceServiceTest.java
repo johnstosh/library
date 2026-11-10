@@ -238,31 +238,6 @@ class CatalogToolMaintenanceServiceTest {
     }
 
     @Test
-    void freeTextApplyAddsLinksAndUndoRemovesOnlyThoseLinks() {
-        String token = token();
-        Author author = authorRepository.save(author("Author " + token));
-        Book book = book("Linked " + token, author);
-        book.setFreeTextUrl("https://a.example/" + token);
-        book = bookRepository.save(book);
-        String before = book.getFreeTextUrl();
-        String after = before + " https://b.example/" + token;
-
-        CatalogToolApplyResultDto rejected = service.applyFreeText(List.of(
-                change(book.getId(), book.getTitle(), before, "https://b.example/" + token)));
-        assertEquals(0, rejected.getApplied());
-        assertEquals(before, bookRepository.findById(book.getId()).orElseThrow().getFreeTextUrl());
-
-        CatalogToolApplyResultDto applied = service.applyFreeText(List.of(
-                change(book.getId(), book.getTitle(), before, after)));
-        assertEquals(1, applied.getApplied());
-        assertEquals(after, bookRepository.findById(book.getId()).orElseThrow().getFreeTextUrl());
-        assertTrue(applied.getChanges().get(0).getAdded().contains("https://b.example/" + token));
-
-        service.undoFreeText(applied.getActionId());
-        assertEquals(before, bookRepository.findById(book.getId()).orElseThrow().getFreeTextUrl());
-    }
-
-    @Test
     @WithMockUser(authorities = "USER")
     void authorGrokipediaRequiresLibrarian() throws Exception {
         mockMvc.perform(get("/api/maintenance/grokipedia-authors/candidates"))

@@ -910,22 +910,10 @@ export function fetchGrokipediaAuthorUndoable() {
   return api.get<CatalogToolUndoableDto>('/maintenance/grokipedia-authors/undoable')
 }
 
-export function fetchFreeTextCandidateIds() {
-  return api.get<CatalogToolCandidatesDto>('/maintenance/free-text/candidates')
+export function fetchFreeTextCandidateIds(limit: number) {
+  return api.get<CatalogToolCandidatesDto>(`/maintenance/free-text/candidates?limit=${limit}`)
 }
 
-export function previewFreeText(bookIds: number[]) {
-  return api.post<CatalogToolPreviewDto>('/maintenance/free-text/preview', { bookIds })
-}
-
-export function applyFreeText(changes: CatalogToolChangeDto[]) {
-  return api.post<CatalogToolApplyResultDto>('/maintenance/free-text/apply', { changes })
-}
-
-export function undoFreeText(actionId: number) {
-  return api.post<CatalogToolApplyResultDto>('/maintenance/free-text/undo', { actionId })
-}
-
-export function fetchFreeTextUndoable() {
-  return api.get<CatalogToolUndoableDto>('/maintenance/free-text/undoable')
+export function searchFreeText(bookIds: number[]) {
+  return api.post<CatalogToolPreviewDto>('/maintenance/free-text/search', { bookIds })
 }

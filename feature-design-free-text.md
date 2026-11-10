@@ -4,7 +4,9 @@
 
 This feature provides bulk processing of selected books to find links to free online text versions. Each website is handled by a dedicated provider class that uses the specific API or technique appropriate for that site. Lookup tries the book's title and every alternate title with the author's name and each alternate name.
 
-The Books page carousel saves as it goes. Data Management → Maintenance runs the same search on every book, lists each title that would gain a link, and saves only when the librarian clicks Do It. That path adds links and does not replace or remove one. See `endpoints/endpoints-maintenance.md`.
+Each finished search stamps `Book.freeTextLastSearched`. Null means never searched. A hit, a miss, and a per-book error all stamp it. A blank or temporary primary title does not. The Books page shows that time, or "never", on the book view and next to the free-text field on the book form. The Books page chip "Free text not searched recently" keeps never-searched books and books whose stamp is strictly older than the day count (default 90). Search, Prices, and Savings do not show that chip.
+
+The Books page carousel saves as it goes and stamps each selected book. It has no batch-size buttons. Data Management → Maintenance searches 100, 200, 400, or 800 books, never-searched first and then oldest stamp, eight books at a time. Each finished book is stored before the next one. New links are added onto the links already stored. A miss leaves the URL unchanged and still stamps the book. That path does not use Do It or Undo. See `endpoints/endpoints-maintenance.md`.
 
 ## Architecture
 

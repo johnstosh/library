@@ -272,6 +272,7 @@ public class CatalogCriteria {
                 filter.withoutMsuAudio, filter.withoutMsuBook, filter.withoutMsuEbook,
                 "msuAudioAvailable", "msuPaperAvailable", "msuEbookAvailable");
         addLibraryCheckedOlder(cb, book, filter, parts);
+        addFreeTextSearchedOlder(cb, book, filter, parts);
         addLibraryLookupError(cb, book, filter, parts);
         addReadingDifficulty(cb, book, filter, parts);
         if (filter.favoriteBooks) {
@@ -358,6 +359,23 @@ public class CatalogCriteria {
         }
         Path<LocalDateTime> checked = book.get(field);
         parts.add(cb.or(cb.isNull(checked), cb.lessThan(checked, cutoff)));
+    }
+
+    /**
+     * Never searched, or last searched strictly before the cutoff.
+     * Days of 0 or less leaves the filter off. Search and Prices leave the days at 0.
+     */
+    private void addFreeTextSearchedOlder(HibernateCriteriaBuilder cb, Root<Book> book,
+            BookCatalogFilter filter, List<Predicate> parts) {
+        if (filter.freeTextSearchedOlderDays <= 0) {
+            return;
+        }
+        LocalDateTime cutoff = filter.freeTextSearchedOlderCutoff;
+        if (cutoff == null) {
+            cutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(filter.freeTextSearchedOlderDays);
+        }
+        Path<LocalDateTime> searched = book.get("freeTextLastSearched");
+        parts.add(cb.or(cb.isNull(searched), cb.lessThan(searched, cutoff)));
     }
 
     /**

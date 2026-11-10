@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import type { BookChipFilters } from '@/utils/bookChipFilters'
 import {
+  DEFAULT_FREE_TEXT_SEARCHED_OLDER_DAYS,
   DEFAULT_LIBRARY_CHECKED_OLDER_DAYS,
   LIBRARY_CHECKED_OLDER_CODES,
   libraryCheckedOlderCode,
@@ -101,6 +102,11 @@ interface BookFiltersProps {
   /** Books, Search, and Prices pass these. Savings and Authors do not. */
   onLibraryCheckedOlderChange?: (library: string, days: number) => void
   onLibraryLookupErrorChange?: (library: string) => void
+  /** Books page only. Search, Prices, and Savings leave this off. */
+  showFreeTextAge?: boolean
+  /** Null means the free-text age chip is off. */
+  freeTextSearchedOlderDays?: number | null
+  onFreeTextSearchedOlderChange?: (on: boolean, days: number) => void
 }
 
 export function BookFilters({
@@ -113,12 +119,19 @@ export function BookFilters({
   libraryLookupError = '',
   onLibraryCheckedOlderChange,
   onLibraryLookupErrorChange,
+  showFreeTextAge = false,
+  freeTextSearchedOlderDays = null,
+  onFreeTextSearchedOlderChange,
 }: BookFiltersProps) {
   const toggle = (chip: keyof BookChipFilters) => onToggle(chip)
   const selectedLibrary = libraryCheckedOlderCode(libraryCheckedOlder)
   const selectedErrorLibrary = libraryCheckedOlderCode(libraryLookupError)
   const days = libraryCheckedOlderDays >= 1 ? libraryCheckedOlderDays : DEFAULT_LIBRARY_CHECKED_OLDER_DAYS
   const showLibraryAge = showAvailabilityFilters && onLibraryCheckedOlderChange != null
+  const freeTextOn = freeTextSearchedOlderDays != null && freeTextSearchedOlderDays >= 1
+  const freeTextDays = freeTextOn && freeTextSearchedOlderDays != null
+    ? freeTextSearchedOlderDays
+    : DEFAULT_FREE_TEXT_SEARCHED_OLDER_DAYS
 
   return (
     <div className="space-y-2">
@@ -230,6 +243,39 @@ export function BookFilters({
               </select>
             </label>
           )}
+        </div>
+      )}
+
+      {showFreeTextAge && onFreeTextSearchedOlderChange != null && (
+        <div className="flex flex-wrap items-center gap-2" data-test="free-text-searched-older">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={freeTextOn}
+              onChange={(e) => onFreeTextSearchedOlderChange(e.target.checked, freeTextDays)}
+              data-test="filter-free-text-searched-older"
+            />
+            Free text not searched recently
+          </label>
+          <label className="inline-flex items-center gap-1 text-sm text-gray-600">
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={freeTextDays}
+              disabled={!freeTextOn}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10)
+                if (Number.isFinite(n) && n >= 1) {
+                  onFreeTextSearchedOlderChange(true, n)
+                }
+              }}
+              className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+              data-test="filter-free-text-searched-older-days"
+              aria-label="Free text not searched recently days"
+            />
+            days
+          </label>
         </div>
       )}
 

@@ -335,7 +335,7 @@ public class BookService {
         book.setElectronicResource(bookDto.getElectronicResource());
         book.setStatusReason(bookDto.getStatusReason());
         // False is a real edit. Null means the caller did not send the flag.
-        // Last-checked times and lookup errors stay as the lookup services wrote them.
+        // Last-checked times, freeTextLastSearched, and lookup errors stay as the lookup services wrote them.
         copyAvailability(bookDto.getYdlAudioAvailable(), book::setYdlAudioAvailable);
         copyAvailability(bookDto.getYdlPaperAvailable(), book::setYdlPaperAvailable);
         copyAvailability(bookDto.getYdlEbookAvailable(), book::setYdlEbookAvailable);

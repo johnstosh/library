@@ -113,6 +113,8 @@ export interface BookDto {
   detailedDescription?: string
   grokipediaUrl?: string
   freeTextUrl?: string
+  /** When a free-text search last finished. Absent means never searched. */
+  freeTextLastSearched?: string
   dateAddedToLibrary?: string
   status: BookStatus
   statusReason?: string

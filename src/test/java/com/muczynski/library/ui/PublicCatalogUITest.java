@@ -100,6 +100,7 @@ public class PublicCatalogUITest {
         assertThat(page.locator("[data-test='book-view-wcc-lookup']")).isVisible();
         assertThat(page.locator("[data-test='book-view-msu-lookup']")).isVisible();
         assertThat(page.locator("[data-test='ydl-last-checked']")).containsText("never");
+        assertThat(page.locator("[data-test='free-text-last-searched']")).containsText("never");
         assertThat(page.locator("[data-test='emu-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='acla-last-checked']")).containsText("never");
         assertThat(page.locator("[data-test='wcc-last-checked']")).containsText("never");

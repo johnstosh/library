@@ -28,9 +28,11 @@ The latest Clean Genres that has not been undone. `actionId` is null when there 
 
 Each book tool covers every book, including withdrawn copies. It does not use the Books page filters. The author Grokipedia tool covers every author.
 
-Recalc lists the changes and saves nothing. Do It writes that list. Undo puts the previous values back. An undo is a new row in `catalog_maintenance_action` that points at the Do It row. Rows are not updated, deleted, or included in JSON import/export.
+Chicago and both Grokipedia tools: Recalc lists the changes and saves nothing. Do It writes that list. Undo puts the previous values back. An undo is a new row in `catalog_maintenance_action` that points at the Do It row. Rows are not updated, deleted, or included in JSON import/export.
 
-Grokipedia and free-text Recalc talk to the network, so the page sends book ids in batches (at most 25 Grokipedia books, or 10 free-text books, per request). Chicago title case is one request.
+Free text does not use Recalc, Do It, or Undo. It searches 100, 200, 400, or 800 books, never-searched first and then oldest `freeTextLastSearched`. Each request searches at most 10 books and stores every finished book before the next one, including a miss. A new search does not write a `catalog_maintenance_action` row. Older free-text rows already in that table are left as they are.
+
+Grokipedia Recalc talks to the network, so the page sends ids in batches of at most 25. Chicago title case is one request.
 
 ### POST /api/maintenance/chicago-titles/preview
 
@@ -104,30 +106,16 @@ Puts the previous author URLs back.
 
 The latest author Grokipedia Do It that has not been undone.
 
-### GET /api/maintenance/free-text/candidates
+### GET /api/maintenance/free-text/candidates?limit=
 
-Every book id, in id order.
+`limit` must be 100, 200, 400, or 800. Anything else is HTTP 400 with `Search 100, 200, 400, or 800 books.`
 
-### POST /api/maintenance/free-text/preview
+Returns that many book ids. Never-searched books come first, then the oldest `freeTextLastSearched`, then the lowest id. Blank and temporary primary titles are left out before the limit is applied. Alternate titles do not change the order. The response is `{ "bookIds": [ ... ] }`.
+
+### POST /api/maintenance/free-text/search
 
 Body: `{ "bookIds": [1, 2] }`
 
-Same search as Find Links to Free Online Text, without saving. A change is returned only when the merge would add at least one new URL. Existing links stay. `added` lists the new URLs. `after` is the field Do It would store.
+Searches at most 10 books. Each book is loaded as id, primary title, alternate titles, free-text URL, author name, and author alternate names. The lookup uses those titles and names. A new URL is merged onto the URLs already stored. The merged URL and `freeTextLastSearched` commit together. A miss or a per-book error commits the timestamp and leaves the URL unchanged. A blank or temporary primary title is skipped and not stamped. The response lists added links in `changes` and failed books in `skipped`. Links in that response are already stored.
 
-### POST /api/maintenance/free-text/apply
-
-Body: `{ "changes": [ { "bookId", "before", "after" } ] }`
-
-Writes `after` only when the stored field is still `before` and `after` is that field plus new links. A value that would drop or replace a link is skipped.
-
-### POST /api/maintenance/free-text/undo
-
-Body: `{ "actionId" }`
-
-Puts the previous free-text field back, which removes only the links Do It added. Leaves a field that has changed since.
-
-### GET /api/maintenance/free-text/undoable
-
-Same shape as the Chicago undoable endpoint.
-
-The Books page carousel still runs these tools on the selected books and saves as it goes. These maintenance endpoints are the whole-catalog preview.
+The Books page still looks up the selected books one id at a time and stamps `freeTextLastSearched` the same way. It has no 100/200/400/800 control.

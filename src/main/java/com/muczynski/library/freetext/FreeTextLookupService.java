@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -83,32 +84,68 @@ public class FreeTextLookupService {
 
         String authorName = book.getAuthor() != null ? book.getAuthor().getName() : null;
         String primaryTitle = book.getTitle();
-        Discovery discovery = discoverUrls(titles, AuthorNames.lookupNames(book.getAuthor()));
-        if (discovery.getUrls() != null && !discovery.getUrls().isBlank()) {
-            String merged = applyFoundUrls(book, discovery.getUrls());
-            log.info("Found free text for book {}: {} via {}", bookId, merged, discovery.getProviderName());
+        try {
+            Discovery discovery = discoverUrls(titles, AuthorNames.lookupNames(book.getAuthor()));
+            if (discovery.getUrls() != null && !discovery.getUrls().isBlank()) {
+                String merged = applyFoundUrls(book, discovery.getUrls());
+                stampSearch(book);
+                log.info("Found free text for book {}: {} via {}", bookId, merged, discovery.getProviderName());
+                return FreeTextBulkLookupResultDto.builder()
+                        .bookId(bookId)
+                        .bookTitle(primaryTitle)
+                        .authorName(authorName)
+                        .success(true)
+                        .freeTextUrl(merged)
+                        .providerName(discovery.getProviderName())
+                        .providersSearched(discovery.getProvidersSearched())
+                        .build();
+            }
+
+            stampSearch(book);
+            log.info("No free text found for book {} '{}' after searching {} providers with {} titles",
+                    bookId, primaryTitle, discovery.getProvidersSearched().size(), titles.size());
+
             return FreeTextBulkLookupResultDto.builder()
                     .bookId(bookId)
                     .bookTitle(primaryTitle)
                     .authorName(authorName)
-                    .success(true)
-                    .freeTextUrl(merged)
-                    .providerName(discovery.getProviderName())
+                    .success(false)
+                    .errorMessage("Not found in any provider")
                     .providersSearched(discovery.getProvidersSearched())
                     .build();
+        } catch (RuntimeException e) {
+            log.warn("Free-text lookup failed for book {}: {}", bookId, e.getMessage());
+            try {
+                stampSearch(book);
+            } catch (RuntimeException stampError) {
+                log.warn("Could not stamp free-text search for book {}: {}", bookId, stampError.getMessage());
+            }
+            return FreeTextBulkLookupResultDto.builder()
+                    .bookId(bookId)
+                    .bookTitle(primaryTitle)
+                    .authorName(authorName)
+                    .success(false)
+                    .errorMessage("Error: " + e.getMessage())
+                    .providersSearched(List.of())
+                    .build();
         }
+    }
 
-        log.info("No free text found for book {} '{}' after searching {} providers with {} titles",
-                bookId, primaryTitle, discovery.getProvidersSearched().size(), titles.size());
-
-        return FreeTextBulkLookupResultDto.builder()
-                .bookId(bookId)
-                .bookTitle(primaryTitle)
-                .authorName(authorName)
-                .success(false)
-                .errorMessage("Not found in any provider")
-                .providersSearched(discovery.getProvidersSearched())
-                .build();
+    /**
+     * Commit one finished maintenance search in its own transaction.
+     * A URL change and the timestamp commit together. A miss stores the timestamp
+     * and leaves the URL alone. Call this through the Spring proxy so
+     * {@code REQUIRES_NEW} actually starts. A blank or temporary primary title
+     * is not stamped.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordFreeTextSearch(Long bookId, String mergedUrl, boolean urlChanged) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        if (urlChanged) {
+            bookRepository.updateFreeTextFound(bookId, mergedUrl, now);
+        } else {
+            bookRepository.updateFreeTextSearched(bookId, now);
+        }
     }
 
     /**
@@ -216,8 +253,9 @@ public class FreeTextLookupService {
     }
 
     /**
-     * Union {@code foundUrls} into the book's existing freeTextUrl and persist
-     * only when the stored field actually changed. Existing links are never dropped.
+     * Union {@code foundUrls} into the stored field. Does not save. The caller
+     * stamps {@code freeTextLastSearched} and saves once, including a miss.
+     * Existing links are never dropped.
      *
      * @return the freeTextUrl value after the merge
      */
@@ -225,10 +263,15 @@ public class FreeTextLookupService {
         String merged = FreeTextLookupCache.mergeUrls(book.getFreeTextUrl(), foundUrls);
         if (!Objects.equals(merged, book.getFreeTextUrl())) {
             book.setFreeTextUrl(merged);
-            book.setLastModified(LocalDateTime.now());
-            bookRepository.save(book);
+            book.setLastModified(LocalDateTime.now(ZoneOffset.UTC));
         }
         return merged;
+    }
+
+    /** Record that this search finished, then save the managed book. */
+    private void stampSearch(Book book) {
+        book.setFreeTextLastSearched(LocalDateTime.now(ZoneOffset.UTC));
+        bookRepository.save(book);
     }
 
     /**

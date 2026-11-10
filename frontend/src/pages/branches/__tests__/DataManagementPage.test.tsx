@@ -29,10 +29,7 @@ const {
   undoGrokipediaAuthors,
   fetchGrokipediaAuthorUndoable,
   fetchFreeTextCandidateIds,
-  previewFreeText,
-  applyFreeText,
-  undoFreeText,
-  fetchFreeTextUndoable,
+  searchFreeText,
 } = vi.hoisted(() => ({
   dismissDuplicatePair: vi.fn().mockResolvedValue(undefined),
   restoreDuplicatePair: vi.fn().mockResolvedValue(undefined),
@@ -154,30 +151,13 @@ const {
   }),
   fetchGrokipediaAuthorUndoable: vi.fn().mockResolvedValue({ actionId: null }),
   fetchFreeTextCandidateIds: vi.fn().mockResolvedValue({ bookIds: [9] }),
-  previewFreeText: vi.fn().mockResolvedValue({
+  searchFreeText: vi.fn().mockResolvedValue({
     booksScanned: 1,
     changeCount: 1,
     changes: [{ bookId: 9, title: 'The Hobbit', before: 'https://a.example/old', after: 'https://a.example/old https://b.example/new', added: 'https://b.example/new' }],
     skipped: [],
-    message: '1 book would gain a free-text link.',
+    message: '1 book gained a free-text link.',
   }),
-  applyFreeText: vi.fn().mockResolvedValue({
-    actionId: 61,
-    applied: 1,
-    skipped: 0,
-    message: 'Added free-text links on 1 book.',
-    changes: [{ bookId: 9, title: 'The Hobbit', added: 'https://b.example/new' }],
-    skippedChanges: [],
-  }),
-  undoFreeText: vi.fn().mockResolvedValue({
-    actionId: 62,
-    applied: 1,
-    skipped: 0,
-    message: 'Restored 1 book.',
-    changes: [],
-    skippedChanges: [],
-  }),
-  fetchFreeTextUndoable: vi.fn().mockResolvedValue({ actionId: null }),
 }))
 
 vi.mock('@/api/data-management', () => ({
@@ -326,10 +306,7 @@ vi.mock('@/api/data-management', () => ({
   undoGrokipediaAuthors,
   fetchGrokipediaAuthorUndoable,
   fetchFreeTextCandidateIds,
-  previewFreeText,
-  applyFreeText,
-  undoFreeText,
-  fetchFreeTextUndoable,
+  searchFreeText,
 }))
 
 vi.mock('@/api/branches', () => ({
@@ -698,17 +675,25 @@ describe('DataManagementPage catalog tools (Issue #386)', () => {
   it('shows Recalc, Do It, and Undo for the three tools, with Do It and Undo off', () => {
     renderPage()
 
-    for (const key of ['grokipedia', 'grokipedia-authors', 'chicago', 'free-text']) {
+    for (const key of ['grokipedia', 'grokipedia-authors', 'chicago']) {
       const row = screen.getByTestId(`maintenance-row-${key}`)
       expect(within(row).getByText('Recalc')).toBeInTheDocument()
       expect(screen.getByTestId(`apply-${key}`)).toBeDisabled()
       expect(screen.getByTestId(`undo-${key}`)).toBeDisabled()
       expect(screen.getByTestId(`maintenance-${key}-count`)).toHaveTextContent('-')
     }
-    expect(screen.getByText(/each alternate title/)).toBeInTheDocument()
+    expect(screen.getByTestId('search-free-text')).toBeInTheDocument()
+    expect(screen.getByTestId('free-text-limit')).toHaveValue('100')
+    expect(screen.queryByTestId('recalc-free-text')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('apply-free-text')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('undo-free-text')).not.toBeInTheDocument()
+    const freeText = screen.getByTestId('maintenance-row-free-text')
+    expect(within(freeText).getByText(/each alternate title/)).toBeInTheDocument()
+    expect(within(freeText).getByText(/never been searched/)).toBeInTheDocument()
+    expect(within(screen.getByTestId('maintenance-row-grokipedia')).getByText(/each alternate title/)).toBeInTheDocument()
     expect(screen.getByText(/each alternate name/)).toBeInTheDocument()
     expect(screen.getByText(/lists each title that will change/)).toBeInTheDocument()
-    expect(screen.getByText(/Does not replace or remove a link/)).toBeInTheDocument()
+    expect(within(freeText).getByText(/Does not replace or remove a link/)).toBeInTheDocument()
   })
 
   it('lists every Chicago title change and the title that will be left alone', async () => {
@@ -775,24 +760,41 @@ describe('DataManagementPage catalog tools (Issue #386)', () => {
     ])
   })
 
-  it('lists the free-text link that would be added and does not replace the old one', async () => {
+  it('stores the free-text link it finds and does not replace the old one', async () => {
     renderPage()
 
-    fireEvent.click(screen.getByTestId('recalc-free-text'))
+    fireEvent.click(screen.getByTestId('search-free-text'))
 
     expect(await screen.findByTestId('maintenance-free-text-change-9')).toHaveTextContent(
       'The Hobbit: add https://b.example/new',
     )
     expect(screen.getByTestId('maintenance-free-text-change-9')).not.toHaveTextContent('replace')
-    fireEvent.click(screen.getByTestId('apply-free-text'))
-    await waitFor(() => {
-      expect(applyFreeText).toHaveBeenCalledWith([
-        expect.objectContaining({
-          bookId: 9,
-          added: 'https://b.example/new',
-          before: 'https://a.example/old',
-        }),
-      ])
-    })
+    expect(fetchFreeTextCandidateIds).toHaveBeenCalledWith(100)
+    expect(searchFreeText).toHaveBeenCalledWith([9])
+    expect(screen.queryByTestId('apply-free-text')).not.toBeInTheDocument()
+  })
+
+  it('keeps links already stored when a later free-text batch fails', async () => {
+    const ids = Array.from({ length: 9 }, (_, index) => index + 1)
+    searchFreeText.mockClear()
+    fetchFreeTextCandidateIds.mockClear()
+    fetchFreeTextCandidateIds.mockResolvedValueOnce({ bookIds: ids })
+    searchFreeText
+      .mockResolvedValueOnce({
+        booksScanned: 8,
+        changeCount: 1,
+        changes: [{ bookId: 1, title: 'The Hobbit', added: 'https://b.example/new', before: 'https://a.example/old' }],
+        skipped: [],
+      })
+      .mockRejectedValueOnce(new Error('Service Unavailable'))
+    renderPage()
+
+    fireEvent.click(screen.getByTestId('search-free-text'))
+
+    expect(await screen.findByTestId('maintenance-free-text-change-1')).toHaveTextContent(
+      'The Hobbit: add https://b.example/new',
+    )
+    expect(screen.getByText('Service Unavailable')).toBeInTheDocument()
+    expect(searchFreeText).toHaveBeenCalledTimes(2)
   })
 })

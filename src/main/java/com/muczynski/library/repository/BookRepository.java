@@ -455,4 +455,49 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     @Query("SELECT b.id FROM Book b ORDER BY b.id ASC")
     List<Long> findAllIdsOrderById();
+
+    /**
+     * Ordering rows for the free-text maintenance search.
+     * Primary title and the last-searched time only. Essays, URLs, and authors stay out.
+     * Null last-searched sorts before any stored time, then oldest first.
+     */
+    interface FreeTextCandidateRow {
+        Long getId();
+        String getTitle();
+        LocalDateTime getFreeTextLastSearched();
+    }
+
+    @Query("SELECT b.id as id, b.title as title, b.freeTextLastSearched as freeTextLastSearched "
+            + "FROM Book b ORDER BY b.freeTextLastSearched ASC NULLS FIRST, b.id ASC")
+    List<FreeTextCandidateRow> findFreeTextCandidates();
+
+    /**
+     * Search rows for one free-text batch. Scalars only, so plot essays and
+     * author biographies are not loaded. Alternate titles and author alternate
+     * names are included because the lookup searches them.
+     */
+    interface FreeTextSearchRow {
+        Long getId();
+        String getTitle();
+        List<String> getAlternateTitles();
+        String getFreeTextUrl();
+        String getAuthorName();
+        List<String> getAuthorAlternateNames();
+    }
+
+    @Query("SELECT b.id as id, b.title as title, b.alternateTitles as alternateTitles, "
+            + "b.freeTextUrl as freeTextUrl, a.name as authorName, a.alternateNames as authorAlternateNames "
+            + "FROM Book b LEFT JOIN b.author a WHERE b.id IN :ids")
+    List<FreeTextSearchRow> findFreeTextSearchRows(@Param("ids") java.util.Collection<Long> ids);
+
+    /** Stamp a finished search that did not change the stored links. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Book b SET b.freeTextLastSearched = :searchedAt WHERE b.id = :id")
+    int updateFreeTextSearched(@Param("id") Long id, @Param("searchedAt") LocalDateTime searchedAt);
+
+    /** Store a merged free-text URL and stamp the search that found it. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Book b SET b.freeTextUrl = :url, b.freeTextLastSearched = :searchedAt, b.lastModified = :searchedAt "
+            + "WHERE b.id = :id")
+    int updateFreeTextFound(@Param("id") Long id, @Param("url") String url, @Param("searchedAt") LocalDateTime searchedAt);
 }

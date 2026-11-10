@@ -165,6 +165,9 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-library-checked-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-library-checked-older-days']")).isVisible();
         assertThat(page.locator("[data-test='filter-library-lookup-error']")).isVisible();
+        assertThat(page.locator("[data-test='filter-free-text-searched-older']")).isVisible();
+        assertThat(page.locator("[data-test='free-text-searched-older']")).containsText("Free text not searched recently");
+        assertThat(page.locator("[data-test='filter-free-text-searched-older-days']")).isDisabled();
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).isVisible();
         assertThat(page.locator("[data-test='filter-title-not-chicago']")).isVisible();
         assertThat(page.locator("[data-test='filter-title-not-chicago']")).containsText("Title not Chicago case");
@@ -199,6 +202,12 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='table-branch-name'] [data-test='app-sub-name']")).hasText("Sacred Heart Library System");
         assertThat(page.locator("[data-test='bulk-lookup-ydl']")).not().isVisible();
         assertThat(page.locator("[data-test='bulk-lookup-acla']")).not().isVisible();
+
+        page.locator("[data-test='filter-free-text-searched-older']").scrollIntoViewIfNeeded();
+        page.click("[data-test='filter-free-text-searched-older']");
+        page.waitForURL(url -> url.contains("freeTextSearchedOlderDays=90") && url.contains("mostRecent=false"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(page.locator("[data-test='filter-free-text-searched-older-days']")).isEnabled();
     }
 
     @Test
@@ -248,6 +257,7 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='book-loc']")).isVisible();
         assertThat(page.locator("[data-test='book-status']")).isVisible();
         assertThat(page.locator("[data-test='book-form-submit']")).isVisible();
+        assertThat(page.locator("[data-test='book-free-text-last-searched']")).containsText("never");
     }
 
     @Test
@@ -346,6 +356,7 @@ public class BooksUITest {
 
         // Verify we're editing the right book
         assertThat(page.locator("[data-test='book-title']")).hasValue("Initial Book");
+        assertThat(page.locator("[data-test='book-free-text-last-searched']")).containsText("never");
 
         // Update the title and two alternate titles
         page.fill("[data-test='book-title']", "Updated Book Title");
@@ -764,6 +775,7 @@ public class BooksUITest {
         // Verify last modified and loan count fields are visible
         assertThat(page.locator("[data-test='book-last-modified']")).isVisible();
         assertThat(page.locator("[data-test='book-loan-count']")).isVisible();
+        assertThat(page.locator("[data-test='free-text-last-searched']")).containsText("never");
     }
 
     @Test

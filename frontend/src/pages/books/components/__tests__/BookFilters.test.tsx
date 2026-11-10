@@ -36,6 +36,7 @@ describe('BookFilters', () => {
     expect(screen.getByTestId('filter-without-acla-ebook')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-library-checked-older')).not.toBeInTheDocument()
     expect(screen.queryByTestId('filter-library-lookup-error')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('filter-free-text-searched-older')).not.toBeInTheDocument()
   })
 
   it('shows the library data age filter when the page opts in', () => {
@@ -67,6 +68,31 @@ describe('BookFilters', () => {
     expect(errorSelect).toHaveValue('')
     fireEvent.change(errorSelect, { target: { value: 'WCC' } })
     expect(onLibraryLookupErrorChange).toHaveBeenCalledWith('WCC')
+    expect(screen.queryByTestId('filter-free-text-searched-older')).not.toBeInTheDocument()
+  })
+
+  it('shows the free-text age chip only when the books page opts in', () => {
+    const onFreeTextSearchedOlderChange = vi.fn()
+    const props = {
+      chips,
+      onToggle: () => {},
+      showFreeTextAge: true,
+      onFreeTextSearchedOlderChange,
+    }
+    const view = render(<BookFilters {...props} freeTextSearchedOlderDays={null} />)
+
+    const box = screen.getByTestId('filter-free-text-searched-older')
+    expect(box).not.toBeChecked()
+    expect(screen.getByTestId('filter-free-text-searched-older-days')).toBeDisabled()
+    expect(screen.getByTestId('filter-free-text-searched-older-days')).toHaveValue(90)
+
+    fireEvent.click(box)
+    expect(onFreeTextSearchedOlderChange).toHaveBeenCalledWith(true, 90)
+
+    view.rerender(<BookFilters {...props} freeTextSearchedOlderDays={90} />)
+    expect(screen.getByTestId('filter-free-text-searched-older-days')).toBeEnabled()
+    fireEvent.change(screen.getByTestId('filter-free-text-searched-older-days'), { target: { value: '30' } })
+    expect(onFreeTextSearchedOlderChange).toHaveBeenCalledWith(true, 30)
   })
 
   it('hides cataloger chips when showCatalogerFilters is false', () => {

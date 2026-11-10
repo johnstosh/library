@@ -38,6 +38,8 @@ export interface BookListFilters {
   libraryCheckedOlderDays?: number
   /** YDL, EMU, ACLA, WCC, or MSU. Omitted or unknown leaves the lookup-error filter off. */
   libraryLookupError?: string
+  /** Books page only. Omitted or below 1 leaves the free-text age filter off. */
+  freeTextSearchedOlderDays?: number | null
   chips: BookChipFilters
 }
 
@@ -124,6 +126,9 @@ export function bookListFilterQuery(filters: BookListFilters): string {
   }
   const lookupError = libraryCheckedOlderCode(filters.libraryLookupError)
   if (lookupError) params.set('libraryLookupError', lookupError)
+  if (filters.freeTextSearchedOlderDays != null && filters.freeTextSearchedOlderDays >= 1) {
+    params.set('freeTextSearchedOlderDays', String(filters.freeTextSearchedOlderDays))
+  }
   return params.toString()
 }
 

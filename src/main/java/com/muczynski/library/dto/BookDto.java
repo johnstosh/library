@@ -31,6 +31,8 @@ public class BookDto {
     private String detailedDescription;
     private String grokipediaUrl;
     private String freeTextUrl;
+    /** When a free-text search last finished. Null means never searched. */
+    private LocalDateTime freeTextLastSearched;
     private LocalDateTime dateAddedToLibrary;
     private LocalDateTime lastModified;
     private BookStatus status;

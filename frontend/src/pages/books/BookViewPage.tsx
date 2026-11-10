@@ -350,6 +350,9 @@ export function BookViewPage() {
                   </div>
                 </div>
               )}
+              <p className="text-xs text-gray-500" data-test="free-text-last-searched">
+                Last searched: {book.freeTextLastSearched ? formatDateTime(book.freeTextLastSearched) : 'never'}
+              </p>
               <div>
                 <p className="text-sm font-medium text-gray-500">Electronic Resource</p>
                 <p className="text-gray-900" data-test="book-electronic-resource">

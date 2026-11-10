@@ -101,6 +101,7 @@ public final class DuplicateTitleSnapshots {
         private String detailedDescription;
         private String grokipediaUrl;
         private String freeTextUrl;
+        private LocalDateTime freeTextLastSearched;
         private LocalDateTime dateAddedToLibrary;
         private LocalDateTime lastModified;
         private String status;
@@ -152,6 +153,7 @@ public final class DuplicateTitleSnapshots {
             state.detailedDescription = book.getDetailedDescription();
             state.grokipediaUrl = book.getGrokipediaUrl();
             state.freeTextUrl = book.getFreeTextUrl();
+            state.freeTextLastSearched = book.getFreeTextLastSearched();
             state.dateAddedToLibrary = book.getDateAddedToLibrary();
             state.lastModified = book.getLastModified();
             state.status = book.getStatus() == null ? null : book.getStatus().name();
