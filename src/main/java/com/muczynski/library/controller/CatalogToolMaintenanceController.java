@@ -19,13 +19,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 /**
- * Data Management catalog tools (Issue #386). Recalc previews every book.
- * Do It writes the preview. Undo restores the previous values.
+ * Data Management catalog tools (Issue #386). Chicago and Grokipedia: Recalc
+ * previews, Do It writes, Undo restores. Free text searches a capped oldest-first
+ * prefix and stores each finished book before the next batch.
  */
 @Slf4j
 @RestController
@@ -127,33 +129,26 @@ public class CatalogToolMaintenanceController {
 
     @GetMapping("/free-text/candidates")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<CatalogToolCandidatesDto> freeTextCandidates() {
-        return ResponseEntity.ok(catalogToolMaintenanceService.freeTextCandidateIds());
+    public ResponseEntity<CatalogToolCandidatesDto> freeTextCandidates(@RequestParam int limit) {
+        return ResponseEntity.ok(catalogToolMaintenanceService.freeTextCandidateIds(limit));
     }
 
-    @PostMapping("/free-text/preview")
+    @PostMapping("/free-text/search")
     @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<CatalogToolPreviewDto> previewFreeText(@RequestBody(required = false) CatalogToolCandidatesDto request) {
-        return preview("Free text", () -> catalogToolMaintenanceService.previewFreeText(
-                request == null ? List.of() : request.getBookIds()));
-    }
-
-    @PostMapping("/free-text/apply")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<CatalogToolApplyResultDto> applyFreeText(@RequestBody(required = false) CatalogToolApplyRequestDto request) {
-        return apply("Free text", () -> catalogToolMaintenanceService.applyFreeText(changes(request)));
-    }
-
-    @PostMapping("/free-text/undo")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<CatalogToolApplyResultDto> undoFreeText(@RequestBody CatalogToolUndoRequestDto request) {
-        return apply("Free text undo", () -> catalogToolMaintenanceService.undoFreeText(request.getActionId()));
-    }
-
-    @GetMapping("/free-text/undoable")
-    @PreAuthorize("hasAuthority('LIBRARIAN')")
-    public ResponseEntity<CatalogToolUndoableDto> undoableFreeText() {
-        return ResponseEntity.ok(catalogToolMaintenanceService.undoableFreeText());
+    public ResponseEntity<CatalogToolPreviewDto> searchFreeText(
+            @RequestBody(required = false) CatalogToolCandidatesDto request) {
+        try {
+            return ResponseEntity.ok(catalogToolMaintenanceService.searchFreeText(
+                    request == null ? List.of() : request.getBookIds()));
+        } catch (Exception e) {
+            log.error("Free text search failed", e);
+            return ResponseEntity.ok(CatalogToolPreviewDto.builder()
+                    .error("Search failed: " + e.getMessage())
+                    .message("Internal error during search. Check logs for details.")
+                    .changes(List.of())
+                    .skipped(List.of())
+                    .build());
+        }
     }
 
     private ResponseEntity<CatalogToolPreviewDto> preview(String tool, PreviewCall call) {

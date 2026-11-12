@@ -141,6 +141,7 @@ public class SearchUITest {
         assertThat(page.locator("[data-test='filter-most-recent']")).containsText("Recent Arrivals");
         assertThat(page.locator("[data-test='filter-library-checked-older']")).isVisible();
         assertThat(page.locator("[data-test='filter-library-checked-older-days']")).isVisible();
+        assertThat(page.locator("[data-test='filter-free-text-searched-older']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-library-lookup-error']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='filter-without-grokipedia']")).hasCount(0);

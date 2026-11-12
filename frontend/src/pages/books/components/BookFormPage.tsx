@@ -31,7 +31,7 @@ import { useLookupSingleWcc } from '@/api/wcc-lookup'
 import { useLookupSingleMsu } from '@/api/msu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
-import { parseISODateSafe } from '@/utils/formatters'
+import { formatDateTime, parseISODateSafe } from '@/utils/formatters'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
 import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
@@ -1315,6 +1315,9 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">Space-separated list of URLs where free online text can be found</p>
+          <p className="text-xs text-gray-500 mt-1" data-test="book-free-text-last-searched">
+            Last searched: {book?.freeTextLastSearched ? formatDateTime(book.freeTextLastSearched) : 'never'}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

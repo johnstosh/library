@@ -5,22 +5,19 @@ import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import {
   applyChicago,
-  applyFreeText,
   applyGrokipedia,
   applyGrokipediaAuthors,
   fetchChicagoUndoable,
   fetchFreeTextCandidateIds,
-  fetchFreeTextUndoable,
   fetchGrokipediaAuthorCandidateIds,
   fetchGrokipediaCandidateIds,
   fetchGrokipediaAuthorUndoable,
   fetchGrokipediaUndoable,
   previewChicago,
-  previewFreeText,
   previewGrokipedia,
   previewGrokipediaAuthors,
+  searchFreeText,
   undoChicago,
-  undoFreeText,
   undoGrokipedia,
   undoGrokipediaAuthors,
   type CatalogToolApplyResultDto,
@@ -373,24 +370,7 @@ const chicagoTool: ToolCopy = {
   undoable: fetchChicagoUndoable,
 }
 
-const freeTextTool: ToolCopy = {
-  testKey: 'free-text',
-  name: 'Find Links to Free Online Text',
-  description:
-    'Searches every book for a free online text, including withdrawn copies. Adds any new links onto the links already stored. Does not replace or remove a link. Recalc lists every title that would gain a link and the links that would be added. Do It writes that list. Undo removes only the links Do It added.',
-  formatChange: (change) => `${bookLabel(change)}: add ${change.added || change.after}`,
-  recalc: (onProgress) => previewInBatches(
-    fetchFreeTextCandidateIds,
-    previewFreeText,
-    FREE_TEXT_BATCH,
-    'No books to check.',
-    (count) => `${count} ${count === 1 ? 'book would gain a free-text link.' : 'books would gain a free-text link.'}`,
-    onProgress,
-  ),
-  apply: applyFreeText,
-  undo: undoFreeText,
-  undoable: fetchFreeTextUndoable,
-}
+const FREE_TEXT_LIMITS = [100, 200, 400, 800] as const
 
 export function GrokipediaMaintenanceRow() {
   return <CatalogToolRow tool={grokipediaTool} />
@@ -405,5 +385,160 @@ export function ChicagoTitleMaintenanceRow() {
 }
 
 export function FreeTextMaintenanceRow() {
-  return <CatalogToolRow tool={freeTextTool} />
+  const [limit, setLimit] = useState<(typeof FREE_TEXT_LIMITS)[number]>(100)
+  const [count, setCount] = useState<number | null>(null)
+  const [changes, setChanges] = useState<CatalogToolChangeDto[]>([])
+  const [skipped, setSkipped] = useState<CatalogToolChangeDto[]>([])
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [progress, setProgress] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const handleSearch = async () => {
+    setBusy(true)
+    setError('')
+    setMessage('')
+    setChanges([])
+    setSkipped([])
+    setCount(null)
+    const found: CatalogToolChangeDto[] = []
+    const left: CatalogToolChangeDto[] = []
+    try {
+      const candidates = await fetchFreeTextCandidateIds(limit)
+      const ids = candidates.bookIds ?? []
+      if (ids.length === 0) {
+        setMessage('No books to check.')
+        setCount(0)
+        return
+      }
+      for (let index = 0; index < ids.length; index += FREE_TEXT_BATCH) {
+        const batch = ids.slice(index, index + FREE_TEXT_BATCH)
+        const done = Math.min(index + batch.length, ids.length)
+        setProgress(`Checking ${done} of ${ids.length}`)
+        try {
+          const result = await searchFreeText(batch)
+          found.push(...(result.changes ?? []))
+          left.push(...(result.skipped ?? []))
+          if (result.error) {
+            setChanges([...found])
+            setSkipped([...left])
+            setCount(found.length)
+            setError(result.error)
+            setMessage(result.message || '')
+            return
+          }
+        } catch (err) {
+          setChanges([...found])
+          setSkipped([...left])
+          setCount(found.length)
+          setError(err instanceof Error ? err.message : 'Search failed')
+          return
+        }
+      }
+      setChanges(found)
+      setSkipped(left)
+      setCount(found.length)
+      setMessage(
+        `${found.length} ${found.length === 1 ? 'book gained a free-text link.' : 'books gained a free-text link.'}`,
+      )
+    } catch (err) {
+      setChanges([...found])
+      setSkipped([...left])
+      setCount(found.length)
+      setError(err instanceof Error ? err.message : 'Search failed')
+    } finally {
+      setBusy(false)
+      setProgress('')
+    }
+  }
+
+  return (
+    <tr data-test="maintenance-row-free-text">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+        {count === null ? (
+          <span className="text-gray-400 text-xl font-light" data-test="maintenance-free-text-count">-</span>
+        ) : (
+          <span className="text-lg font-bold tabular-nums text-indigo-700" data-test="maintenance-free-text-count">
+            {count}
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4">
+        <div className="text-sm font-medium text-gray-900 mb-2">Find Links to Free Online Text</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
+            Search
+            <select
+              value={limit}
+              onChange={(e) => setLimit(Number(e.target.value) as (typeof FREE_TEXT_LIMITS)[number])}
+              disabled={busy}
+              className="px-2 py-1 border border-gray-300 rounded-md text-sm bg-white"
+              data-test="free-text-limit"
+              aria-label="How many books to search"
+            >
+              {FREE_TEXT_LIMITS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleSearch}
+            isLoading={busy}
+            disabled={busy}
+            leftIcon={<PiArrowClockwise className="w-4 h-4" />}
+            data-test="search-free-text"
+          >
+            Search
+          </Button>
+        </div>
+      </td>
+      <td className="px-6 py-4 text-sm text-gray-600">
+        Searches the books that have never been searched, then the ones searched longest ago.
+        Blank and temporary titles are skipped. Each search tries the primary title and each
+        alternate title. Adds any new links onto the links already stored. Does not replace or
+        remove a link. A finished search is stored before the next book, including a miss.
+      </td>
+      <td className="px-6 py-4 text-sm" data-test="maintenance-free-text-results">
+        {error ? <ErrorMessage message={error} /> : null}
+        {progress ? (
+          <p className="text-sm text-gray-600 mb-2" data-test="maintenance-free-text-progress">{progress}</p>
+        ) : null}
+        {message ? (
+          <p className="text-sm text-gray-700 mb-2" data-test="maintenance-free-text-message">{message}</p>
+        ) : null}
+        {changes.length > 0 ? (
+          <div className="max-h-64 overflow-y-auto space-y-1">
+            {changes.map((change) => (
+              <p
+                key={changeKey(change)}
+                className="text-sm text-gray-800 break-words"
+                data-test={`maintenance-free-text-change-${change.bookId}`}
+              >
+                {bookLabel(change)}: add {change.added || change.after}
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {skipped.length > 0 ? (
+          <div className="max-h-40 overflow-y-auto space-y-1 mt-2">
+            {skipped.map((change) => (
+              <p
+                key={`skip-${changeKey(change)}`}
+                className="text-sm text-gray-500 break-words"
+                data-test={`maintenance-free-text-skipped-${change.bookId}`}
+              >
+                {(change.title || `Book ${change.bookId}`)}: {change.reason}
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {!error && !progress && changes.length === 0 && skipped.length === 0 && count === null ? (
+          <span className="text-gray-400 text-sm">Choose how many books, then Search.</span>
+        ) : null}
+      </td>
+    </tr>
+  )
 }

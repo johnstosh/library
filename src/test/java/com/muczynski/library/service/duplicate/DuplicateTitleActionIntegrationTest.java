@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.muczynski.library.domain.DuplicateTitleAction;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -119,6 +120,8 @@ class DuplicateTitleActionIntegrationTest {
         Book electronic = book("Confession", BookStatus.ACTIVE, augustine);
         electronic.setElectronicResource(true);
         electronic.setFreeTextUrl("https://electronic.example/b");
+        LocalDateTime searched = LocalDateTime.of(2024, 3, 4, 5, 6);
+        electronic.setFreeTextLastSearched(searched);
         electronic.setAlternateTitles(List.of("Confessiones"));
         bookRepository.saveAll(java.util.List.of(shelf, electronic));
         bookRepository.flush();
@@ -140,6 +143,7 @@ class DuplicateTitleActionIntegrationTest {
         Book restored = bookRepository.findById(electronic.getId()).orElseThrow();
         assertEquals("Confession", restored.getTitle());
         assertEquals("https://electronic.example/b", restored.getFreeTextUrl());
+        assertEquals(searched, restored.getFreeTextLastSearched());
         Book shelfAgain = bookRepository.findById(shelf.getId()).orElseThrow();
         assertEquals("https://shelf.example/a", shelfAgain.getFreeTextUrl());
         assertEquals("BR65 .A9", shelfAgain.getLocNumber());

@@ -105,7 +105,7 @@ class FreeTextLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("Not found in any provider", result.getErrorMessage());
         assertEquals(2, result.getProvidersSearched().size());
-        verify(bookRepository, never()).save(any());
+        verify(bookRepository).save(argThat(saved -> saved.getFreeTextLastSearched() != null));
     }
 
     @Test
@@ -122,6 +122,7 @@ class FreeTextLookupServiceTest {
         assertEquals("Temporary title - skipped", result.getErrorMessage());
         assertTrue(result.getProvidersSearched().isEmpty());
         verify(mockProvider1, never()).search(anyString(), anyString());
+        verify(bookRepository, never()).save(any());
     }
 
     @Test
@@ -211,7 +212,8 @@ class FreeTextLookupServiceTest {
 
         verify(bookRepository).save(argThat(savedBook ->
                 "https://example.com/book".equals(savedBook.getFreeTextUrl()) &&
-                savedBook.getLastModified() != null
+                savedBook.getLastModified() != null &&
+                savedBook.getFreeTextLastSearched() != null
         ));
     }
 
@@ -297,7 +299,9 @@ class FreeTextLookupServiceTest {
         assertThatUrlsContain(result.getFreeTextUrl(),
                 "https://archive.org/details/book",
                 "https://www.ewtn.com/catholicism/library/book-1");
-        verify(bookRepository, never()).save(any());
+        verify(bookRepository).save(argThat(saved ->
+                saved.getFreeTextLastSearched() != null
+                        && saved.getFreeTextUrl().contains("https://archive.org/details/book")));
     }
 
     @Test
@@ -317,7 +321,8 @@ class FreeTextLookupServiceTest {
                 "https://archive.org/details/wisdomfatherbro01chesgoog",
                 "https://www.ewtn.com/catholicism/library/wisdom-of-fr-brown-10889");
         verify(mockProvider1, never()).search(anyString(), anyString());
-        verify(bookRepository, never()).save(any());
+        verify(bookRepository).save(argThat(saved -> saved.getFreeTextLastSearched() != null
+                && saved.getFreeTextUrl().contains("https://archive.org/details/wisdomfatherbro01chesgoog")));
     }
 
     @Test
@@ -339,7 +344,8 @@ class FreeTextLookupServiceTest {
 
         assertFalse(result.isSuccess());
         assertEquals("Not found in any provider", result.getErrorMessage());
-        verify(bookRepository, never()).save(any());
+        verify(bookRepository).save(argThat(saved -> saved.getFreeTextLastSearched() != null
+                && saved.getFreeTextUrl() == null));
     }
 
     private static void assertThatUrlsContain(String field, String... expected) {

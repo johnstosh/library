@@ -32,6 +32,8 @@ public class ImportBookDto {
     private String detailedDescription;
     private String grokipediaUrl;
     private String freeTextUrl;
+    /** When a free-text search last finished. Import writes this only when it is present. */
+    private LocalDateTime freeTextLastSearched;
     private LocalDateTime dateAddedToLibrary;
     private LocalDateTime lastModified;
     private BookStatus status;

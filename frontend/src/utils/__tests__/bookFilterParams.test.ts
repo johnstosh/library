@@ -7,6 +7,7 @@ import {
   booksPathFromPriceFilters,
   pricesPathFromFilters,
   chipsFromSearchParams,
+  freeTextSearchedOlderDaysFromSearchParams,
   isBooksIntakeConstrained,
   isSearchVisibleChip,
   labelsFromSearchParams,
@@ -392,6 +393,8 @@ describe('isBooksIntakeConstrained', () => {
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], 'nope')).toBe(false)
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', 'WCC')).toBe(true)
     expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', 'nope')).toBe(false)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', '', 90)).toBe(true)
+    expect(isBooksIntakeConstrained(chips(), [], '', [], [], [], [], '', '', null)).toBe(false)
   })
 })
 
@@ -450,6 +453,42 @@ describe('library data older than', () => {
       libraryCheckedOlder: 'ydl',
       libraryCheckedOlderDays: 12,
     })).toBe('libraryCheckedOlder=YDL&libraryCheckedOlderDays=12')
+  })
+})
+
+describe('free text not searched recently', () => {
+  it('reads a positive day count and ignores anything else', () => {
+    expect(freeTextSearchedOlderDaysFromSearchParams(new URLSearchParams('freeTextSearchedOlderDays=30'))).toBe(30)
+    expect(freeTextSearchedOlderDaysFromSearchParams(new URLSearchParams('freeTextSearchedOlderDays=0'))).toBeNull()
+    expect(freeTextSearchedOlderDaysFromSearchParams(new URLSearchParams(''))).toBeNull()
+  })
+
+  it('turns off the Books recent-arrivals default when the chip is on', () => {
+    const parsed = chipsFromSearchParams(new URLSearchParams('freeTextSearchedOlderDays=90'), 'books')
+    expect(parsed.mostRecent).toBe(false)
+  })
+
+  it('emits the day count only on the Books URL and the books summaries query', () => {
+    const state = {
+      chips: chips({ mostRecent: false }),
+      labels: [] as string[],
+      q: '',
+      freeTextSearchedOlderDays: 90,
+    }
+    expect(bookFilterParamsForUrl(state, 'books')).toEqual({
+      mostRecent: 'false',
+      freeTextSearchedOlderDays: '90',
+    })
+    expect(bookFilterParamsForUrl(state, 'search')).toEqual({})
+    expect(bookFilterParamsForUrl(state, 'prices')).toEqual({})
+    expect(booksPathFromFilters(state)).toBe('/books')
+    expect(pricesPathFromFilters(state)).toBe('/prices')
+    expect(booksPathFromPriceFilters(state)).toBe('/books?mostRecent=false')
+    expect(bookListFilterQuery({
+      chips: chips(),
+      freeTextSearchedOlderDays: 45,
+    })).toBe('freeTextSearchedOlderDays=45')
+    expect(bookListFilterQuery({ chips: chips() })).toBe('')
   })
 })
 

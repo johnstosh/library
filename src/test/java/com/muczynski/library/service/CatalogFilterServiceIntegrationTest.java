@@ -186,6 +186,37 @@ class CatalogFilterServiceIntegrationTest {
     }
 
     @Test
+    void bookSummariesKeepNeverSearchedAndFreeTextSearchesOlderThanTheCutoff() {
+        String token = "FreeTextAge" + UUID.randomUUID().toString().replace("-", "");
+        Author author = authorRepository.save(authorNamed("Author " + token));
+        LocalDateTime old = LocalDateTime.now(ZoneOffset.UTC).minusDays(120);
+        LocalDateTime fresh = LocalDateTime.now(ZoneOffset.UTC).minusDays(2);
+
+        Book never = bookRepository.save(book(token + " never", author, null, null));
+
+        Book stale = book(token + " stale", author, null, null);
+        stale.setFreeTextLastSearched(old);
+        stale = bookRepository.save(stale);
+
+        Book recent = book(token + " recent", author, null, null);
+        recent.setFreeTextLastSearched(fresh);
+        recent = bookRepository.save(recent);
+
+        CatalogFilterService.BookCatalogFilter filter = query(token);
+        filter.freeTextSearchedOlderDays = 90;
+        List<Long> matched = ids(catalogFilterService.bookSummaries(filter, null, true));
+        assertTrue(matched.contains(never.getId()));
+        assertTrue(matched.contains(stale.getId()));
+        assertFalse(matched.contains(recent.getId()));
+
+        CatalogFilterService.BookCatalogFilter off = query(token);
+        List<Long> all = ids(catalogFilterService.bookSummaries(off, null, true));
+        assertTrue(all.contains(never.getId()));
+        assertTrue(all.contains(stale.getId()));
+        assertTrue(all.contains(recent.getId()));
+    }
+
+    @Test
     void bookSummariesKeepLibraryLookupErrors() {
         String token = "Err" + UUID.randomUUID().toString().replace("-", "");
         Author author = authorRepository.save(authorNamed("Author " + token));

@@ -97,6 +97,7 @@ public class CatalogFilterService {
         int days = filter.priceOlderDays > 0 ? filter.priceOlderDays : DEFAULT_PRICE_OLDER_DAYS;
         filter.priceOlderCutoff = LocalDateTime.now(ZoneOffset.UTC).minusDays(days);
         applyLibraryCheckedOlder(filter);
+        applyFreeTextSearchedOlder(filter);
         applyLibraryLookupError(filter);
         filter.hideRequested = !includeRequested;
 
@@ -208,6 +209,20 @@ public class CatalogFilterService {
      * filter off. Matching rows are those whose message starts with
      * {@link #LIBRARY_LOOKUP_ERROR_PREFIX}.
      */
+    /**
+     * Days of 0 or less turns the filter off. A positive day count sets the UTC
+     * cutoff. A null last search matches. A stored search matches only when it
+     * is strictly older than the cutoff.
+     */
+    public static void applyFreeTextSearchedOlder(BookCatalogFilter filter) {
+        if (filter.freeTextSearchedOlderDays <= 0) {
+            filter.freeTextSearchedOlderCutoff = null;
+            return;
+        }
+        filter.freeTextSearchedOlderCutoff = LocalDateTime.now(ZoneOffset.UTC)
+                .minusDays(filter.freeTextSearchedOlderDays);
+    }
+
     public static void applyLibraryLookupError(BookCatalogFilter filter) {
         filter.libraryLookupError = libraryCheckedOlderCode(filter.libraryLookupError);
     }
@@ -284,6 +299,13 @@ public class CatalogFilterService {
          */
         public String libraryCheckedOlder;
         public int libraryCheckedOlderDays = DEFAULT_LIBRARY_CHECKED_OLDER_DAYS;
+        /**
+         * Books page only. 0 means off. A positive count matches a null
+         * {@code freeTextLastSearched} or a time strictly older than the cutoff.
+         */
+        public int freeTextSearchedOlderDays;
+        /** UTC instant for {@link #freeTextSearchedOlderDays}. Set by the service. */
+        public LocalDateTime freeTextSearchedOlderCutoff;
         /**
          * YDL, EMU, ACLA, WCC, or MSU. Null means the lookup-error filter is off.
          * Matches a stored message that starts with {@link CatalogFilterService#LIBRARY_LOOKUP_ERROR_PREFIX}.

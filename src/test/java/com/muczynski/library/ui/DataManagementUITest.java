@@ -176,8 +176,11 @@ public class DataManagementUITest {
         assertThat(page.locator("[data-test='undo-grokipedia']")).isDisabled();
         assertThat(page.locator("[data-test='recalc-chicago']")).isVisible();
         assertThat(page.locator("[data-test='apply-chicago']")).isDisabled();
-        assertThat(page.locator("[data-test='recalc-free-text']")).isVisible();
-        assertThat(page.locator("[data-test='apply-free-text']")).isDisabled();
+        assertThat(page.locator("[data-test='search-free-text']")).isVisible();
+        assertThat(page.locator("[data-test='free-text-limit']")).hasValue("100");
+        assertThat(page.locator("[data-test='recalc-free-text']")).hasCount(0);
+        assertThat(page.locator("[data-test='apply-free-text']")).hasCount(0);
+        assertThat(page.locator("[data-test='undo-free-text']")).hasCount(0);
         assertThat(page.locator("[data-test='undo-illegal-genres']")).isDisabled();
         assertThat(page.locator("[data-test='maintenance-row-illegal-genres']")).containsText("Drops are at the top");
         page.locator("[data-test='recalc-illegal-genres']").click();
@@ -192,6 +195,7 @@ public class DataManagementUITest {
         assertThat(page.locator("[data-test='maintenance-row-grokipedia-authors']")).containsText("alternate name");
         assertThat(page.locator("[data-test='maintenance-row-chicago']")).containsText("Chicago Title Case");
         assertThat(page.locator("[data-test='maintenance-row-free-text']")).containsText("Find Links to Free Online Text");
+        assertThat(page.locator("[data-test='maintenance-row-free-text']")).containsText("never been searched");
 
         page.locator("[data-test='recalc-chicago']").click();
         assertThat(page.locator("[data-test='maintenance-chicago-count']")).not().hasText("-");

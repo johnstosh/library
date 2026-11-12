@@ -119,6 +119,9 @@ export const LIBRARY_CHECKED_OLDER_CODES = ['YDL', 'EMU', 'ACLA', 'WCC', 'MSU'] 
 
 export const DEFAULT_LIBRARY_CHECKED_OLDER_DAYS = 90
 
+/** Days for the Books "free text not searched recently" chip when it is turned on. */
+export const DEFAULT_FREE_TEXT_SEARCHED_OLDER_DAYS = 90
+
 /** Blank when the value is not one of the five library codes. */
 export function libraryCheckedOlderCode(raw: string | null | undefined): string {
   const code = (raw ?? '').trim().toUpperCase()
@@ -138,6 +141,14 @@ export function libraryCheckedOlderDaysFromSearchParams(params: URLSearchParams)
 /** Blank when the value is not one of the five library codes. */
 export function libraryLookupErrorFromSearchParams(params: URLSearchParams): string {
   return libraryCheckedOlderCode(params.get('libraryLookupError'))
+}
+
+/** Null when the Books free-text age chip is off or the value is not a positive day count. */
+export function freeTextSearchedOlderDaysFromSearchParams(params: URLSearchParams): number | null {
+  const raw = params.get('freeTextSearchedOlderDays')
+  if (raw == null || raw.trim() === '') return null
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) && n >= 1 ? n : null
 }
 
 export function labelsFromSearchParams(params: URLSearchParams): string[] {
@@ -169,6 +180,7 @@ export function isBooksIntakeConstrained(
   bindings: string[] = [],
   libraryCheckedOlder = '',
   libraryLookupError = '',
+  freeTextSearchedOlderDays: number | null = null,
 ): boolean {
   return (
     isOtherBookChipActive(chips) ||
@@ -179,7 +191,8 @@ export function isBooksIntakeConstrained(
     bindings.length > 0 ||
     q.trim().length > 0 ||
     libraryCheckedOlderCode(libraryCheckedOlder) !== '' ||
-    libraryCheckedOlderCode(libraryLookupError) !== ''
+    libraryCheckedOlderCode(libraryLookupError) !== '' ||
+    (freeTextSearchedOlderDays != null && freeTextSearchedOlderDays >= 1)
   )
 }
 
@@ -205,6 +218,7 @@ export function chipsFromSearchParams(
     const bindings = bindingsFromSearchParams(params)
     const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(params)
     const libraryLookupError = libraryLookupErrorFromSearchParams(params)
+    const freeTextSearchedOlderDays = freeTextSearchedOlderDaysFromSearchParams(params)
     const explicitMostRecent = params.get(CHIP_URL_KEYS.mostRecent)
     if (explicitMostRecent === 'true') {
       chips.mostRecent = true
@@ -220,6 +234,7 @@ export function chipsFromSearchParams(
       bindings,
       libraryCheckedOlder,
       libraryLookupError,
+      freeTextSearchedOlderDays,
     )) {
       chips.mostRecent = true
     } else {
@@ -247,6 +262,11 @@ export interface BookFilterUrlState {
   libraryCheckedOlderDays?: number
   /** YDL, EMU, ACLA, WCC, or MSU. Blank leaves the lookup-error filter off. */
   libraryLookupError?: string
+  /**
+   * Books page only. Null or omitted leaves the free-text age chip off.
+   * A positive day count matches never-searched books and searches older than that.
+   */
+  freeTextSearchedOlderDays?: number | null
   /** Desire-to-purchase chips (Prices page). */
   desireToPurchase?: DesireToPurchaseFilter[]
   /** When true, emit `q=` even if the query is blank (Search “has searched”). */
@@ -296,6 +316,11 @@ export function bookFilterParamsForUrl(
 
   const libraryCheckedOlder = libraryCheckedOlderCode(state.libraryCheckedOlder)
   const libraryLookupError = libraryCheckedOlderCode(state.libraryLookupError)
+  const freeTextSearchedOlderDays = mode === 'books'
+    && state.freeTextSearchedOlderDays != null
+    && state.freeTextSearchedOlderDays >= 1
+    ? state.freeTextSearchedOlderDays
+    : null
 
   if (mode === 'books') {
     const othersOn = isBooksIntakeConstrained(
@@ -308,6 +333,7 @@ export function bookFilterParamsForUrl(
       bindings,
       libraryCheckedOlder,
       libraryLookupError,
+      freeTextSearchedOlderDays,
     )
     // Always emit mostRecent state honestly (true or false) so it stays toggleable
     // and combinable. Omit only the default intake-on when nothing else is active.
@@ -342,6 +368,10 @@ export function bookFilterParamsForUrl(
 
   if (libraryLookupError) {
     params.libraryLookupError = libraryLookupError
+  }
+
+  if (freeTextSearchedOlderDays != null) {
+    params.freeTextSearchedOlderDays = String(freeTextSearchedOlderDays)
   }
 
   return params

@@ -215,6 +215,22 @@ describe('BooksPage library data age', () => {
   })
 })
 
+describe('BooksPage free text age', () => {
+  it('turning the chip on turns off the default recent-arrivals intake', () => {
+    librarianState.current = true
+    renderBooksPage('/books')
+
+    fireEvent.click(screen.getByTestId('filter-free-text-searched-older'))
+
+    const location = screen.getByTestId('location').textContent ?? ''
+    expect(location).toContain('freeTextSearchedOlderDays=90')
+    expect(location).toContain('mostRecent=false')
+    expect(lastBookFilters.current).toMatchObject({
+      freeTextSearchedOlderDays: 90,
+    })
+  })
+})
+
 describe('BooksPage Open in Prices', () => {
   it('hands current filters to /prices as a URL', () => {
     librarianState.current = true

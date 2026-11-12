@@ -80,9 +80,10 @@ public class DuplicateTitleActionRestore {
                         acla_paper_available, acla_ebook_available, acla_last_checked, acla_lookup_error,
                         wcc_audio_available, wcc_paper_available, wcc_ebook_available, wcc_last_checked, wcc_lookup_error,
                         msu_audio_available, msu_paper_available, msu_ebook_available, msu_last_checked, msu_lookup_error,
-                        reading_difficulty, binding, desire_to_purchase, author_id, library_id)
+                        reading_difficulty, binding, desire_to_purchase, author_id, library_id,
+                        free_text_last_searched)
                     VALUES (?, ?, ?, ?, ?, ?, lo_from_bytea(0, ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
@@ -130,6 +131,7 @@ public class DuplicateTitleActionRestore {
                 setInteger(statement, 44, book.getDesireToPurchase());
                 setLong(statement, 45, book.getAuthorId());
                 setLong(statement, 46, book.getLibraryId());
+                setTimestamp(statement, 47, book.getFreeTextLastSearched());
                 statement.executeUpdate();
             }
             return null;

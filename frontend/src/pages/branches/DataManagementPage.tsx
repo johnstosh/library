@@ -363,19 +363,14 @@ export function DataManagementPage() {
   // Maintenance handlers for Illegal Genres (Issue #347)
   const handleRecalcIllegalGenres = async () => {
     setIsRecalcing(true)
-    setErrorMessage('')
     try {
       const result = await recalcIllegalGenres.mutateAsync()
       setIllegalGenresCount(result.booksAffected)
       setIllegalGenresResult(result)
       setGenrePhase('preview')
-      if (result.error) {
-        setErrorMessage(result.error)
-      }
     } catch (error) {
       console.error('Failed to recalc illegal genres:', error)
       const msg = error instanceof Error ? error.message : 'Failed to recalculate'
-      setErrorMessage(msg)
       setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
     } finally {
       setIsRecalcing(false)
@@ -384,8 +379,6 @@ export function DataManagementPage() {
 
   const handleCleanupIllegalGenres = async () => {
     setIsCleaning(true)
-    setErrorMessage('')
-    setSuccessMessage('')
     try {
       const result = await cleanupIllegalGenres.mutateAsync()
       setIllegalGenresCount(result.booksAffected ?? 0)
@@ -394,15 +387,9 @@ export function DataManagementPage() {
       if (result.actionId != null) {
         setGenreUndoId(result.actionId)
       }
-      if (result.error) {
-        setErrorMessage(result.error || result.message || 'Cleanup encountered an error')
-      } else if (result.message) {
-        setSuccessMessage(result.message)
-      }
     } catch (error) {
       console.error('Failed to cleanup illegal genres:', error)
       const msg = error instanceof Error ? error.message : 'Cleanup failed'
-      setErrorMessage(msg)
       setIllegalGenresResult({ booksAffected: 0, error: msg } as IllegalGenresMaintenanceDto)
     } finally {
       setIsCleaning(false)
@@ -412,22 +399,17 @@ export function DataManagementPage() {
   const handleUndoIllegalGenres = async () => {
     if (genreUndoId == null) return
     setIsUndoingGenres(true)
-    setErrorMessage('')
-    setSuccessMessage('')
     try {
       const result = await undoIllegalGenres(genreUndoId)
       setIllegalGenresResult(result)
       setGenrePhase('done')
-      setGenreUndoId(null)
-      if (result.error) {
-        setErrorMessage(result.error)
-      } else if (result.message) {
-        setSuccessMessage(result.message)
+      if (!result.error) {
+        setGenreUndoId(null)
       }
     } catch (error) {
       console.error('Failed to undo genre cleanup:', error)
       const msg = error instanceof Error ? error.message : 'Undo failed'
-      setErrorMessage(msg)
+      setIllegalGenresResult({ booksAffected: illegalGenresCount ?? 0, error: msg } as IllegalGenresMaintenanceDto)
     } finally {
       setIsUndoingGenres(false)
     }

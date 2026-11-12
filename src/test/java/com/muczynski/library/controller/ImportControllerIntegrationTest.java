@@ -339,6 +339,7 @@ class ImportControllerIntegrationTest {
         testBook.setYdlAudioAvailable(true);
         testBook.setYdlPaperAvailable(true);
         testBook.setYdlEbookAvailable(false);
+        testBook.setFreeTextLastSearched(LocalDateTime.of(2025, 5, 1, 8, 0));
         testBook.setYdlLastChecked(LocalDateTime.of(2025, 6, 1, 12, 0));
         testBook.setYdlLookupError("ydl-timeout");
         testBook.setEmuAudioAvailable(false);
@@ -368,6 +369,7 @@ class ImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlAudioAvailable", hasItem(true)))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlPaperAvailable", hasItem(true)))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlEbookAvailable", hasItem(false)))
+                .andExpect(jsonPath("$.books[?(@.title=='Test Book')].freeTextLastSearched", hasItem("2025-05-01T08:00:00")))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLastChecked", hasItem("2025-06-01T12:00:00")))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].ydlLookupError", hasItem("ydl-timeout")))
                 .andExpect(jsonPath("$.books[?(@.title=='Test Book')].emuAudioAvailable", hasItem(false)))
@@ -1237,6 +1239,7 @@ class ImportControllerIntegrationTest {
                     "status": "ACTIVE",
                     "ydlAudioAvailable": true,
                     "ydlPaperAvailable": true,
+                    "freeTextLastSearched": "2024-04-01T08:00:00",
                     "ydlEbookAvailable": false,
                     "ydlLastChecked": "2025-07-10T09:00:00",
                     "ydlLookupError": "old-err",
@@ -1298,6 +1301,7 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getYdlAudioAvailable()));
         org.junit.jupiter.api.Assertions.assertTrue(Boolean.TRUE.equals(after.getYdlPaperAvailable()));
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getYdlEbookAvailable()));
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2024, 4, 1, 8, 0), after.getFreeTextLastSearched());
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 10, 9, 0), after.getYdlLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("old-err", after.getYdlLookupError());
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getEmuAudioAvailable()));
@@ -1320,6 +1324,32 @@ class ImportControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertFalse(Boolean.TRUE.equals(after.getMsuEbookAvailable()));
         org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2025, 7, 13, 10, 45), after.getMsuLastChecked());
         org.junit.jupiter.api.Assertions.assertEquals("old-msu-err", after.getMsuLookupError());
+
+        String stampedImportJson = """
+            {
+                "libraries": [{"branchName": "Preserve Ydl Library", "librarySystemName": "Preserve Ydl System"}],
+                "authors": [{"name": "Preserve Ydl Author"}],
+                "users": [],
+                "books": [{
+                    "title": "Preserve Ydl Book",
+                    "libraryName": "Preserve Ydl Library",
+                    "authorName": "Preserve Ydl Author",
+                    "publicationYear": 2020,
+                    "publisher": "Test Publisher",
+                    "status": "ACTIVE",
+                    "freeTextLastSearched": "2026-01-02T03:04:00"
+                }],
+                "loans": []
+            }
+            """;
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/import/json")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(stampedImportJson))
+                .andExpect(status().isOk());
+
+        Book stamped = bookRepository.findAllByTitleAndAuthor_NameOrderByIdAsc("Preserve Ydl Book", "Preserve Ydl Author").get(0);
+        org.junit.jupiter.api.Assertions.assertEquals(LocalDateTime.of(2026, 1, 2, 3, 4), stamped.getFreeTextLastSearched());
     }
 
     /**

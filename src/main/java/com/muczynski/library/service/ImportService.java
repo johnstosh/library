@@ -598,6 +598,7 @@ public class ImportService {
         if (bDto.getYdlAudioAvailable() != null) book.setYdlAudioAvailable(bDto.getYdlAudioAvailable());
         if (bDto.getYdlPaperAvailable() != null) book.setYdlPaperAvailable(bDto.getYdlPaperAvailable());
         if (bDto.getYdlEbookAvailable() != null) book.setYdlEbookAvailable(bDto.getYdlEbookAvailable());
+        if (bDto.getFreeTextLastSearched() != null) book.setFreeTextLastSearched(bDto.getFreeTextLastSearched());
         if (bDto.getYdlLastChecked() != null) book.setYdlLastChecked(bDto.getYdlLastChecked());
         if (bDto.getYdlLookupError() != null) book.setYdlLookupError(bDto.getYdlLookupError());
         if (bDto.getEmuAudioAvailable() != null) book.setEmuAudioAvailable(bDto.getEmuAudioAvailable());
@@ -1211,6 +1212,7 @@ public class ImportService {
         bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
         bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
         bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
+        bDto.setFreeTextLastSearched(book.getFreeTextLastSearched());
         bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bDto.setStatus(book.getStatus());
         bDto.setLocNumber(emptyToNull(book.getLocNumber()));

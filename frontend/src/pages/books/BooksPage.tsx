@@ -28,6 +28,7 @@ import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
   favoriteListsFromSearchParams,
+  freeTextSearchedOlderDaysFromSearchParams,
   labelsFromSearchParams,
   libraryCheckedOlderDaysFromSearchParams,
   libraryCheckedOlderFromSearchParams,
@@ -55,6 +56,7 @@ export function BooksPage() {
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
   const libraryLookupError = libraryLookupErrorFromSearchParams(searchParams)
+  const freeTextSearchedOlderDays = freeTextSearchedOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
   const selectedBindings = bindingsFromSearchParams(searchParams)
@@ -92,6 +94,7 @@ export function BooksPage() {
     libraryCheckedOlder?: string
     libraryCheckedOlderDays?: number
     libraryLookupError?: string
+    freeTextSearchedOlderDays?: number | null
   }) => {
     const q = next.q !== undefined ? next.q : urlQuery
     if (next.q !== undefined) ownQuery.current = q
@@ -113,6 +116,9 @@ export function BooksPage() {
           libraryLookupError: next.libraryLookupError !== undefined
             ? next.libraryLookupError
             : libraryLookupError,
+          freeTextSearchedOlderDays: next.freeTextSearchedOlderDays !== undefined
+            ? next.freeTextSearchedOlderDays
+            : freeTextSearchedOlderDays,
         },
         'books',
       ),
@@ -130,6 +136,7 @@ export function BooksPage() {
     libraryCheckedOlder: libraryCheckedOlderFromSearchParams(searchParams),
     libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
     libraryLookupError: libraryLookupErrorFromSearchParams(searchParams),
+    freeTextSearchedOlderDays: freeTextSearchedOlderDaysFromSearchParams(searchParams),
     chips: chipsFromSearchParams(searchParams, 'books'),
   }), [searchParams])
 
@@ -314,6 +321,18 @@ export function BooksPage() {
               writeUrl({
                 libraryCheckedOlder: library,
                 libraryCheckedOlderDays: days,
+                ...(selecting && implicitRecent
+                  ? { chips: { ...chips, mostRecent: false } }
+                  : {}),
+              })
+            }}
+            showFreeTextAge
+            freeTextSearchedOlderDays={freeTextSearchedOlderDays}
+            onFreeTextSearchedOlderChange={(on, days) => {
+              const selecting = on && freeTextSearchedOlderDays == null
+              const implicitRecent = searchParams.get('mostRecent') == null && chips.mostRecent
+              writeUrl({
+                freeTextSearchedOlderDays: on ? days : null,
                 ...(selecting && implicitRecent
                   ? { chips: { ...chips, mostRecent: false } }
                   : {}),

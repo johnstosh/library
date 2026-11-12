@@ -94,6 +94,13 @@ public class Book {
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String freeTextUrl;
 
+    /**
+     * When a free-text search last finished for this book.
+     * Null means never searched. A miss or a per-book error still stamps this
+     * so the next oldest-first pass does not start over on the same book.
+     */
+    private LocalDateTime freeTextLastSearched;
+
     private LocalDateTime dateAddedToLibrary;
 
     private LocalDateTime lastModified;

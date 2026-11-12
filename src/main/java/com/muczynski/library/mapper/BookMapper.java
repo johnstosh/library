@@ -95,6 +95,7 @@ public class BookMapper {
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setFreeTextUrl(bookDto.getFreeTextUrl());
+        book.setFreeTextLastSearched(bookDto.getFreeTextLastSearched());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
         book.setLastModified(bookDto.getLastModified());
         book.setStatus(bookDto.getStatus());
@@ -181,6 +182,7 @@ public class BookMapper {
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
         bookDto.setFreeTextUrl(book.getFreeTextUrl());
+        bookDto.setFreeTextLastSearched(book.getFreeTextLastSearched());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bookDto.setLastModified(book.getLastModified());
         bookDto.setStatus(book.getStatus());

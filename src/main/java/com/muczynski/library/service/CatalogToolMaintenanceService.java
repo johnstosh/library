@@ -24,21 +24,28 @@ import com.muczynski.library.util.ChicagoTitleCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Data Management copies of Quick Grokipedia lookup, Chicago title case, and
- * free-text lookup (Issue #386). Recalc lists every change and saves nothing.
- * Do It writes that list. Undo puts the previous values back.
- * Each tool covers every book, including withdrawn copies.
- * Grokipedia and free text only add. They do not replace or remove a stored value.
+ * free-text lookup (Issue #386). Chicago and Grokipedia: Recalc lists every
+ * change and saves nothing, Do It writes that list, Undo puts the previous
+ * values back. Free text searches a capped oldest-first prefix and stores each
+ * finished book immediately. Each tool covers every book, including withdrawn
+ * copies. Grokipedia and free text only add. They do not replace or remove a
+ * stored value.
  */
 @Slf4j
 @Service
@@ -47,6 +54,8 @@ public class CatalogToolMaintenanceService {
 
     static final int GROKIPEDIA_BATCH_LIMIT = 25;
     static final int FREE_TEXT_BATCH_LIMIT = 10;
+    /** Session sizes for the oldest-first free-text search. */
+    public static final Set<Integer> FREE_TEXT_LIMITS = Set.of(100, 200, 400, 800);
     private static final int APPLY_LIMIT = 20000;
 
     private final BookRepository bookRepository;
@@ -112,11 +121,28 @@ public class CatalogToolMaintenanceService {
                 .build();
     }
 
+    /**
+     * Oldest free-text searches first, with never-searched books before any stored time.
+     * Blank and temporary primary titles are dropped before the limit is applied.
+     * Alternate titles do not affect the order.
+     */
     @Transactional(readOnly = true)
-    public CatalogToolCandidatesDto freeTextCandidateIds() {
-        return CatalogToolCandidatesDto.builder()
-                .bookIds(bookRepository.findAllIdsOrderById())
-                .build();
+    public CatalogToolCandidatesDto freeTextCandidateIds(int limit) {
+        if (!FREE_TEXT_LIMITS.contains(limit)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search 100, 200, 400, or 800 books.");
+        }
+        List<Long> ids = new ArrayList<>();
+        for (BookRepository.FreeTextCandidateRow row : bookRepository.findFreeTextCandidates()) {
+            String title = row.getTitle();
+            if (title == null || title.isBlank() || BooksFromFeedService.isTemporaryTitle(title)) {
+                continue;
+            }
+            ids.add(row.getId());
+            if (ids.size() >= limit) {
+                break;
+            }
+        }
+        return CatalogToolCandidatesDto.builder().bookIds(ids).build();
     }
 
     @Transactional(readOnly = true)
@@ -175,56 +201,73 @@ public class CatalogToolMaintenanceService {
                 changes.size(), "author would gain a Grokipedia link.", "authors would gain a Grokipedia link."));
     }
 
-    @Transactional(readOnly = true)
-    public CatalogToolPreviewDto previewFreeText(List<Long> bookIds) {
+    /**
+     * Search one small batch and store each finished book before the next.
+     * Runs outside a transaction so provider HTTP does not hold a connection.
+     * Each write goes through {@link FreeTextLookupService#recordFreeTextSearch}
+     * in its own transaction. A blank or temporary primary title is skipped
+     * and not stamped.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public CatalogToolPreviewDto searchFreeText(List<Long> bookIds) {
         List<Long> ids = distinctIds(bookIds);
         if (ids.isEmpty()) {
             return preview(0, List.of(), List.of(), "No books in this batch.");
         }
         if (ids.size() > FREE_TEXT_BATCH_LIMIT) {
-            return errorPreview("Preview at most " + FREE_TEXT_BATCH_LIMIT + " books at a time.");
+            return errorPreview("Search at most " + FREE_TEXT_BATCH_LIMIT + " books at a time.");
+        }
+        Map<Long, BookRepository.FreeTextSearchRow> rows = new LinkedHashMap<>();
+        for (BookRepository.FreeTextSearchRow row : bookRepository.findFreeTextSearchRows(ids)) {
+            rows.putIfAbsent(row.getId(), row);
         }
         List<CatalogToolChangeDto> changes = new ArrayList<>();
         List<CatalogToolChangeDto> skipped = new ArrayList<>();
         for (Long bookId : ids) {
-            Book book = bookRepository.findById(bookId).orElse(null);
-            if (book == null) {
+            BookRepository.FreeTextSearchRow row = rows.get(bookId);
+            if (row == null) {
                 skipped.add(missing(bookId));
                 continue;
             }
-            String title = book.getTitle();
+            String title = row.getTitle();
             if (title == null || title.isBlank() || BooksFromFeedService.isTemporaryTitle(title)) {
                 continue;
             }
+            Book book = bookForFreeTextSearch(row);
             List<String> titles = Book.titlesToSearch(book);
             if (titles.isEmpty()) {
                 continue;
             }
-            String existing = book.getFreeTextUrl();
+            String existing = row.getFreeTextUrl();
             try {
                 FreeTextLookupService.Discovery discovery = freeTextLookupService.discoverUrls(
                         titles, AuthorNames.lookupNames(book.getAuthor()));
                 String found = discovery.getUrls();
                 if (found == null || found.isBlank()) {
+                    freeTextLookupService.recordFreeTextSearch(bookId, null, false);
                     continue;
                 }
                 String merged = FreeTextLookupCache.mergeUrls(existing, found);
-                if (sameText(merged, existing)) {
-                    continue;
-                }
                 String added = addedUrls(existing, merged);
-                if (added.isBlank()) {
+                if (sameText(merged, existing) || added.isBlank()) {
+                    freeTextLookupService.recordFreeTextSearch(bookId, null, false);
                     continue;
                 }
+                freeTextLookupService.recordFreeTextSearch(bookId, merged, true);
                 changes.add(CatalogToolChangeDto.builder()
-                        .bookId(book.getId())
+                        .bookId(bookId)
                         .title(title)
                         .before(existing == null ? "" : existing)
                         .after(merged)
                         .added(added)
                         .build());
             } catch (RuntimeException e) {
-                log.warn("Free-text preview failed for book {}: {}", bookId, e.getMessage());
+                log.warn("Free-text search failed for book {}: {}", bookId, e.getMessage());
+                try {
+                    freeTextLookupService.recordFreeTextSearch(bookId, null, false);
+                } catch (RuntimeException stampError) {
+                    log.warn("Could not stamp free-text search for book {}: {}", bookId, stampError.getMessage());
+                }
                 skipped.add(CatalogToolChangeDto.builder()
                         .bookId(bookId)
                         .title(title)
@@ -233,7 +276,27 @@ public class CatalogToolMaintenanceService {
             }
         }
         return preview(ids.size(), changes, skipped, countMessage(
-                changes.size(), "book would gain a free-text link.", "books would gain a free-text link."));
+                changes.size(), "book gained a free-text link.", "books gained a free-text link."));
+    }
+
+    /**
+     * Transient book and author built from the search projection.
+     * {@link Book#titlesToSearch} and {@link AuthorNames#lookupNames} read these
+     * fields. The entities are never saved.
+     */
+    private static Book bookForFreeTextSearch(BookRepository.FreeTextSearchRow row) {
+        Book book = new Book();
+        book.setId(row.getId());
+        book.setTitle(row.getTitle());
+        book.setAlternateTitles(row.getAlternateTitles());
+        book.setFreeTextUrl(row.getFreeTextUrl());
+        if (row.getAuthorName() != null || (row.getAuthorAlternateNames() != null && !row.getAuthorAlternateNames().isEmpty())) {
+            Author author = new Author();
+            author.setName(row.getAuthorName());
+            author.setAlternateNames(row.getAuthorAlternateNames());
+            book.setAuthor(author);
+        }
+        return book;
     }
 
     @Transactional
@@ -370,50 +433,6 @@ public class CatalogToolMaintenanceService {
     }
 
     @Transactional
-    public CatalogToolApplyResultDto applyFreeText(List<CatalogToolChangeDto> requested) {
-        List<CatalogToolChangeDto> changes = limit(requested);
-        if (changes == null) {
-            return errorApply("Do It accepts at most " + APPLY_LIMIT + " changes at a time.");
-        }
-        if (changes.isEmpty()) {
-            return nothingToDo();
-        }
-        List<CatalogToolChangeDto> applied = new ArrayList<>();
-        List<CatalogToolChangeDto> skipped = new ArrayList<>();
-        for (CatalogToolChangeDto change : changes) {
-            if (change == null || change.getBookId() == null) {
-                continue;
-            }
-            Book book = bookRepository.findById(change.getBookId()).orElse(null);
-            if (book == null) {
-                skipped.add(missing(change.getBookId()));
-                continue;
-            }
-            String current = book.getFreeTextUrl();
-            String after = change.getAfter();
-            if (!sameText(current, change.getBefore())) {
-                skipped.add(skip(book, "Links changed since Recalc"));
-                continue;
-            }
-            if (!addsOnly(current, after)) {
-                skipped.add(skip(book, "Would replace or remove an existing link"));
-                continue;
-            }
-            book.setFreeTextUrl(after);
-            bookRepository.save(book);
-            applied.add(CatalogToolChangeDto.builder()
-                    .bookId(book.getId())
-                    .title(book.getTitle())
-                    .before(current)
-                    .after(after)
-                    .added(addedUrls(current, after))
-                    .build());
-        }
-        return finish(CatalogMaintenanceAction.FREE_TEXT_URLS, applied, skipped,
-                applyMessage("Added free-text links on", applied.size(), "book", "books", ".", skipped.size()));
-    }
-
-    @Transactional
     public CatalogToolApplyResultDto undoChicago(Long actionId) {
         return undo(actionId, CatalogMaintenanceAction.CHICAGO_TITLES, CatalogMaintenanceAction.UNDO_CHICAGO_TITLES,
                 (book, change) -> {
@@ -446,19 +465,6 @@ public class CatalogToolMaintenanceService {
                 });
     }
 
-    @Transactional
-    public CatalogToolApplyResultDto undoFreeText(Long actionId) {
-        return undo(actionId, CatalogMaintenanceAction.FREE_TEXT_URLS, CatalogMaintenanceAction.UNDO_FREE_TEXT_URLS,
-                (book, change) -> {
-                    if (!sameText(book.getFreeTextUrl(), change.getAfter())) {
-                        return "Links changed since Do It";
-                    }
-                    book.setFreeTextUrl(change.getBefore());
-                    bookRepository.save(book);
-                    return null;
-                });
-    }
-
     @Transactional(readOnly = true)
     public CatalogToolUndoableDto undoableChicago() {
         return undoable(CatalogMaintenanceAction.CHICAGO_TITLES);
@@ -478,11 +484,6 @@ public class CatalogToolMaintenanceService {
     @Transactional(readOnly = true)
     public CatalogToolUndoableDto undoableGrokipediaAuthors() {
         return undoable(CatalogMaintenanceAction.GROKIPEDIA_AUTHOR_URLS);
-    }
-
-    @Transactional(readOnly = true)
-    public CatalogToolUndoableDto undoableFreeText() {
-        return undoable(CatalogMaintenanceAction.FREE_TEXT_URLS);
     }
 
     private CatalogToolApplyResultDto undo(Long actionId, String forwardKind, String undoKind, Restorer restorer) {
