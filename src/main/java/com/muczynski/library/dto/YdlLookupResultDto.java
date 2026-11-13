@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * DTO for individual YDL (Ypsilanti District Library) availability lookup result
  */
@@ -22,5 +24,7 @@ public class YdlLookupResultDto {
     private Boolean paperAvailable;
     private Boolean ebookAvailable;
     private String matchedTitle;
+    /** Records that set the flags. Empty when the lookup did not use a keyed record. */
+    private List<CatalogMatchRef> matches;
     private String errorMessage;
 }

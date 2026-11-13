@@ -9,6 +9,7 @@ import com.muczynski.library.domain.BookTitles;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.RejectedMatches;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import org.springframework.stereotype.Service;
@@ -94,7 +95,15 @@ public class BookMapper {
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
+        book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidGrokipediaUrls(), null, com.muczynski.library.service.CurrentActor.username()));
         book.setFreeTextUrl(bookDto.getFreeTextUrl());
+        book.setInvalidFreeTextUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidFreeTextUrls(), null, com.muczynski.library.service.CurrentActor.username()));
+        book.setInvalidFreeAudioUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidFreeAudioUrls(), null, com.muczynski.library.service.CurrentActor.username()));
+        book.setInvalidHoldings(RejectedMatches.acceptEditedHoldings(
+                bookDto.getInvalidHoldings(), null, com.muczynski.library.service.CurrentActor.username()));
         book.setFreeTextLastSearched(bookDto.getFreeTextLastSearched());
         book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());
         book.setLastModified(bookDto.getLastModified());
@@ -181,7 +190,11 @@ public class BookMapper {
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
+        bookDto.setInvalidGrokipediaUrls(RejectedMatches.orEmptyUrls(book.getInvalidGrokipediaUrls()));
         bookDto.setFreeTextUrl(book.getFreeTextUrl());
+        bookDto.setInvalidFreeTextUrls(RejectedMatches.orEmptyUrls(book.getInvalidFreeTextUrls()));
+        bookDto.setInvalidFreeAudioUrls(RejectedMatches.orEmptyUrls(book.getInvalidFreeAudioUrls()));
+        bookDto.setInvalidHoldings(RejectedMatches.orEmptyHoldings(book.getInvalidHoldings()));
         bookDto.setFreeTextLastSearched(book.getFreeTextLastSearched());
         bookDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bookDto.setLastModified(book.getLastModified());

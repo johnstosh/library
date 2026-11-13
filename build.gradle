@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.muczynski'
-version = '2.4.111'
+version = '2.4.112'
 
 ext['tomcat.version'] = '10.+'
 // 2.21.6 is CVE-2026-91776 and CVE-2026-91777 (HIGH). Trivy fails the deploy on HIGH.
@@ -39,7 +39,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    runtimeOnly 'org.postgresql:postgresql:42.7.+'
+    implementation 'org.postgresql:postgresql:42.7.+'
     // Unix socket to Cloud Run's built-in Cloud SQL Auth Proxy. This replaces the
     // Java socket factory, which generated an RSA key pair on every cold start.
     runtimeOnly 'com.kohlschutter.junixsocket:junixsocket-common:2.11.1'

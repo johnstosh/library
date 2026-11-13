@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.RejectedHolding;
+import com.muczynski.library.domain.RejectedUrl;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -31,7 +33,12 @@ public class ImportBookDto {
     private String relatedWorks;
     private String detailedDescription;
     private String grokipediaUrl;
+    /** Omitted when empty. A missing field leaves the stored list unchanged. An empty list clears it. */
+    private List<RejectedUrl> invalidGrokipediaUrls;
     private String freeTextUrl;
+    private List<RejectedUrl> invalidFreeTextUrls;
+    private List<RejectedUrl> invalidFreeAudioUrls;
+    private List<RejectedHolding> invalidHoldings;
     /** When a free-text search last finished. Import writes this only when it is present. */
     private LocalDateTime freeTextLastSearched;
     private LocalDateTime dateAddedToLibrary;

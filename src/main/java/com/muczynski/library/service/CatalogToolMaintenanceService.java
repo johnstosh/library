@@ -9,6 +9,8 @@ import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.CatalogMaintenanceAction;
+import com.muczynski.library.domain.RejectedMatches;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.CatalogToolApplyResultDto;
 import com.muczynski.library.dto.CatalogToolCandidatesDto;
 import com.muczynski.library.dto.CatalogToolChangeDto;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -164,7 +167,8 @@ public class CatalogToolMaintenanceService {
             }
             String existing = book.getGrokipediaUrl();
             CatalogToolChangeDto change = grokipediaAddition(
-                    book.getId(), null, book.getTitle(), existing, Book.titlesToSearch(book));
+                    book.getId(), null, book.getTitle(), existing, Book.titlesToSearch(book),
+                    book.getInvalidGrokipediaUrls());
             if (change != null) {
                 changes.add(change);
             }
@@ -192,7 +196,8 @@ public class CatalogToolMaintenanceService {
             }
             String existing = author.getGrokipediaUrl();
             CatalogToolChangeDto change = grokipediaAddition(
-                    null, author.getId(), author.getName(), existing, Author.namesToSearch(author));
+                    null, author.getId(), author.getName(), existing, Author.namesToSearch(author),
+                    author.getInvalidGrokipediaUrls());
             if (change != null) {
                 changes.add(change);
             }
@@ -247,7 +252,16 @@ public class CatalogToolMaintenanceService {
                     freeTextLookupService.recordFreeTextSearch(bookId, null, false);
                     continue;
                 }
-                String merged = FreeTextLookupCache.mergeUrls(existing, found);
+                Book stored = bookRepository.findById(bookId).orElse(null);
+                boolean audio = discovery.getProviderName() != null
+                        && discovery.getProviderName().toLowerCase(Locale.ROOT).contains("librivox");
+                String allowed = stored == null ? found : RejectedMatches.withoutRejectedFreeText(
+                        found, stored.getInvalidFreeTextUrls(), stored.getInvalidFreeAudioUrls(), audio);
+                if (allowed == null || allowed.isBlank()) {
+                    freeTextLookupService.recordFreeTextSearch(bookId, null, false);
+                    continue;
+                }
+                String merged = FreeTextLookupCache.mergeUrls(existing, allowed);
                 String added = addedUrls(existing, merged);
                 if (sameText(merged, existing) || added.isBlank()) {
                     freeTextLookupService.recordFreeTextSearch(bookId, null, false);
@@ -371,7 +385,11 @@ public class CatalogToolMaintenanceService {
                 continue;
             }
             String current = book.getGrokipediaUrl();
-            String after = change.getAfter();
+            String after = RejectedMatches.withoutRejectedGrokipedia(change.getAfter(), book.getInvalidGrokipediaUrls());
+            if (after == null || addedUrls(current, after).isBlank()) {
+                skipped.add(skip(book, "Rejected Grokipedia page"));
+                continue;
+            }
             String reason = grokipediaRejectReason(current, change.getBefore(), after);
             if (reason != null) {
                 skipped.add(skip(book, reason));
@@ -412,7 +430,12 @@ public class CatalogToolMaintenanceService {
                 continue;
             }
             String current = author.getGrokipediaUrl();
-            String after = change.getAfter();
+            String after = RejectedMatches.withoutRejectedGrokipedia(
+                    change.getAfter(), author.getInvalidGrokipediaUrls());
+            if (after == null || addedUrls(current, after).isBlank()) {
+                skipped.add(skipAuthor(author, "Rejected Grokipedia page"));
+                continue;
+            }
             String reason = grokipediaRejectReason(current, change.getBefore(), after);
             if (reason != null) {
                 skipped.add(skipAuthor(author, reason));
@@ -620,11 +643,12 @@ public class CatalogToolMaintenanceService {
      * Reads the names before the lookup so the HTTP call does not keep a database session.
      */
     private CatalogToolChangeDto grokipediaAddition(Long bookId, Long authorId, String label,
-                                                     String existing, List<String> names) {
+                                                     String existing, List<String> names,
+                                                     List<RejectedUrl> rejected) {
         if (names == null || names.isEmpty()) {
             return null;
         }
-        List<String> found = grokipediaLookupService.findQuickUrls(names);
+        List<String> found = grokipediaLookupService.findQuickUrls(names, rejected);
         if (found.isEmpty()) {
             return null;
         }

@@ -85,6 +85,11 @@ public class Book {
     @Column(columnDefinition = "text")
     private String grokipediaUrl;
 
+    /** Grokipedia pages that were checked and rejected. Lookups skip these URLs. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invalid_grokipedia_urls", columnDefinition = "jsonb")
+    private List<RejectedUrl> invalidGrokipediaUrls;
+
     /**
      * Space-separated list of URLs where free online text can be found.
      * Using @Lob with explicit LONGVARCHAR type for PostgreSQL compatibility.
@@ -93,6 +98,24 @@ public class Book {
     @Lob
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.LONGVARCHAR)
     private String freeTextUrl;
+
+    /** Free-text URLs that were checked and rejected. Text providers skip these. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invalid_free_text_urls", columnDefinition = "jsonb")
+    private List<RejectedUrl> invalidFreeTextUrls;
+
+    /** LibriVox URLs that were checked and rejected. Audio lookup skips these. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invalid_free_audio_urls", columnDefinition = "jsonb")
+    private List<RejectedUrl> invalidFreeAudioUrls;
+
+    /**
+     * Catalog records that were checked and found wrong. The next lookup for
+     * that library skips the record id.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invalid_holdings", columnDefinition = "jsonb")
+    private List<RejectedHolding> invalidHoldings;
 
     /**
      * When a free-text search last finished for this book.

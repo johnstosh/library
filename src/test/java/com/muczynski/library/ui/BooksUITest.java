@@ -375,6 +375,36 @@ public class BooksUITest {
     }
 
     @Test
+    @DisplayName("Should save a rejected Grokipedia URL and a rejected catalog match")
+    void testSaveRejectedMatches() {
+        page.click("text=Initial Book");
+        page.waitForURL("**/books/1");
+        page.click("[data-test='book-view-edit']");
+        page.waitForURL("**/books/1/edit");
+        page.waitForSelector("[data-test='book-invalid-grokipedia']");
+
+        page.locator("[data-test='book-invalid-grokipedia'] summary").click();
+        page.fill("[data-test='book-invalid-grokipedia-url']", "https://grokipedia.com/page/Other_Book");
+        page.fill("[data-test='book-invalid-grokipedia-reason']", "different book");
+        page.click("[data-test='book-invalid-grokipedia-add']");
+
+        page.locator("[data-test='book-invalid-holdings'] summary").click();
+        page.selectOption("[data-test='book-invalid-holdings-library']", "YDL");
+        page.fill("[data-test='book-invalid-holdings-key']", "e71f094a");
+        page.fill("[data-test='book-invalid-holdings-reason']", "wrong book");
+        page.click("[data-test='book-invalid-holdings-add']");
+        page.click("[data-test='book-form-submit']");
+        page.waitForURL("**/books/1");
+
+        page.click("[data-test='book-view-edit']");
+        page.waitForURL("**/books/1/edit");
+        page.locator("[data-test='book-invalid-grokipedia'] summary").click();
+        page.locator("[data-test='book-invalid-holdings'] summary").click();
+        assertThat(page.locator("[data-test='book-invalid-grokipedia']")).containsText("https://grokipedia.com/page/Other_Book");
+        assertThat(page.locator("[data-test='book-invalid-holdings']")).containsText("e71f094a");
+    }
+
+    @Test
     @DisplayName("Should save checked and cleared YDL, EMU, ACLA, WCC, and MSU availability")
     void testEditBookAvailabilityCheckboxes() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

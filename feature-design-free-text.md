@@ -6,6 +6,8 @@ This feature provides bulk processing of selected books to find links to free on
 
 Each finished search stamps `Book.freeTextLastSearched`. Null means never searched. A hit, a miss, and a per-book error all stamp it. A blank or temporary primary title does not. The Books page shows that time, or "never", on the book view and next to the free-text field on the book form. The Books page chip "Free text not searched recently" keeps never-searched books and books whose stamp is strictly older than the day count (default 90). Search, Prices, and Savings do not show that chip.
 
+Rejected free-text links live on the book as `invalidFreeTextUrls`. A LibriVox link (`librivox.org`, or any URL when the provider name contains "librivox") is checked against `invalidFreeAudioUrls` instead. There is no separate audio URL column; LibriVox links stay inside `freeTextUrl`. A rejected URL is dropped before it is merged. If every found URL was rejected, the search is a miss: the stored URL is unchanged and the search is stamped. The book edit page lists both rejection lists under the free-text field. Move to rejected sends `librivox.org` URLs to the audio list and every other URL to the text list.
+
 The Books page carousel saves as it goes and stamps each selected book. It has no batch-size buttons. Data Management → Maintenance searches 100, 200, 400, or 800 books, never-searched first and then oldest stamp, eight books at a time. Each finished book is stored before the next one. New links are added onto the links already stored. A miss leaves the URL unchanged and still stamps the book. That path does not use Do It or Undo. See `endpoints/endpoints-maintenance.md`.
 
 ## Architecture

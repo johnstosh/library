@@ -5,6 +5,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.RejectedMatches;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.exception.GrokCreditsExhaustedException;
 import com.muczynski.library.exception.LibraryException;
@@ -102,6 +104,13 @@ public class GrokipediaLookupService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public String findQuickUrl(List<String> titles) {
+        return findQuickUrl(titles, List.of());
+    }
+
+    /**
+     * Quick lookup only. Skips URLs in {@code rejected}. Does not save.
+     */
+    public String findQuickUrl(List<String> titles, List<RejectedUrl> rejected) {
         if (titles == null) {
             return null;
         }
@@ -110,6 +119,9 @@ public class GrokipediaLookupService {
                 continue;
             }
             String usualUrl = generateGrokipediaUrl(title);
+            if (RejectedMatches.rejectsUrl(rejected, usualUrl)) {
+                continue;
+            }
             if (checkUrlExists(usualUrl)) {
                 return usualUrl;
             }
@@ -124,6 +136,13 @@ public class GrokipediaLookupService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<String> findQuickUrls(List<String> titles) {
+        return findQuickUrls(titles, List.of());
+    }
+
+    /**
+     * Quick lookup for every name. Skips URLs in {@code rejected}. Does not save.
+     */
+    public List<String> findQuickUrls(List<String> titles, List<RejectedUrl> rejected) {
         LinkedHashSet<String> found = new LinkedHashSet<>();
         if (titles == null) {
             return List.of();
@@ -133,6 +152,9 @@ public class GrokipediaLookupService {
                 continue;
             }
             String usualUrl = generateGrokipediaUrl(title);
+            if (RejectedMatches.rejectsUrl(rejected, usualUrl)) {
+                continue;
+            }
             if (checkUrlExists(usualUrl)) {
                 found.add(usualUrl);
             }
@@ -207,13 +229,17 @@ public class GrokipediaLookupService {
 
         String primaryTitle = book.getTitle();
         String foundUrl = null;
-        String usedTitle = primaryTitle;
+        List<RejectedUrl> rejected = book.getInvalidGrokipediaUrls();
+        boolean[] sawRejected = new boolean[1];
 
         for (String lookupTitle : titles) {
             String usualUrl = generateGrokipediaUrl(lookupTitle);
+            if (RejectedMatches.rejectsUrl(rejected, usualUrl)) {
+                sawRejected[0] = true;
+                continue;
+            }
             if (checkUrlExists(usualUrl)) {
                 foundUrl = usualUrl;
-                usedTitle = lookupTitle; // but save uses original primary
                 break;
             }
         }
@@ -223,6 +249,9 @@ public class GrokipediaLookupService {
         }
 
         if (!slow) {
+            if (sawRejected[0]) {
+                return rejectedGrokipedia(book.getId(), null, primaryTitle);
+            }
             log.info("No Grokipedia page found for book '{}' at usual URLs", primaryTitle);
             return GrokipediaLookupResultDto.builder()
                     .bookId(book.getId())
@@ -247,7 +276,7 @@ public class GrokipediaLookupService {
                     .build();
         }
 
-        String workingUrl = firstWorkingUrl(grokUrls);
+        String workingUrl = firstWorkingUrl(grokUrls, rejected, sawRejected);
         if (workingUrl != null) {
             return saveBookUrl(book, primaryTitle, workingUrl);
         }
@@ -256,7 +285,7 @@ public class GrokipediaLookupService {
             String altTitle = titles.get(index);
             try {
                 grokUrls = askGrok.suggestGrokipediaUrlsForBook(altTitle, authorName);
-                workingUrl = firstWorkingUrl(grokUrls);
+                workingUrl = firstWorkingUrl(grokUrls, rejected, sawRejected);
                 if (workingUrl != null) {
                     return saveBookUrl(book, primaryTitle, workingUrl);
                 }
@@ -265,6 +294,9 @@ public class GrokipediaLookupService {
             }
         }
 
+        if (sawRejected[0]) {
+            return rejectedGrokipedia(book.getId(), null, primaryTitle);
+        }
         return saveBookNotAvailable(book, primaryTitle);
     }
 
@@ -290,12 +322,19 @@ public class GrokipediaLookupService {
                     .build();
         }
 
+        List<RejectedUrl> rejected = author.getInvalidGrokipediaUrls();
+        boolean[] sawRejected = new boolean[1];
         String usualUrl = generateGrokipediaUrl(name);
-        if (checkUrlExists(usualUrl)) {
+        if (RejectedMatches.rejectsUrl(rejected, usualUrl)) {
+            sawRejected[0] = true;
+        } else if (checkUrlExists(usualUrl)) {
             return saveAuthorUrl(author, name, usualUrl);
         }
 
         if (!slow) {
+            if (sawRejected[0]) {
+                return rejectedGrokipedia(null, author.getId(), name);
+            }
             log.info("No Grokipedia page found for author '{}' at URL: {}", name, usualUrl);
             return GrokipediaLookupResultDto.builder()
                     .authorId(author.getId())
@@ -319,11 +358,14 @@ public class GrokipediaLookupService {
                     .build();
         }
 
-        String workingUrl = firstWorkingUrl(grokUrls);
+        String workingUrl = firstWorkingUrl(grokUrls, rejected, sawRejected);
         if (workingUrl != null) {
             return saveAuthorUrl(author, name, workingUrl);
         }
 
+        if (sawRejected[0]) {
+            return rejectedGrokipedia(null, author.getId(), name);
+        }
         return saveAuthorNotAvailable(author, name);
     }
 
@@ -391,7 +433,22 @@ public class GrokipediaLookupService {
      * Return the first candidate URL that returns 2xx. 4xx URLs are discarded.
      * "-" is not saved here; the caller saves N/A only when this returns null.
      */
-    private String firstWorkingUrl(List<String> candidateUrls) {
+    private GrokipediaLookupResultDto rejectedGrokipedia(Long bookId, Long authorId, String name) {
+        log.info("Every Grokipedia candidate for '{}' was already rejected; leaving the stored URL", name);
+        return GrokipediaLookupResultDto.builder()
+                .bookId(bookId)
+                .authorId(authorId)
+                .name(name)
+                .success(false)
+                .errorMessage("Rejected Grokipedia page")
+                .build();
+    }
+
+    /**
+     * Return the first candidate URL that returns 2xx and is not rejected.
+     * A rejected candidate sets {@code sawRejected} and is not written.
+     */
+    private String firstWorkingUrl(List<String> candidateUrls, List<RejectedUrl> rejected, boolean[] sawRejected) {
         if (candidateUrls == null) {
             return null;
         }
@@ -401,6 +458,10 @@ public class GrokipediaLookupService {
             }
             String url = candidate.trim();
             if (!isGrokipediaPageUrl(url)) {
+                continue;
+            }
+            if (RejectedMatches.rejectsUrl(rejected, url)) {
+                sawRejected[0] = true;
                 continue;
             }
             if (checkUrlExists(url)) {

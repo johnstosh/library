@@ -5,6 +5,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.dto.AclaLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -467,5 +469,45 @@ class AclaLookupServiceTest {
         assertTrue(Boolean.TRUE.equals(result.getPaperAvailable()));
         assertTrue(Boolean.TRUE.equals(result.getEbookAvailable()));
         verify(aclaRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsARejectedBibAndKeepsTheOthers() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.ACLA, "S1", null, "wrong copy", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertFalse(result.getPaperAvailable());
+        assertTrue(result.getEbookAvailable());
+        assertTrue(result.getAudioAvailable());
+        assertTrue(result.getMatches().stream().noneMatch(match -> "S1".equals(match.getRecordKey())));
+        assertTrue(result.getMatches().stream().anyMatch(match -> "S2".equals(match.getRecordKey())));
+    }
+
+    @Test
+    void lookupAndUpdateBook_rejectedOnlyBibsAreNotHeld() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        book.setAclaPaperAvailable(true);
+        book.setInvalidHoldings(List.of(
+                new RejectedHolding(PublicLibrary.ACLA, "S1", null, "wrong copy", null, null),
+                new RejectedHolding(PublicLibrary.ACLA, "s2", null, "wrong copy", null, null),
+                new RejectedHolding(PublicLibrary.ACLA, "S3", null, "wrong copy", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(aclaRestTemplate.getForObject(any(URI.class), eq(String.class)))
+                .thenReturn(RESPONSE_WITH_ALL_FORMATS);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        AclaLookupResultDto result = aclaLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by ACLA", result.getErrorMessage());
+        assertFalse(book.getAclaPaperAvailable());
     }
 }

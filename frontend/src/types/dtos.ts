@@ -46,6 +46,32 @@ export interface BranchStatisticsDto {
 }
 
 // Author DTOs
+export type PublicLibrary = 'YDL' | 'EMU' | 'ACLA' | 'WCC' | 'MSU'
+
+/** A URL that was checked and rejected. Date and by are filled in on save. */
+export interface RejectedUrl {
+  url: string
+  reason?: string
+  date?: string
+  by?: string
+}
+
+/** A catalog record that was checked and rejected for one public library. */
+export interface RejectedHolding {
+  library: PublicLibrary
+  recordKey: string
+  url?: string
+  reason?: string
+  date?: string
+  by?: string
+}
+
+/** A catalog record that set availability flags on the last lookup. */
+export interface CatalogMatchRef {
+  recordKey: string
+  url?: string
+}
+
 export interface AuthorDto {
   id: number
   name: string
@@ -58,6 +84,7 @@ export interface AuthorDto {
   nationality?: string
   briefBiography?: string
   grokipediaUrl?: string
+  invalidGrokipediaUrls?: RejectedUrl[]
   firstPhotoId?: number
   firstPhotoChecksum?: string
   bookCount?: number
@@ -112,7 +139,11 @@ export interface BookDto {
   relatedWorks?: string
   detailedDescription?: string
   grokipediaUrl?: string
+  invalidGrokipediaUrls?: RejectedUrl[]
   freeTextUrl?: string
+  invalidFreeTextUrls?: RejectedUrl[]
+  invalidFreeAudioUrls?: RejectedUrl[]
+  invalidHoldings?: RejectedHolding[]
   /** When a free-text search last finished. Absent means never searched. */
   freeTextLastSearched?: string
   dateAddedToLibrary?: string

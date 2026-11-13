@@ -22,6 +22,7 @@ The JSON export includes:
 - **Prices** (AbeBooks listings: book title+author, cover including library binding, price, shipping, condition, date, URL)
 - Book `binding` (`HARDCOVER`, `SOFTCOVER`, `LIBRARY_BINDING`, `OTHER`, `UNKNOWN`; missing on legacy JSON imports as `UNKNOWN`)
 - Book `readingDifficulty` and `desireToPurchase`. Export writes both. Import stores them on create and on an existing title when the JSON includes them. A missing field leaves the stored value unchanged.
+- Rejected matches: author `invalidGrokipediaUrls`; book `invalidGrokipediaUrls`, `invalidFreeTextUrls`, `invalidFreeAudioUrls`, and `invalidHoldings` (`library` is `YDL`, `EMU`, `ACLA`, `WCC`, or `MSU`, plus `recordKey`, optional `url`, `reason`, `date`, `by`). Export omits a list when it is empty. Import of a missing field leaves the stored list unchanged. A present list, including `[]`, replaces it. Imported `by` and `date` are kept.
 - **Photo metadata** (permanent IDs, captions, ordering, export status)
 
 ### What's NOT Included

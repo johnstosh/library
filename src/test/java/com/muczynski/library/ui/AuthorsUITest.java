@@ -340,6 +340,27 @@ public class AuthorsUITest {
     }
 
     @Test
+    @DisplayName("Should save a rejected Grokipedia page on the author")
+    void shouldSaveRejectedGrokipediaPage() {
+        page.click("tr[data-entity-id]");
+        page.waitForSelector("[data-test='author-view-edit']",
+            new Page.WaitForSelectorOptions().setState(WaitForSelectorState.VISIBLE));
+        page.click("[data-test='author-view-edit']");
+        page.waitForURL("**/edit");
+        page.locator("[data-test='author-invalid-grokipedia'] summary").click();
+        page.fill("[data-test='author-invalid-grokipedia-url']", "https://grokipedia.com/page/Other_Person");
+        page.fill("[data-test='author-invalid-grokipedia-reason']", "different person");
+        page.click("[data-test='author-invalid-grokipedia-add']");
+        page.click("[data-test='author-form-submit']");
+        page.waitForURL("**/authors/1");
+
+        page.click("[data-test='author-view-edit']");
+        page.waitForURL("**/edit");
+        page.locator("[data-test='author-invalid-grokipedia'] summary").click();
+        assertThat(page.locator("[data-test='author-invalid-grokipedia']")).containsText("https://grokipedia.com/page/Other_Person");
+    }
+
+    @Test
     @DisplayName("Should show Grokipedia link on author view and authors table")
     void shouldShowGrokipediaLinkOnAuthorViewAndTable() {
         page.waitForLoadState(LoadState.NETWORKIDLE);

@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.repository.AuthorRepository;
 import com.muczynski.library.repository.BookRepository;
@@ -531,6 +532,40 @@ class GrokipediaLookupServiceTest {
         assertFalse(result.isSuccess());
         assertEquals("-", result.getGrokipediaUrl());
         verify(authorRepository).save(argThat(a -> "-".equals(a.getGrokipediaUrl())));
+    }
+
+    @Test
+    void lookupBook_skipsARejectedPageAndDoesNotSave() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Hermann Geiger");
+        book.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "hermann_geiger", "different person", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Rejected Grokipedia page", result.getErrorMessage());
+        assertNull(result.getGrokipediaUrl());
+        verify(bookRepository, never()).save(any());
+        verify(restTemplate, never()).exchange(anyString(), eq(HttpMethod.HEAD), isNull(), eq(Void.class));
+    }
+
+    @Test
+    void lookupBook_slow_doesNotSaveDashWhenEveryCandidateIsRejected() {
+        Book book = bookWithAuthor(1L, "Hermann Geiger", "Hermann Geiger");
+        book.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "https://grokipedia.com/page/Hermann_Geiger", "different person", null, "ada")));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(askGrok.suggestGrokipediaUrlsForBook("Hermann Geiger", "Hermann Geiger"))
+                .thenReturn(List.of("https://grokipedia.com/page/Hermann_Geiger"));
+
+        GrokipediaLookupResultDto result = grokipediaLookupService.lookupBook(1L, true);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Rejected Grokipedia page", result.getErrorMessage());
+        verify(bookRepository, never()).save(any());
     }
 
     private Book bookWithAuthor(Long id, String title, String authorName) {

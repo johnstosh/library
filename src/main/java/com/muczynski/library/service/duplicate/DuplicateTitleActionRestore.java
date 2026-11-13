@@ -3,12 +3,15 @@
  */
 package com.muczynski.library.service.duplicate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.AuthorState;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.BookState;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.FavoriteState;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.LoanState;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.PriceState;
+import org.postgresql.util.PGobject;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -31,6 +34,8 @@ import java.util.List;
 @Component
 public class DuplicateTitleActionRestore {
 
+    private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
+
     private final JdbcTemplate jdbc;
 
     public DuplicateTitleActionRestore(JdbcTemplate jdbc) {
@@ -43,8 +48,8 @@ public class DuplicateTitleActionRestore {
                     INSERT INTO author (
                         id, name, alternate_names, date_of_birth, date_of_death,
                         religious_affiliation, birth_country, nationality, brief_biography,
-                        grokipedia_url, last_modified)
-                    VALUES (?, ?, ?, ?, ?, lo_from_bytea(0, ?), lo_from_bytea(0, ?), lo_from_bytea(0, ?), lo_from_bytea(0, ?), ?, CURRENT_TIMESTAMP)
+                        grokipedia_url, invalid_grokipedia_urls, last_modified)
+                    VALUES (?, ?, ?, ?, ?, lo_from_bytea(0, ?), lo_from_bytea(0, ?), lo_from_bytea(0, ?), lo_from_bytea(0, ?), ?, ?, CURRENT_TIMESTAMP)
                     """)) {
                 statement.setLong(1, author.getId());
                 statement.setString(2, author.getName());
@@ -60,6 +65,7 @@ public class DuplicateTitleActionRestore {
                 setOidText(statement, 8, author.getNationality());
                 setOidText(statement, 9, author.getBiographicalEssay());
                 statement.setString(10, author.getGrokipediaUrl());
+                setJson(statement, 11, author.getInvalidGrokipediaUrls());
                 statement.executeUpdate();
             }
             return null;
@@ -81,9 +87,10 @@ public class DuplicateTitleActionRestore {
                         wcc_audio_available, wcc_paper_available, wcc_ebook_available, wcc_last_checked, wcc_lookup_error,
                         msu_audio_available, msu_paper_available, msu_ebook_available, msu_last_checked, msu_lookup_error,
                         reading_difficulty, binding, desire_to_purchase, author_id, library_id,
-                        free_text_last_searched)
+                        free_text_last_searched, invalid_grokipedia_urls, invalid_free_text_urls,
+                        invalid_free_audio_urls, invalid_holdings)
                     VALUES (?, ?, ?, ?, ?, ?, lo_from_bytea(0, ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
@@ -132,6 +139,10 @@ public class DuplicateTitleActionRestore {
                 setLong(statement, 45, book.getAuthorId());
                 setLong(statement, 46, book.getLibraryId());
                 setTimestamp(statement, 47, book.getFreeTextLastSearched());
+                setJson(statement, 48, book.getInvalidGrokipediaUrls());
+                setJson(statement, 49, book.getInvalidFreeTextUrls());
+                setJson(statement, 50, book.getInvalidFreeAudioUrls());
+                setJson(statement, 51, book.getInvalidHoldings());
                 statement.executeUpdate();
             }
             return null;
@@ -228,6 +239,21 @@ public class DuplicateTitleActionRestore {
         }
         Array array = connection.createArrayOf("text", values.toArray(String[]::new));
         statement.setArray(index, array);
+    }
+
+    private static void setJson(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value == null) {
+            statement.setNull(index, Types.OTHER);
+            return;
+        }
+        try {
+            PGobject json = new PGobject();
+            json.setType("jsonb");
+            json.setValue(JSON.writeValueAsString(value));
+            statement.setObject(index, json);
+        } catch (JsonProcessingException ex) {
+            throw new SQLException("Could not write rejected matches", ex);
+        }
     }
 
     private static void setString(PreparedStatement statement, int index, String value) throws SQLException {

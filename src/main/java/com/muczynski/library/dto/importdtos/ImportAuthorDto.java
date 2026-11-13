@@ -4,6 +4,7 @@
 package com.muczynski.library.dto.importdtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.muczynski.library.domain.RejectedUrl;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -21,4 +22,6 @@ public class ImportAuthorDto {
     private String nationality;
     private String briefBiography;
     private String grokipediaUrl;
+    /** Omitted when empty. A missing field leaves the stored list unchanged. */
+    private List<RejectedUrl> invalidGrokipediaUrls;
 }
