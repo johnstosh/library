@@ -323,11 +323,11 @@ class DuplicateTitleActionIntegrationTest {
         sourceAuthor.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
                 "https://grokipedia.com/page/Other", "source", null, "bea")));
         authorRepository.save(sourceAuthor);
-        book("Ada Rejected One", BookStatus.ACTIVE, keeperAuthor);
-        book("Ada Rejected Two", BookStatus.ACTIVE, sourceAuthor);
+        Book onKeeper = book("Ada Rejected One", BookStatus.ACTIVE, keeperAuthor);
+        Book onSource = book("Ada Rejected Two", BookStatus.ACTIVE, sourceAuthor);
         bookRepository.flush();
 
-        DuplicateTitleActionResultDto merged = actionService.mergeAuthors(keeperAuthor.getId(), sourceAuthor.getId());
+        DuplicateTitleActionResultDto merged = actionService.mergeAuthors(onKeeper.getId(), onSource.getId());
         refresh();
 
         Author kept = authorRepository.findById(keeperAuthor.getId()).orElseThrow();
