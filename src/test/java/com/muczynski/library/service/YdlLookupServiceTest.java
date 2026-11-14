@@ -5,6 +5,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.dto.YdlLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -558,6 +560,65 @@ class YdlLookupServiceTest {
         verify(ydlRestTemplate, times(2)).postForObject(anyString(), any(HttpEntity.class), any());
         assertEquals(1, pauses.size());
         assertTrue(Math.abs(pauses.get(0) - 2_000) <= 250, "pause was " + pauses.get(0));
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsARejectedRecordAndKeepsTheOther() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.YDL, "drop-me", null, "different edition", null, null)));
+        String response = """
+                {"totalPages":1,"page":0,"totalResults":2,"data":[
+                  {"id":"keep-me","title":"Test Book","primaryAgent":{"label":"Author, Test"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]},
+                  {"id":"drop-me","title":"Test Book","primaryAgent":{"label":"Author, Test"},
+                   "materialTabs":[{"name":"Ebook","type":"electronic"}]}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any())).thenReturn(response);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertEquals(1, result.getMatches().size());
+        assertEquals("keep-me", result.getMatches().get(0).getRecordKey());
+    }
+
+    @Test
+    void lookupAndUpdateBook_rejectedOnlyRecordIsNotHeld() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        book.setYdlPaperAvailable(true);
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.YDL, "DROP-ME", null, "wrong book", null, null)));
+        String response = """
+                {"totalPages":1,"page":0,"totalResults":1,"data":[
+                  {"id":"drop-me","title":"Test Book","primaryAgent":{"label":"Author, Test"},
+                   "materialTabs":[{"name":"Book","type":"physical"}]}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(ydlRestTemplate.postForObject(anyString(), any(HttpEntity.class), any())).thenReturn(response);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        YdlLookupResultDto result = ydlLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by YDL", result.getErrorMessage());
+        assertFalse(book.getYdlPaperAvailable());
     }
 
     private static HttpClientErrorException tooMany() {

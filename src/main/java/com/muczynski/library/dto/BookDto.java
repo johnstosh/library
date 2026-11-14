@@ -6,6 +6,8 @@ package com.muczynski.library.dto;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.RejectedHolding;
+import com.muczynski.library.domain.RejectedUrl;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
@@ -30,7 +32,15 @@ public class BookDto {
     private String relatedWorks;
     private String detailedDescription;
     private String grokipediaUrl;
+    /** Rejected Grokipedia pages. Empty when none have been rejected. */
+    private List<RejectedUrl> invalidGrokipediaUrls;
     private String freeTextUrl;
+    /** Rejected free-text URLs. Empty when none have been rejected. */
+    private List<RejectedUrl> invalidFreeTextUrls;
+    /** Rejected LibriVox URLs. Empty when none have been rejected. */
+    private List<RejectedUrl> invalidFreeAudioUrls;
+    /** Catalog records that were checked and found wrong. */
+    private List<RejectedHolding> invalidHoldings;
     /** When a free-text search last finished. Null means never searched. */
     private LocalDateTime freeTextLastSearched;
     private LocalDateTime dateAddedToLibrary;

@@ -5,6 +5,7 @@ package com.muczynski.library.freetext;
 
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.RejectedMatches;
 import com.muczynski.library.dto.FreeTextBulkLookupResultDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookRepository;
@@ -86,8 +87,9 @@ public class FreeTextLookupService {
         String primaryTitle = book.getTitle();
         try {
             Discovery discovery = discoverUrls(titles, AuthorNames.lookupNames(book.getAuthor()));
-            if (discovery.getUrls() != null && !discovery.getUrls().isBlank()) {
-                String merged = applyFoundUrls(book, discovery.getUrls());
+            String allowed = allowedFreeText(book, discovery);
+            if (allowed != null && !allowed.isBlank()) {
+                String merged = applyFoundUrls(book, allowed);
                 stampSearch(book);
                 log.info("Found free text for book {}: {} via {}", bookId, merged, discovery.getProviderName());
                 return FreeTextBulkLookupResultDto.builder()
@@ -259,6 +261,16 @@ public class FreeTextLookupService {
      *
      * @return the freeTextUrl value after the merge
      */
+    private static String allowedFreeText(Book book, Discovery discovery) {
+        if (discovery == null || discovery.getUrls() == null || discovery.getUrls().isBlank()) {
+            return null;
+        }
+        boolean audio = discovery.getProviderName() != null
+                && discovery.getProviderName().toLowerCase(java.util.Locale.ROOT).contains("librivox");
+        return RejectedMatches.withoutRejectedFreeText(
+                discovery.getUrls(), book.getInvalidFreeTextUrls(), book.getInvalidFreeAudioUrls(), audio);
+    }
+
     private String applyFoundUrls(Book book, String foundUrls) {
         String merged = FreeTextLookupCache.mergeUrls(book.getFreeTextUrl(), foundUrls);
         if (!Objects.equals(merged, book.getFreeTextUrl())) {

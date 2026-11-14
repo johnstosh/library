@@ -158,6 +158,8 @@ The application can automatically discover Grokipedia article URLs for books and
 
 `"-"` is treated as missing by without-Grokipedia filters and is not shown as a link.
 
+A page that was checked and rejected is stored on the book or author as `invalidGrokipediaUrls` (`url`, `reason`, `date`, `by`). Comparison ignores case, a trailing slash, and the query string. A stored slug such as `hermann_geiger` matches `https://grokipedia.com/page/Hermann_Geiger`. Quick and slow lookup skip those pages and do not save them. If every working candidate was rejected, the stored URL is left as it is and `"-"` is not written. The edit page shows the list collapsed, and Move to rejected clears the live URL. A live URL that is already rejected shows a warning and can still be saved.
+
 ## Endpoints
 
 ### Books Bulk Lookup

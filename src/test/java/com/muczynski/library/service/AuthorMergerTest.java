@@ -4,6 +4,7 @@
 package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.RejectedUrl;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -59,6 +60,23 @@ class AuthorMergerTest {
 
         assertEquals("Spain", keeper.getBirthCountry());
         assertNull(keeper.getAlternateNames());
+    }
+
+    @Test
+    void unionsRejectedGrokipediaUrlsAndKeepsTheKeeperReason() {
+        Author keeper = author("Ada");
+        keeper.setInvalidGrokipediaUrls(new ArrayList<>(List.of(
+                new RejectedUrl("https://grokipedia.com/page/Ada", "keeper", null, "ada"))));
+        Author source = author("Ada Lovelace");
+        source.setInvalidGrokipediaUrls(new ArrayList<>(List.of(
+                new RejectedUrl("https://grokipedia.com/page/Ada/", "source", null, "bea"),
+                new RejectedUrl("https://grokipedia.com/page/Other", "source", null, "bea"))));
+
+        AuthorMerger.mergeFields(keeper, source);
+
+        assertEquals(2, keeper.getInvalidGrokipediaUrls().size());
+        assertEquals("keeper", keeper.getInvalidGrokipediaUrls().get(0).getReason());
+        assertEquals("https://grokipedia.com/page/Other", keeper.getInvalidGrokipediaUrls().get(1).getUrl());
     }
 
     private static Author author(String name) {

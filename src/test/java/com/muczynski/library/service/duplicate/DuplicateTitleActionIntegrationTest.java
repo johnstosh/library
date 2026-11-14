@@ -6,6 +6,9 @@ package com.muczynski.library.service.duplicate;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.domain.RejectedHolding;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.DuplicateTitleActionResultDto;
 import com.muczynski.library.dto.DuplicateTitlePairDto;
 import com.muczynski.library.exception.LibraryException;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -264,6 +268,81 @@ class DuplicateTitleActionIntegrationTest {
     private void refresh() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    @Test
+    void mergeTitlesUnionsRejectedMatchesAndUndoRestoresThem() {
+        Author augustine = author("Augustine of Hippo Rejected");
+        Book shelf = book("Confessions Rejected Shelf", BookStatus.ACTIVE, augustine);
+        shelf.setFreeTextUrl("https://gutenberg.org/1 https://archive.org/ok");
+        shelf.setInvalidFreeTextUrls(List.of(new RejectedUrl(
+                "https://gutenberg.org/1", "wrong edition", null, "ada")));
+        shelf.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.YDL, "shelf-1", null, "wrong book", null, "ada")));
+        Book electronic = book("Confession Rejected Copy", BookStatus.ACTIVE, augustine);
+        electronic.setFreeTextUrl("https://librivox.org/city");
+        electronic.setInvalidFreeAudioUrls(List.of(new RejectedUrl(
+                "https://librivox.org/city", "wrong reading", null, "bea")));
+        electronic.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "https://grokipedia.com/page/Other", "different book", null, "bea")));
+        electronic.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.EMU, "emu-1", null, "not this copy", null, "bea")));
+        bookRepository.saveAll(List.of(shelf, electronic));
+        bookRepository.flush();
+
+        DuplicateTitleActionResultDto merged = actionService.mergeTitles(shelf.getId(), electronic.getId());
+        refresh();
+
+        Book kept = bookRepository.findById(shelf.getId()).orElseThrow();
+        assertEquals("https://archive.org/ok", kept.getFreeTextUrl());
+        assertEquals(1, kept.getInvalidFreeTextUrls().size());
+        assertEquals(1, kept.getInvalidFreeAudioUrls().size());
+        assertEquals(1, kept.getInvalidGrokipediaUrls().size());
+        assertEquals(2, kept.getInvalidHoldings().size());
+
+        actionService.undoTitleMerge(merged.getActionId());
+        refresh();
+
+        Book restored = bookRepository.findById(electronic.getId()).orElseThrow();
+        assertEquals("https://librivox.org/city", restored.getFreeTextUrl());
+        assertEquals("emu-1", restored.getInvalidHoldings().get(0).getRecordKey());
+        assertEquals(1, restored.getInvalidFreeAudioUrls().size());
+        Book shelfAgain = bookRepository.findById(shelf.getId()).orElseThrow();
+        assertEquals("https://gutenberg.org/1 https://archive.org/ok", shelfAgain.getFreeTextUrl());
+        assertEquals(1, shelfAgain.getInvalidFreeTextUrls().size());
+        assertNull(shelfAgain.getInvalidFreeAudioUrls());
+    }
+
+    @Test
+    void mergeAuthorsUnionsRejectedPagesAndUndoRestoresThem() {
+        Author keeperAuthor = author("Ada Lovelace Smith");
+        keeperAuthor.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "https://grokipedia.com/page/Ada", "keeper", null, "ada")));
+        authorRepository.save(keeperAuthor);
+        Author sourceAuthor = author("Beatrice Other");
+        sourceAuthor.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "https://grokipedia.com/page/Other", "source", null, "bea")));
+        authorRepository.save(sourceAuthor);
+        Book onKeeper = book("Ada Rejected One", BookStatus.ACTIVE, keeperAuthor);
+        Book onSource = book("Ada Rejected Two", BookStatus.ACTIVE, sourceAuthor);
+        bookRepository.flush();
+
+        DuplicateTitleActionResultDto merged = actionService.mergeAuthors(onKeeper.getId(), onSource.getId());
+        refresh();
+
+        Author kept = authorRepository.findById(keeperAuthor.getId()).orElseThrow();
+        assertEquals(2, kept.getInvalidGrokipediaUrls().size());
+        assertEquals("keeper", kept.getInvalidGrokipediaUrls().get(0).getReason());
+
+        actionService.undoAuthorMerge(merged.getActionId());
+        refresh();
+
+        assertEquals("keeper", authorRepository.findById(keeperAuthor.getId()).orElseThrow()
+                .getInvalidGrokipediaUrls().get(0).getReason());
+        assertEquals(1, authorRepository.findById(keeperAuthor.getId()).orElseThrow()
+                .getInvalidGrokipediaUrls().size());
+        assertEquals("source", authorRepository.findById(sourceAuthor.getId()).orElseThrow()
+                .getInvalidGrokipediaUrls().get(0).getReason());
     }
 
     private Author author(String name) {

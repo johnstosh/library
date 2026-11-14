@@ -5,6 +5,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.dto.MsuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -440,6 +442,54 @@ class MsuLookupServiceTest {
         return HttpClientErrorException.create(
                 HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", headers,
                 new byte[0], StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsARejectedRecordAndKeepsTheOther() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.MSU, "drop-me", null, "different edition", null, null)));
+        String body = """
+                {"status":"OK","records":[
+                  {"id":"keep-me","title":"Test Book","shortTitle":"Test Book","formats":["Book"],
+                   "authors":{"primary":{"Author, Test":{"role":["author"]}}}},
+                  {"id":"drop-me","title":"Test Book","shortTitle":"Test Book","formats":["Audio"],
+                   "authors":{"primary":{"Author, Test":{"role":[]}}}}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(msuRestTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn(body);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        MsuLookupResultDto result = msuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getAudioAvailable());
+        assertEquals("keep-me", result.getMatches().get(0).getRecordKey());
+    }
+
+    @Test
+    void lookupAndUpdateBook_rejectedOnlyRecordIsNotHeld() {
+        Book book = bookWithAuthor("Test Book", "Test Author");
+        book.setMsuPaperAvailable(true);
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.MSU, "DROP-ME", null, "wrong book", null, null)));
+        String body = """
+                {"status":"OK","records":[
+                  {"id":"drop-me","title":"Test Book","shortTitle":"Test Book","formats":["Book"],
+                   "authors":{"primary":{"Author, Test":{"role":["author"]}}}}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(msuRestTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn(body);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        MsuLookupResultDto result = msuLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by Michigan State University", result.getErrorMessage());
+        assertFalse(book.getMsuPaperAvailable());
     }
 
     private static Book bookWithAuthor(String title, String authorName) {

@@ -65,6 +65,13 @@ public class Author {
     @Column(columnDefinition = "text")
     private String grokipediaUrl;
 
+    /**
+     * Grokipedia pages that were checked and rejected. Lookups skip these URLs.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "invalid_grokipedia_urls", columnDefinition = "jsonb")
+    private List<RejectedUrl> invalidGrokipediaUrls;
+
     private LocalDateTime lastModified;
 
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)

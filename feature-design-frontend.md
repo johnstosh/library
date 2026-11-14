@@ -819,6 +819,7 @@ Headless UI Dialog with consistent structure:
 
 ### 1. Books Management
 - On a phone (under 640px) the list is a card per book, the same shape as a Search result: cover, title, author, status, and wrapping action icons. The wide table stays on larger screens. `data-test="books-phone-list"` marks the phone list.
+- The book page renders `detailedDescription` as Markdown (`MarkdownText` in `BookViewPage`). `react-markdown` with `remark-gfm` and `remark-breaks`. Raw HTML is dropped (`skipHtml`, no `rehype-raw`). Links are http(s) only and open in a new tab with `rel="noopener noreferrer"`. A `#` heading renders as an `h2` at `text-lg`, smaller than the `text-2xl` page title. Blank lines stay separate paragraphs. A single line break stays a line break. The edit form still shows the source. Plot summary stays plain text.
 - Filter by All, Most Recent Day, Status (including Without LOC), and a bottom Pricing section (Books with Pricing, Books without Pricing; price older than N days, default 90)
 - CRUD operations
 - Bulk delete

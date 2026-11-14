@@ -12,7 +12,9 @@ import { useAuthorBooks, useCreateAuthor, useUpdateAuthor } from '@/api/authors'
 import { useLookupSingleAuthorGrokipedia, type GrokipediaLookupResultDto } from '@/api/grokipedia-lookup'
 import { useIsLibrarian } from '@/stores/authStore'
 import { GrokipediaIcon } from '@/components/ui/Icons'
-import type { AuthorDto } from '@/types/dtos'
+import { RejectedUrlList } from '@/components/RejectedUrlList'
+import { appendRejectedUrls, httpUrls } from '@/utils/rejectedMatches'
+import type { AuthorDto, RejectedUrl } from '@/types/dtos'
 
 interface AuthorFormPageProps {
   title: string
@@ -36,6 +38,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
     briefBiography: '',
     grokipediaUrl: '',
   })
+  const [invalidGrokipediaUrls, setInvalidGrokipediaUrls] = useState<RejectedUrl[]>([])
   const [error, setError] = useState('')
   const [showTryAgainDialog, setShowTryAgainDialog] = useState(false)
   const [pendingError, setPendingError] = useState<unknown>(null)
@@ -63,6 +66,9 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
         briefBiography: author.briefBiography || '',
         grokipediaUrl: author.grokipediaUrl || '',
       })
+      setInvalidGrokipediaUrls(author.invalidGrokipediaUrls ?? [])
+    } else {
+      setInvalidGrokipediaUrls([])
     }
   }, [author])
 
@@ -127,6 +133,7 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
         nationality: formData.nationality || undefined,
         briefBiography: formData.briefBiography || undefined,
         grokipediaUrl: formData.grokipediaUrl || undefined,
+        invalidGrokipediaUrls,
       }
 
       if (isEditing) {
@@ -283,6 +290,23 @@ export function AuthorFormPage({ title, author, onSuccess, onCancel }: AuthorFor
             </>
           )}
         </div>
+        <RejectedUrlList
+          title="Rejected Grokipedia pages"
+          testId="author-invalid-grokipedia"
+          rows={invalidGrokipediaUrls}
+          onChange={(rows) => {
+            setInvalidGrokipediaUrls(rows)
+            setHasUnsavedChanges(true)
+          }}
+          liveValue={formData.grokipediaUrl}
+          onMove={(reason) => {
+            const urls = httpUrls(formData.grokipediaUrl)
+            if (!reason.trim() || urls.length === 0) return
+            setInvalidGrokipediaUrls((current) => appendRejectedUrls(current, urls, reason))
+            setFormData((prev) => ({ ...prev, grokipediaUrl: '' }))
+            setHasUnsavedChanges(true)
+          }}
+        />
 
         {/* Books Section - Only show when editing */}
         {isEditing && author && (

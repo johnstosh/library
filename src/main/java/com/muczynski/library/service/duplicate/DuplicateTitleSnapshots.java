@@ -68,6 +68,7 @@ public final class DuplicateTitleSnapshots {
         private String nationality;
         private String biographicalEssay;
         private String grokipediaUrl;
+        private List<com.muczynski.library.domain.RejectedUrl> invalidGrokipediaUrls;
 
         static AuthorState from(Author author) {
             AuthorState state = new AuthorState();
@@ -82,6 +83,8 @@ public final class DuplicateTitleSnapshots {
             state.nationality = author.getNationality();
             state.biographicalEssay = author.getBiographicalEssay();
             state.grokipediaUrl = author.getGrokipediaUrl();
+            state.invalidGrokipediaUrls = author.getInvalidGrokipediaUrls() == null
+                    ? null : new ArrayList<>(author.getInvalidGrokipediaUrls());
             return state;
         }
     }
@@ -100,7 +103,11 @@ public final class DuplicateTitleSnapshots {
         private String relatedWorks;
         private String detailedDescription;
         private String grokipediaUrl;
+        private List<com.muczynski.library.domain.RejectedUrl> invalidGrokipediaUrls;
         private String freeTextUrl;
+        private List<com.muczynski.library.domain.RejectedUrl> invalidFreeTextUrls;
+        private List<com.muczynski.library.domain.RejectedUrl> invalidFreeAudioUrls;
+        private List<com.muczynski.library.domain.RejectedHolding> invalidHoldings;
         private LocalDateTime freeTextLastSearched;
         private LocalDateTime dateAddedToLibrary;
         private LocalDateTime lastModified;
@@ -152,7 +159,15 @@ public final class DuplicateTitleSnapshots {
             state.relatedWorks = book.getRelatedWorks();
             state.detailedDescription = book.getDetailedDescription();
             state.grokipediaUrl = book.getGrokipediaUrl();
+            state.invalidGrokipediaUrls = book.getInvalidGrokipediaUrls() == null
+                    ? null : new ArrayList<>(book.getInvalidGrokipediaUrls());
             state.freeTextUrl = book.getFreeTextUrl();
+            state.invalidFreeTextUrls = book.getInvalidFreeTextUrls() == null
+                    ? null : new ArrayList<>(book.getInvalidFreeTextUrls());
+            state.invalidFreeAudioUrls = book.getInvalidFreeAudioUrls() == null
+                    ? null : new ArrayList<>(book.getInvalidFreeAudioUrls());
+            state.invalidHoldings = book.getInvalidHoldings() == null
+                    ? null : new ArrayList<>(book.getInvalidHoldings());
             state.freeTextLastSearched = book.getFreeTextLastSearched();
             state.dateAddedToLibrary = book.getDateAddedToLibrary();
             state.lastModified = book.getLastModified();

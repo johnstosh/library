@@ -33,13 +33,16 @@ import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDateTime, parseISODateSafe } from '@/utils/formatters'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
-import type { BookDto, GenreLookupResultDto } from '@/types/dtos'
+import type { BookDto, CatalogMatchRef, GenreLookupResultDto, PublicLibrary, RejectedHolding, RejectedUrl } from '@/types/dtos'
 import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
 import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
 import { AclaIcon, AiIcon, AuthorIcon, GrokipediaIcon, LocIcon, MsuIcon, WccIcon } from '@/components/ui/Icons'
 import { IconButton } from '@/components/ui/IconButton'
+import { RejectedUrlList } from '@/components/RejectedUrlList'
+import { RejectCatalogMatchesButton, RejectedHoldingsList } from '@/components/RejectedHoldingsList'
+import { appendHoldings, appendRejectedUrls, httpUrls, isLibriVox } from '@/utils/rejectedMatches'
 
 function linesToTitles(text: string): string[] {
   return text
@@ -118,6 +121,12 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     binding: BookCoverType.UNKNOWN as BookCoverType,
     desireToPurchase: null as number | null,
   })
+  const [invalidGrokipediaUrls, setInvalidGrokipediaUrls] = useState<RejectedUrl[]>([])
+  const [invalidFreeTextUrls, setInvalidFreeTextUrls] = useState<RejectedUrl[]>([])
+  const [invalidFreeAudioUrls, setInvalidFreeAudioUrls] = useState<RejectedUrl[]>([])
+  const [invalidHoldings, setInvalidHoldings] = useState<RejectedHolding[]>([])
+  const [catalogMatches, setCatalogMatches] = useState<Partial<Record<PublicLibrary, CatalogMatchRef[]>>>({})
+  const [freeTextRejectReason, setFreeTextRejectReason] = useState('')
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -203,6 +212,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         binding: book.binding ?? BookCoverType.UNKNOWN,
         desireToPurchase: book.desireToPurchase ?? null,
       })
+      setInvalidGrokipediaUrls(book.invalidGrokipediaUrls ?? [])
+      setInvalidFreeTextUrls(book.invalidFreeTextUrls ?? [])
+      setInvalidFreeAudioUrls(book.invalidFreeAudioUrls ?? [])
+      setInvalidHoldings(book.invalidHoldings ?? [])
+      setCatalogMatches({})
     } else {
       // Creating a new book: keep a branch already chosen (or the first branch
       // if the list is already loaded). A later effect fills branchId if branches
@@ -244,6 +258,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         binding: BookCoverType.UNKNOWN as BookCoverType,
         desireToPurchase: null as number | null,
       }))
+      setInvalidGrokipediaUrls([])
+      setInvalidFreeTextUrls([])
+      setInvalidFreeAudioUrls([])
+      setInvalidHoldings([])
+      setCatalogMatches({})
     }
     // branches is read only if already loaded; the effect below fills branchId later.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,6 +335,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupYdl.mutateAsync(book.id)
+      setCatalogMatches((prev) => ({ ...prev, YDL: result.matches ?? [] }))
       // The backend returns definite true/false availability whenever it completed a search
       // (whether or not a match was found) - only omits them on a hard error (network failure,
       // temporary title) where availability is genuinely unknown and shouldn't be touched.
@@ -347,6 +367,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupEmu.mutateAsync(book.id)
+      setCatalogMatches((prev) => ({ ...prev, EMU: result.matches ?? [] }))
       // The backend returns definite true/false availability whenever it completed a search
       // (whether or not a match was found) - only omits them on a hard error (network failure,
       // temporary title) where availability is genuinely unknown and shouldn't be touched.
@@ -378,6 +399,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupAcla.mutateAsync(book.id)
+      setCatalogMatches((prev) => ({ ...prev, ACLA: result.matches ?? [] }))
       // The backend returns definite true/false availability whenever it completed a search
       // (whether or not a match was found) - only omits them on a hard error (network failure,
       // temporary title) where availability is genuinely unknown and shouldn't be touched.
@@ -408,6 +430,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupWcc.mutateAsync(book.id)
+      setCatalogMatches((prev) => ({ ...prev, WCC: result.matches ?? [] }))
       if (typeof result.audioAvailable === 'boolean') {
         setFormData({
           ...formData,
@@ -434,6 +457,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
 
     try {
       const result = await lookupMsu.mutateAsync(book.id)
+      setCatalogMatches((prev) => ({ ...prev, MSU: result.matches ?? [] }))
       if (typeof result.audioAvailable === 'boolean') {
         setFormData({
           ...formData,
@@ -792,6 +816,48 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     }
   }
 
+  const rememberRejection = () => setHasUnsavedChanges(true)
+
+  const moveGrokipediaToRejected = (reason: string) => {
+    const urls = httpUrls(formData.grokipediaUrl)
+    if (!reason.trim() || urls.length === 0) return
+    setInvalidGrokipediaUrls((rows) => appendRejectedUrls(rows, urls, reason))
+    setFormData((prev) => ({ ...prev, grokipediaUrl: '' }))
+    setHasUnsavedChanges(true)
+  }
+
+  const moveFreeTextToRejected = (reason: string) => {
+    const urls = httpUrls(formData.freeTextUrl)
+    if (!reason.trim() || urls.length === 0) return
+    const text = urls.filter((url) => !isLibriVox(url))
+    const audio = urls.filter((url) => isLibriVox(url))
+    setInvalidFreeTextUrls((rows) => appendRejectedUrls(rows, text, reason))
+    setInvalidFreeAudioUrls((rows) => appendRejectedUrls(rows, audio, reason))
+    setFormData((prev) => ({ ...prev, freeTextUrl: '' }))
+    setHasUnsavedChanges(true)
+  }
+
+  const rejectLibraryMatches = (library: PublicLibrary, reason: string) => {
+    const matches = catalogMatches[library] ?? []
+    if (!reason.trim() || matches.length === 0) return
+    setInvalidHoldings((rows) => appendHoldings(rows, library, matches, reason))
+    setFormData((prev) => {
+      if (library === 'YDL') return { ...prev, ydlAudioAvailable: false, ydlPaperAvailable: false, ydlEbookAvailable: false }
+      if (library === 'EMU') return { ...prev, emuAudioAvailable: false, emuPaperAvailable: false, emuEbookAvailable: false }
+      if (library === 'ACLA') return { ...prev, aclaAudioAvailable: false, aclaPaperAvailable: false, aclaEbookAvailable: false }
+      if (library === 'WCC') return { ...prev, wccAudioAvailable: false, wccPaperAvailable: false, wccEbookAvailable: false }
+      return { ...prev, msuAudioAvailable: false, msuPaperAvailable: false, msuEbookAvailable: false }
+    })
+    setHasUnsavedChanges(true)
+  }
+
+  const rejectedLists = {
+    invalidGrokipediaUrls,
+    invalidFreeTextUrls,
+    invalidFreeAudioUrls,
+    invalidHoldings,
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -813,6 +879,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       detailedDescription: formData.detailedDescription || undefined,
       grokipediaUrl: formData.grokipediaUrl || undefined,
       freeTextUrl: formData.freeTextUrl || undefined,
+      ...rejectedLists,
       status: formData.status as BookDto['status'],
       statusReason: formData.statusReason || undefined,
       locNumber: formData.locNumber || undefined,
@@ -1286,6 +1353,17 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             </>
           )}
         </div>
+        <RejectedUrlList
+          title="Rejected Grokipedia pages"
+          testId="book-invalid-grokipedia"
+          rows={invalidGrokipediaUrls}
+          onChange={(rows) => {
+            setInvalidGrokipediaUrls(rows)
+            rememberRejection()
+          }}
+          liveValue={formData.grokipediaUrl}
+          onMove={moveGrokipediaToRejected}
+        />
 
         <div>
           <div className="flex items-end gap-2">
@@ -1318,6 +1396,54 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           <p className="text-xs text-gray-500 mt-1" data-test="book-free-text-last-searched">
             Last searched: {book?.freeTextLastSearched ? formatDateTime(book.freeTextLastSearched) : 'never'}
           </p>
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <label className="flex-1 min-w-[12rem] text-sm text-gray-700">
+              Reason
+              <input
+                value={freeTextRejectReason}
+                onChange={(event) => setFreeTextRejectReason(event.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm min-h-[44px]"
+                data-test="book-invalid-free-text-move-reason"
+              />
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              disabled={!freeTextRejectReason.trim() || httpUrls(formData.freeTextUrl).length === 0}
+              onClick={() => {
+                moveFreeTextToRejected(freeTextRejectReason)
+                setFreeTextRejectReason('')
+              }}
+              data-test="book-invalid-free-text-move"
+            >
+              Move to rejected
+            </Button>
+          </div>
+          <div className="mt-2 space-y-2">
+            <RejectedUrlList
+              title="Rejected free text"
+              testId="book-invalid-free-text"
+              rows={invalidFreeTextUrls}
+              onChange={(rows) => {
+                setInvalidFreeTextUrls(rows)
+                rememberRejection()
+              }}
+              liveValue={formData.freeTextUrl}
+              liveKind="text"
+            />
+            <RejectedUrlList
+              title="Rejected free audio"
+              testId="book-invalid-free-audio"
+              rows={invalidFreeAudioUrls}
+              onChange={(rows) => {
+                setInvalidFreeAudioUrls(rows)
+                rememberRejection()
+              }}
+              liveValue={formData.freeTextUrl}
+              liveKind="audio"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1336,6 +1462,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             Electronic Resource
           </label>
         </div>
+
+        <RejectedHoldingsList
+          rows={invalidHoldings}
+          onChange={(rows) => {
+            setInvalidHoldings(rows)
+            rememberRejection()
+          }}
+        />
 
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -1366,6 +1500,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   {book?.ydlLastChecked ? 'Retry YDL Lookup' : 'Lookup YDL Availability'}
                 </Button>
               )}
+              <RejectCatalogMatchesButton
+                testId="book-reject-ydl-matches"
+                matches={catalogMatches.YDL}
+                onReject={(reason) => rejectLibraryMatches('YDL', reason)}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1454,6 +1593,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   {book?.emuLastChecked ? 'Retry EMU Lookup' : 'Lookup EMU Availability'}
                 </Button>
               )}
+              <RejectCatalogMatchesButton
+                testId="book-reject-emu-matches"
+                matches={catalogMatches.EMU}
+                onReject={(reason) => rejectLibraryMatches('EMU', reason)}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1542,6 +1686,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   {book?.aclaLastChecked ? 'Retry ACLA Lookup' : 'Lookup ACLA Availability'}
                 </Button>
               )}
+              <RejectCatalogMatchesButton
+                testId="book-reject-acla-matches"
+                matches={catalogMatches.ACLA}
+                onReject={(reason) => rejectLibraryMatches('ACLA', reason)}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1630,6 +1779,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   {book?.wccLastChecked ? 'Retry WCC Lookup' : 'Lookup WCC Availability'}
                 </Button>
               )}
+              <RejectCatalogMatchesButton
+                testId="book-reject-wcc-matches"
+                matches={catalogMatches.WCC}
+                onReject={(reason) => rejectLibraryMatches('WCC', reason)}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1717,6 +1871,11 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                   {book?.msuLastChecked ? 'Retry MSU Lookup' : 'Lookup MSU Availability'}
                 </Button>
               )}
+              <RejectCatalogMatchesButton
+                testId="book-reject-msu-matches"
+                matches={catalogMatches.MSU}
+                onReject={(reason) => rejectLibraryMatches('MSU', reason)}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-4">
@@ -1941,6 +2100,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 detailedDescription: formData.detailedDescription || undefined,
                 grokipediaUrl: formData.grokipediaUrl || undefined,
                 freeTextUrl: formData.freeTextUrl || undefined,
+                ...rejectedLists,
                 status: formData.status as BookDto['status'],
                 statusReason: formData.statusReason || undefined,
                 locNumber: formData.locNumber || undefined,

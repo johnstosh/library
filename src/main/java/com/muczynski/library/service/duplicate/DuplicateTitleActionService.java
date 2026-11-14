@@ -130,7 +130,18 @@ public class DuplicateTitleActionService {
         payload.setKeeperBook(BookState.from(keeper));
         payload.setDeletedBook(BookState.from(dropped));
         moveBookChildren(keeper, dropped, payload);
-        keeper.setFreeTextUrl(plan.keeperFreeTextUrl());
+        List<com.muczynski.library.domain.RejectedUrl> textRejected = com.muczynski.library.domain.RejectedMatches.unionUrls(
+                keeper.getInvalidFreeTextUrls(), dropped.getInvalidFreeTextUrls());
+        List<com.muczynski.library.domain.RejectedUrl> audioRejected = com.muczynski.library.domain.RejectedMatches.unionUrls(
+                keeper.getInvalidFreeAudioUrls(), dropped.getInvalidFreeAudioUrls());
+        keeper.setInvalidGrokipediaUrls(com.muczynski.library.domain.RejectedMatches.unionUrls(
+                keeper.getInvalidGrokipediaUrls(), dropped.getInvalidGrokipediaUrls()));
+        keeper.setInvalidFreeTextUrls(textRejected);
+        keeper.setInvalidFreeAudioUrls(audioRejected);
+        keeper.setInvalidHoldings(com.muczynski.library.domain.RejectedMatches.unionHoldings(
+                keeper.getInvalidHoldings(), dropped.getInvalidHoldings()));
+        keeper.setFreeTextUrl(com.muczynski.library.domain.RejectedMatches.withoutRejectedFreeText(
+                plan.keeperFreeTextUrl(), textRejected, audioRejected, false));
         keeper.setElectronicResource(plan.keeperElectronic());
         keeper.setAlternateTitles(storedTitles(plan.keeperAlternate()));
         keeper.setTagsList(unionTags(payload.getKeeperBook().getTags(), payload.getDeletedBook().getTags()));
@@ -329,10 +340,15 @@ public class DuplicateTitleActionService {
         keeper.setNationality(before.getNationality());
         keeper.setBiographicalEssay(before.getBiographicalEssay());
         keeper.setGrokipediaUrl(before.getGrokipediaUrl());
+        keeper.setInvalidGrokipediaUrls(before.getInvalidGrokipediaUrls());
     }
 
     private void applyKeeperBook(Book keeper, BookState before) {
         keeper.setFreeTextUrl(before.getFreeTextUrl());
+        keeper.setInvalidGrokipediaUrls(before.getInvalidGrokipediaUrls());
+        keeper.setInvalidFreeTextUrls(before.getInvalidFreeTextUrls());
+        keeper.setInvalidFreeAudioUrls(before.getInvalidFreeAudioUrls());
+        keeper.setInvalidHoldings(before.getInvalidHoldings());
         keeper.setElectronicResource(before.getElectronicResource());
         keeper.setAlternateTitles(storedTitles(before.getAlternateTitles()));
         keeper.setTagsList(before.getTags() == null ? new ArrayList<>() : new ArrayList<>(before.getTags()));

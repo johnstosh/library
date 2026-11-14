@@ -5,6 +5,8 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.dto.EmuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -513,6 +515,67 @@ class EmuLookupServiceTest {
         verify(emuRestTemplate, times(2)).getForObject(any(URI.class), eq(String.class));
         assertEquals(1, pauses.size());
         assertTrue(Math.abs(pauses.get(0) - 2_000) <= 250, "pause was " + pauses.get(0));
+    }
+
+    @Test
+    void lookupAndUpdateBook_skipsARejectedRecordAndKeepsTheOther() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.EMU, "alma-drop", null, "different edition", null, null)));
+        String response = """
+                {"info":{"totalResultsLocal":2},"docs":[
+                  {"context":"L","pnx":{"control":{"recordid":["alma-keep"]},
+                   "display":{"type":["book"],"title":["Test Book"],"format":["300 pages"]},
+                   "addata":{"au":["Author, Test"]}}},
+                  {"context":"L","pnx":{"control":{"recordid":["alma-drop"]},
+                   "display":{"type":["book"],"title":["Test Book"],"format":["1 online resource"]},
+                   "addata":{"au":["Author, Test"]}}}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn(response);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertTrue(result.getPaperAvailable());
+        assertFalse(result.getEbookAvailable());
+        assertEquals("alma-keep", result.getMatches().get(0).getRecordKey());
+    }
+
+    @Test
+    void lookupAndUpdateBook_rejectedOnlyRecordIsNotHeld() {
+        Book book = new Book();
+        book.setId(1L);
+        book.setTitle("Test Book");
+        Author author = new Author();
+        author.setName("Test Author");
+        book.setAuthor(author);
+        book.setEmuPaperAvailable(true);
+        book.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.EMU, "ALMA-DROP", null, "wrong book", null, null)));
+        String response = """
+                {"info":{"totalResultsLocal":1},"docs":[
+                  {"context":"L","pnx":{"control":{"recordid":["alma-drop"]},
+                   "display":{"type":["book"],"title":["Test Book"],"format":["300 pages"]},
+                   "addata":{"au":["Author, Test"]}}}
+                ]}
+                """;
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(emuRestTemplate.getForObject(any(URI.class), eq(String.class))).thenReturn(response);
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        EmuLookupResultDto result = emuLookupService.lookupAndUpdateBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("Not held by EMU Halle Library", result.getErrorMessage());
+        assertFalse(book.getEmuPaperAvailable());
     }
 
     private static HttpClientErrorException tooMany() {

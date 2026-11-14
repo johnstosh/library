@@ -11,7 +11,10 @@ import com.muczynski.library.dto.GrokipediaLookupResultDto;
 import com.muczynski.library.dto.NameNormalizationResultDto;
 import com.muczynski.library.dto.ReadingDifficultyLookupResultDto;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.PublicLibrary;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.RejectedHolding;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.PhotoDto;
 import com.muczynski.library.exception.BookHasNoPhotosException;
 import com.muczynski.library.exception.GrokCreditsExhaustedException;
@@ -32,6 +35,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,12 +43,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.mockito.ArgumentCaptor;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -210,6 +217,50 @@ class BookControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(inputDto)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void getAndUpdateBookRoundTripRejectedMatches() throws Exception {
+        BookDto stored = new BookDto();
+        stored.setId(1L);
+        stored.setTitle("Confessions");
+        stored.setStatus(BookStatus.ACTIVE);
+        stored.setInvalidGrokipediaUrls(List.of(new RejectedUrl(
+                "https://grokipedia.com/page/Other", "different book", LocalDate.of(2026, 11, 12), "ada")));
+        stored.setInvalidFreeTextUrls(List.of());
+        stored.setInvalidFreeAudioUrls(List.of());
+        stored.setInvalidHoldings(List.of(new RejectedHolding(
+                PublicLibrary.YDL, "e71f", null, "wrong book", LocalDate.of(2026, 11, 12), "ada")));
+        when(bookService.getBookById(1L)).thenReturn(stored);
+
+        mockMvc.perform(get("/api/books/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invalidGrokipediaUrls[0].url").value("https://grokipedia.com/page/Other"))
+                .andExpect(jsonPath("$.invalidGrokipediaUrls[0].by").value("ada"))
+                .andExpect(jsonPath("$.invalidHoldings[0].library").value("YDL"))
+                .andExpect(jsonPath("$.invalidHoldings[0].recordKey").value("e71f"))
+                .andExpect(jsonPath("$.invalidFreeTextUrls").isArray());
+
+        ArgumentCaptor<BookDto> captor = ArgumentCaptor.forClass(BookDto.class);
+        when(bookService.updateBook(eq(1L), captor.capture())).thenReturn(stored);
+        mockMvc.perform(put("/api/books/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Confessions","invalidGrokipediaUrls":[{"url":"https://grokipedia.com/page/Other","reason":"different book"}],"invalidHoldings":[{"library":"YDL","recordKey":"e71f","reason":"wrong book"}]}
+                                """))
+                .andExpect(status().isOk());
+        assertEquals("https://grokipedia.com/page/Other", captor.getValue().getInvalidGrokipediaUrls().get(0).getUrl());
+        assertEquals(PublicLibrary.YDL, captor.getValue().getInvalidHoldings().get(0).getLibrary());
+    }
+
+    @Test
+    @WithMockUser(authorities = "LIBRARIAN")
+    void updateBookRejectsAnUnknownLibrary() throws Exception {
+        mockMvc.perform(put("/api/books/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Confessions\",\"invalidHoldings\":[{\"library\":\"MEL\",\"recordKey\":\"x\",\"reason\":\"wrong\"}]}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

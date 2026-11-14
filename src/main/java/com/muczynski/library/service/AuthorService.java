@@ -7,6 +7,7 @@ import com.muczynski.library.exception.LibraryException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.AuthorNames;
+import com.muczynski.library.domain.RejectedMatches;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.dto.AuthorAvailabilityDto;
 import com.muczynski.library.dto.AuthorDto;
@@ -107,6 +108,8 @@ public class AuthorService {
         author.setNationality(authorDto.getNationality());
         author.setBiographicalEssay(authorDto.getBriefBiography());
         author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
+        author.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
+                authorDto.getInvalidGrokipediaUrls(), author.getInvalidGrokipediaUrls(), CurrentActor.username()));
         author.setAlternateNames(AuthorNames.normalize(author.getName(), authorDto.getAlternateNames()));
         Author savedAuthor = authorRepository.save(author);
         return authorMapper.toDto(savedAuthor);

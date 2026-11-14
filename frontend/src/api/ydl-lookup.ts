@@ -11,6 +11,7 @@ export interface YdlLookupResultDto {
   ebookAvailable?: boolean
   matchedTitle?: string
   errorMessage?: string
+  matches?: { recordKey: string; url?: string }[]
 }
 
 /**

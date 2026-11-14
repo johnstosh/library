@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.dto.CatalogMatchRef;
 import com.muczynski.library.dto.MsuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.util.LookupErrorMessages;
@@ -130,13 +132,18 @@ public class MsuLookupService {
         try {
             ArrayNode matches = objectMapper.createArrayNode();
             String matchedTitle = null;
+            List<CatalogMatchRef> matchedRefs = new ArrayList<>();
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
                     JsonNode records = search(candidateTitle);
                     MatchBatch filtered = filterMatches(records, candidateTitle, authorLastNames);
-                    if (!filtered.matches.isEmpty()) {
-                        matches = filtered.matches;
+                    ArrayNode kept = objectMapper.createArrayNode();
+                    List<CatalogMatchRef> refs = CatalogMatchKeys.keep(
+                            kept, filtered.matches, book.getInvalidHoldings(), PublicLibrary.MSU, CatalogMatchKeys::msuKey);
+                    if (!kept.isEmpty()) {
+                        matches = kept;
+                        matchedRefs = refs;
                         matchedTitle = filtered.matchedTitle;
                         break;
                     }
@@ -190,6 +197,7 @@ public class MsuLookupService {
                     .paperAvailable(paper)
                     .ebookAvailable(ebook)
                     .matchedTitle(matchedTitle)
+                    .matches(matchedRefs)
                     .build();
         } catch (Exception e) {
             log.error("Error during MSU lookup for book {}: {}", book.getId(), e.getMessage());

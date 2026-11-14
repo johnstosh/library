@@ -92,6 +92,7 @@ Looks up Grokipedia URLs for selected books.
 **Behavior:**
 - Quick: HEAD-check `https://grokipedia.com/page/{Title_With_Underscores}` after stripping a trailing copy suffix (`", c. 3"`). Save on 2xx; save nothing on 4xx.
 - Slow: same first. If that is not 2xx, ask Grok to search Grokipedia by title only (author is context, not in `q=`). Keep 2xx `grokipedia.com/page/...` URLs; discard 4xx. Save `"-"` only when no working URL is found.
+- `invalidGrokipediaUrls` on GET and PUT skips a rejected page. If every working candidate was rejected, the stored URL stays and `"-"` is not saved. A null or omitted list on PUT leaves the stored list. `[]` clears it. `date` and `by` are stamped on the server for a new or changed row.
 
 ---
 
@@ -461,6 +462,7 @@ Looks up paper/ebook/audio holdings for one book at the Allegheny County Library
 - Temporary date-format titles are skipped (`Not Ready - Temporary title`)
 - Title matching is exact after normalization; short titles (4 words or fewer) also require an author last-name match
 - A completed search that finds no match clears stale holdings and returns `Not held by ACLA`
+- YDL, EMU, ACLA, WCC, and MSU skip a record whose id is in `invalidHoldings` for that library. YDL uses the format-group `id`. EMU and WCC use Primo `pnx.control.recordid`. ACLA uses the BiblioCommons bib id. MSU uses the VuFind `id`. A record with no id cannot be rejected. If every match for the title was rejected, the lookup writes the same not-held result as a miss. The result `matches` list holds the record ids that set the flags so the edit page can reject them. An unknown `library` value on PUT is HTTP 400.
 - HTTP and other lookup failures are stored on the book as `aclaLookupError` (max 255 characters) and returned as `success: false`. HTTP errors are recorded as `Error: HTTP {status}` without the response body, so a block/error page cannot overflow the column.
 - HTTP 403/429/502/503/504 and I/O timeouts are retried with exponential backoff (`acla.lookup.retries`, `acla.lookup.backoff-ms`). A `Retry-After` header is honored when it asks for a longer wait, capped at 60 seconds. A pause (`acla.lookup.request-delay-ms`) is inserted between outbound searches, and the last failed try reserves that wait so the next title does not go out immediately. YDL and EMU use the same `ydl.lookup.*` and `emu.lookup.*` settings.
 - Follow-up format searches that still fail after retries are skipped: holdings already found on the unfiltered title search are kept instead of recording `Error: HTTP 403 Forbidden` for the whole book.

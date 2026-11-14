@@ -13,6 +13,7 @@ import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
 import com.muczynski.library.domain.ReadingDifficulty;
+import com.muczynski.library.domain.RejectedMatches;
 import com.muczynski.library.dto.BookDto;
 import com.muczynski.library.dto.BookSummaryDto;
 import com.muczynski.library.dto.BulkDeleteResultDto;
@@ -323,7 +324,15 @@ public class BookService {
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
+        book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidGrokipediaUrls(), book.getInvalidGrokipediaUrls(), CurrentActor.username()));
         book.setFreeTextUrl(bookDto.getFreeTextUrl());
+        book.setInvalidFreeTextUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidFreeTextUrls(), book.getInvalidFreeTextUrls(), CurrentActor.username()));
+        book.setInvalidFreeAudioUrls(RejectedMatches.acceptEditedUrls(
+                bookDto.getInvalidFreeAudioUrls(), book.getInvalidFreeAudioUrls(), CurrentActor.username()));
+        book.setInvalidHoldings(RejectedMatches.acceptEditedHoldings(
+                bookDto.getInvalidHoldings(), book.getInvalidHoldings(), CurrentActor.username()));
         // Preserve dateAddedToLibrary if not provided in DTO (don't overwrite with null)
         if (bookDto.getDateAddedToLibrary() != null) {
             book.setDateAddedToLibrary(bookDto.getDateAddedToLibrary());

@@ -84,6 +84,8 @@ public class AuthorMerger {
         keeper.setNationality(preferLonger(keeper.getNationality(), source.getNationality()));
         keeper.setBiographicalEssay(preferLonger(keeper.getBiographicalEssay(), source.getBiographicalEssay()));
         keeper.setGrokipediaUrl(preferLonger(keeper.getGrokipediaUrl(), source.getGrokipediaUrl()));
+        keeper.setInvalidGrokipediaUrls(com.muczynski.library.domain.RejectedMatches.unionUrls(
+                keeper.getInvalidGrokipediaUrls(), source.getInvalidGrokipediaUrls()));
         keeper.setDateOfBirth(preferDate(keeper.getDateOfBirth(), source.getDateOfBirth()));
         keeper.setDateOfDeath(preferDate(keeper.getDateOfDeath(), source.getDateOfDeath()));
         List<String> combined = new ArrayList<>();

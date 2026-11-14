@@ -5,8 +5,11 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
+import com.muczynski.library.dto.CatalogMatchRef;
 import com.muczynski.library.dto.EmuLookupResultDto;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.service.BooksFromFeedService;
@@ -125,6 +128,7 @@ public class EmuLookupService {
         try {
             JsonNode matches = objectMapper.createArrayNode();
             String matchedTitle = null;
+            List<CatalogMatchRef> matchedRefs = new ArrayList<>();
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
@@ -134,9 +138,13 @@ public class EmuLookupService {
                             // Verification checks this form of the book's author. Query variants
                             // only improve EMU's hit rate; they do not relax what counts as a match.
                             JsonNode filtered = filterMatches(entries, candidateTitle, authorLastName);
-                            if (!filtered.isEmpty()) {
-                                matches = filtered;
-                                matchedTitle = filtered.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
+                            ArrayNode kept = objectMapper.createArrayNode();
+                            List<CatalogMatchRef> refs = CatalogMatchKeys.keep(
+                                    kept, filtered, book.getInvalidHoldings(), PublicLibrary.EMU, CatalogMatchKeys::primoKey);
+                            if (!kept.isEmpty()) {
+                                matches = kept;
+                                matchedRefs = refs;
+                                matchedTitle = kept.get(0).path("pnx").path("display").path("title").path(0).asText(cleaned);
                                 break;
                             }
                         }
@@ -204,6 +212,7 @@ public class EmuLookupService {
                     .paperAvailable(paper)
                     .ebookAvailable(ebook)
                     .matchedTitle(finalMatchedTitle)
+                    .matches(matchedRefs)
                     .build();
 
         } catch (Exception e) {

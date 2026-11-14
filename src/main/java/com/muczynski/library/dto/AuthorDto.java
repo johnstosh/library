@@ -6,6 +6,8 @@ package com.muczynski.library.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import com.muczynski.library.domain.RejectedUrl;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +29,8 @@ public class AuthorDto {
     private String nationality;
     private String briefBiography;
     private String grokipediaUrl;
+    /** Rejected Grokipedia pages. Empty when none have been rejected. */
+    private List<RejectedUrl> invalidGrokipediaUrls;
     private Long firstPhotoId;
     private String firstPhotoChecksum;
     private Long bookCount;

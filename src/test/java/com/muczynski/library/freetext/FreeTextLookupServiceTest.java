@@ -5,6 +5,7 @@ package com.muczynski.library.freetext;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.RejectedUrl;
 import com.muczynski.library.dto.FreeTextBulkLookupResultDto;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.repository.BookRepository;
@@ -482,5 +483,55 @@ class FreeTextLookupServiceTest {
         FreeTextBulkLookupResultDto result = service.lookupBook(1L);
 
         assertTrue(result.isSuccess());
+    }
+
+    @Test
+    void lookupBook_dropsARejectedGutenbergUrlAndKeepsTheStoredLink() {
+        Book book = createBook(1L, "City of God", "Augustine");
+        book.setFreeTextUrl("https://already.example/keep");
+        book.setInvalidFreeTextUrls(List.of(new RejectedUrl(
+                "https://gutenberg.org/1", "wrong edition", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(eq("City of God"), eq("Augustine")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://gutenberg.org/1"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertEquals("https://already.example/keep", book.getFreeTextUrl());
+    }
+
+    @Test
+    void lookupBook_dropsARejectedLibriVoxUrl() {
+        Book book = createBook(1L, "City of God", "Augustine");
+        book.setInvalidFreeAudioUrls(List.of(new RejectedUrl(
+                "https://librivox.org/city-of-god", "wrong reading", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.getProviderName()).thenReturn("LibriVox");
+        when(mockProvider1.search(eq("City of God"), eq("Augustine")))
+                .thenReturn(FreeTextLookupResult.success("LibriVox", "https://librivox.org/city-of-god"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertFalse(result.isSuccess());
+        assertNull(book.getFreeTextUrl());
+    }
+
+    @Test
+    void lookupBook_keepsAGutenbergUrlThatIsOnlyOnTheAudioList() {
+        Book book = createBook(1L, "City of God", "Augustine");
+        book.setInvalidFreeAudioUrls(List.of(new RejectedUrl(
+                "https://gutenberg.org/1", "wrong edition", null, null)));
+        when(bookRepository.findById(1L)).thenReturn(Optional.of(book));
+        when(mockProvider1.search(eq("City of God"), eq("Augustine")))
+                .thenReturn(FreeTextLookupResult.success("Provider1", "https://gutenberg.org/1"));
+        when(bookRepository.save(any(Book.class))).thenReturn(book);
+
+        FreeTextBulkLookupResultDto result = service.lookupBook(1L);
+
+        assertTrue(result.isSuccess());
+        assertEquals("https://gutenberg.org/1", book.getFreeTextUrl());
     }
 }

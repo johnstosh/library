@@ -420,6 +420,9 @@ public class ImportService {
         if (aDto.getGrokipediaUrl() != null) {
             auth.setGrokipediaUrl(aDto.getGrokipediaUrl());
         }
+        if (aDto.getInvalidGrokipediaUrls() != null) {
+            auth.setInvalidGrokipediaUrls(RejectedMatches.acceptImportedUrls(aDto.getInvalidGrokipediaUrls()));
+        }
         if (aDto.getAlternateNames() != null) {
             auth.setAlternateNames(AuthorNames.normalize(aDto.getName(), aDto.getAlternateNames()));
         }
@@ -583,7 +586,19 @@ public class ImportService {
         book.setRelatedWorks(bDto.getRelatedWorks());
         book.setDetailedDescription(bDto.getDetailedDescription());
         book.setGrokipediaUrl(bDto.getGrokipediaUrl());
+        if (bDto.getInvalidGrokipediaUrls() != null) {
+            book.setInvalidGrokipediaUrls(RejectedMatches.acceptImportedUrls(bDto.getInvalidGrokipediaUrls()));
+        }
         book.setFreeTextUrl(bDto.getFreeTextUrl());
+        if (bDto.getInvalidFreeTextUrls() != null) {
+            book.setInvalidFreeTextUrls(RejectedMatches.acceptImportedUrls(bDto.getInvalidFreeTextUrls()));
+        }
+        if (bDto.getInvalidFreeAudioUrls() != null) {
+            book.setInvalidFreeAudioUrls(RejectedMatches.acceptImportedUrls(bDto.getInvalidFreeAudioUrls()));
+        }
+        if (bDto.getInvalidHoldings() != null) {
+            book.setInvalidHoldings(RejectedMatches.acceptImportedHoldings(bDto.getInvalidHoldings()));
+        }
         book.setDateAddedToLibrary(bDto.getDateAddedToLibrary());
         book.setStatus(bDto.getStatus() != null ? bDto.getStatus() : BookStatus.ACTIVE);
         book.setLocNumber(bDto.getLocNumber());
@@ -1211,7 +1226,19 @@ public class ImportService {
         bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
         bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
         bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
+        if (book.getInvalidGrokipediaUrls() != null && !book.getInvalidGrokipediaUrls().isEmpty()) {
+            bDto.setInvalidGrokipediaUrls(new ArrayList<>(book.getInvalidGrokipediaUrls()));
+        }
         bDto.setFreeTextUrl(emptyToNull(book.getFreeTextUrl()));
+        if (book.getInvalidFreeTextUrls() != null && !book.getInvalidFreeTextUrls().isEmpty()) {
+            bDto.setInvalidFreeTextUrls(new ArrayList<>(book.getInvalidFreeTextUrls()));
+        }
+        if (book.getInvalidFreeAudioUrls() != null && !book.getInvalidFreeAudioUrls().isEmpty()) {
+            bDto.setInvalidFreeAudioUrls(new ArrayList<>(book.getInvalidFreeAudioUrls()));
+        }
+        if (book.getInvalidHoldings() != null && !book.getInvalidHoldings().isEmpty()) {
+            bDto.setInvalidHoldings(new ArrayList<>(book.getInvalidHoldings()));
+        }
         bDto.setFreeTextLastSearched(book.getFreeTextLastSearched());
         bDto.setDateAddedToLibrary(book.getDateAddedToLibrary());
         bDto.setStatus(book.getStatus());
@@ -1384,6 +1411,9 @@ public class ImportService {
         aDto.setNationality(emptyToNull(author.getNationality()));
         aDto.setBriefBiography(emptyToNull(author.getBiographicalEssay()));
         aDto.setGrokipediaUrl(emptyToNull(author.getGrokipediaUrl()));
+        if (author.getInvalidGrokipediaUrls() != null && !author.getInvalidGrokipediaUrls().isEmpty()) {
+            aDto.setInvalidGrokipediaUrls(new ArrayList<>(author.getInvalidGrokipediaUrls()));
+        }
         return aDto;
     }
 

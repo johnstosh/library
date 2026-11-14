@@ -21,6 +21,7 @@ import { EntityLink } from '@/components/ui/EntityLink'
 import { TEXT_LINK_UNDERLINE_CLASS } from '@/components/ui/IconButton'
 import { BackLink } from '@/components/ui/BackLink'
 import { EntityNotFound } from '@/components/ui/EntityNotFound'
+import { MarkdownText } from '@/components/ui/MarkdownText'
 import { PageCard } from '@/components/ui/PageCard'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FavoriteStar } from '@/components/favorites/FavoriteStar'
@@ -442,7 +443,7 @@ export function BookViewPage() {
             {book.detailedDescription && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm font-medium text-gray-500">Detailed Description</p>
-                <p className="text-gray-900 whitespace-pre-wrap">{book.detailedDescription}</p>
+                <MarkdownText markdown={book.detailedDescription} dataTest="book-detailed-description" />
               </div>
             )}
           </div>

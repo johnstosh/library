@@ -5,9 +5,13 @@ package com.muczynski.library.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.muczynski.library.domain.AuthorNames;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.PublicLibrary;
 import com.muczynski.library.dto.AclaLookupResultDto;
+import com.muczynski.library.dto.CatalogMatchRef;
 import com.muczynski.library.repository.BookRepository;
 import com.muczynski.library.service.BooksFromFeedService;
 import com.muczynski.library.util.LookupErrorMessages;
@@ -28,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.LongConsumer;
 import java.util.regex.Pattern;
 
@@ -133,12 +138,18 @@ public class AclaLookupService {
             JsonNode matches = objectMapper.createArrayNode();
             String matchedCandidate = primaryTitle != null ? cleanTitle(primaryTitle) : "";
             String matchedLastName = null;
+            List<CatalogMatchRef> matchedRefs = new ArrayList<>();
             for (String searchTitle : titles) {
                 String cleaned = cleanTitle(searchTitle);
                 for (String candidateTitle : buildTitleCandidates(cleaned)) {
                     for (String authorLastName : AuthorNames.lookupLastNames(book.getAuthor())) {
-                        matches = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
-                        if (!matches.isEmpty()) {
+                        JsonNode filtered = filterMatches(search(candidateTitle, null), candidateTitle, authorLastName);
+                        ArrayNode kept = objectMapper.createArrayNode();
+                        List<CatalogMatchRef> refs = CatalogMatchKeys.keep(
+                                kept, filtered, book.getInvalidHoldings(), PublicLibrary.ACLA, CatalogMatchKeys::aclaKey);
+                        if (!kept.isEmpty()) {
+                            matches = kept;
+                            matchedRefs = refs;
                             matchedCandidate = candidateTitle;
                             matchedLastName = authorLastName;
                             break;
@@ -184,13 +195,19 @@ public class AclaLookupService {
             // BiblioCommons paginates at 25 and does not group formats, so a popular
             // title's first page may be all print. Follow up per missing category.
             if (!audio) {
-                audio = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, AUDIO_FORMAT_FILTERS), "audio");
+                JsonNode extra = searchMissingFormats(matchedCandidate, matchedLastName, AUDIO_FORMAT_FILTERS, book);
+                audio = hasFormat(extra, "audio");
+                matchedRefs.addAll(refsOf(extra));
             }
             if (!ebook) {
-                ebook = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, EBOOK_FORMAT_FILTERS), "ebook");
+                JsonNode extra = searchMissingFormats(matchedCandidate, matchedLastName, EBOOK_FORMAT_FILTERS, book);
+                ebook = hasFormat(extra, "ebook");
+                matchedRefs.addAll(refsOf(extra));
             }
             if (!paper) {
-                paper = hasFormat(searchMissingFormats(matchedCandidate, matchedLastName, PAPER_FORMAT_FILTERS), "paper");
+                JsonNode extra = searchMissingFormats(matchedCandidate, matchedLastName, PAPER_FORMAT_FILTERS, book);
+                paper = hasFormat(extra, "paper");
+                matchedRefs.addAll(refsOf(extra));
             }
 
             book.setAclaAudioAvailable(audio);
@@ -210,6 +227,7 @@ public class AclaLookupService {
                     .paperAvailable(paper)
                     .ebookAvailable(ebook)
                     .matchedTitle(matchedTitle)
+                    .matches(matchedRefs)
                     .build();
 
         } catch (Exception e) {
@@ -290,12 +308,14 @@ public class AclaLookupService {
         }
     }
 
-    private JsonNode searchMissingFormats(String title, String authorLastName, String[] formatFilters) {
-        com.fasterxml.jackson.databind.node.ArrayNode combined = objectMapper.createArrayNode();
+    private JsonNode searchMissingFormats(String title, String authorLastName, String[] formatFilters, Book book) {
+        ArrayNode combined = objectMapper.createArrayNode();
         for (String formatFilter : formatFilters) {
             try {
                 JsonNode matches = filterMatches(search(title, formatFilter), title, authorLastName);
-                for (JsonNode match : matches) {
+                ArrayNode kept = objectMapper.createArrayNode();
+                CatalogMatchKeys.keep(kept, matches, book.getInvalidHoldings(), PublicLibrary.ACLA, CatalogMatchKeys::aclaKey);
+                for (JsonNode match : kept) {
                     combined.add(match);
                 }
             } catch (Exception e) {
@@ -336,27 +356,59 @@ public class AclaLookupService {
         String normalizedTitle = normalize(title);
         int titleWordCount = normalizedTitle.isEmpty() ? 0 : normalizedTitle.split(" ").length;
 
+        if (bibs != null && bibs.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> fields = bibs.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                JsonNode entry = field.getValue();
+                if (entry instanceof ObjectNode object && !object.has("_recordKey")) {
+                    object.put("_recordKey", field.getKey());
+                }
+                if (aclaTitleMatches(entry, normalizedTitle, titleWordCount, authorLastName)) {
+                    matches.add(entry);
+                }
+            }
+            return matches;
+        }
         Iterator<JsonNode> entries = bibs.elements();
         while (entries.hasNext()) {
             JsonNode entry = entries.next();
-            JsonNode briefInfo = entry.path("briefInfo");
-            String entryTitle = normalize(briefInfo.path("title").asText(""));
-            if (entryTitle.isEmpty() || !entryTitle.equals(normalizedTitle)) {
-                continue;
+            if (aclaTitleMatches(entry, normalizedTitle, titleWordCount, authorLastName)) {
+                matches.add(entry);
             }
-
-            if (titleWordCount <= 4) {
-                if (authorLastName == null) {
-                    continue;
-                }
-                if (!jsonArrayHasExactAuthorWordMatch(briefInfo.path("authors"), authorLastName)) {
-                    continue;
-                }
-            }
-
-            matches.add(entry);
         }
         return matches;
+    }
+
+    private boolean aclaTitleMatches(JsonNode entry, String normalizedTitle, int titleWordCount, String authorLastName) {
+        JsonNode briefInfo = entry.path("briefInfo");
+        String entryTitle = normalize(briefInfo.path("title").asText(""));
+        if (entryTitle.isEmpty() || !entryTitle.equals(normalizedTitle)) {
+            return false;
+        }
+        if (titleWordCount <= 4) {
+            if (authorLastName == null) {
+                return false;
+            }
+            if (!jsonArrayHasExactAuthorWordMatch(briefInfo.path("authors"), authorLastName)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private List<CatalogMatchRef> refsOf(JsonNode matches) {
+        List<CatalogMatchRef> refs = new ArrayList<>();
+        if (matches == null) {
+            return refs;
+        }
+        for (JsonNode entry : matches) {
+            String key = CatalogMatchKeys.aclaKey(entry);
+            if (key != null && !key.isBlank()) {
+                refs.add(new CatalogMatchRef(key, null));
+            }
+        }
+        return refs;
     }
 
     /**

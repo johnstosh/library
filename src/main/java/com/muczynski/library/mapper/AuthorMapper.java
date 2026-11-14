@@ -4,6 +4,7 @@
 package com.muczynski.library.mapper;
 
 import com.muczynski.library.domain.Author;
+import com.muczynski.library.domain.RejectedMatches;
 import com.muczynski.library.dto.AuthorDto;
 import com.muczynski.library.repository.PhotoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,7 @@ public class AuthorMapper {
         dto.setNationality(author.getNationality());
         dto.setBriefBiography(author.getBiographicalEssay());
         dto.setGrokipediaUrl(author.getGrokipediaUrl());
+        dto.setInvalidGrokipediaUrls(RejectedMatches.orEmptyUrls(author.getInvalidGrokipediaUrls()));
         dto.setLastModified(author.getLastModified());
 
         // Use efficient queries to get first photo ID and checksum without loading photos collection
@@ -80,6 +82,8 @@ public class AuthorMapper {
         author.setNationality(authorDto.getNationality());
         author.setBiographicalEssay(authorDto.getBriefBiography());
         author.setGrokipediaUrl(authorDto.getGrokipediaUrl());
+        author.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
+                authorDto.getInvalidGrokipediaUrls(), null, com.muczynski.library.service.CurrentActor.username()));
 
         return author;
     }
