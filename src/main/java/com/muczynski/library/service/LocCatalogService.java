@@ -65,6 +65,8 @@ public class LocCatalogService {
     private static final String SRU_BASE_URL = "http://lx2.loc.gov:210/LCDB";
     private static final int DEFAULT_MAX_RECORDS = 5;
     private static final int MAX_ALLOWED_RECORDS = 50;
+    /** LOC sometimes reports a hit count and a diagnostic, with no MARC records. */
+    private static final int OMITTED_RECORD_TRIES = 3;
 
     private final RestTemplate restTemplate;
     private final CatalogLookupRetry http;
@@ -100,14 +102,21 @@ public class LocCatalogService {
         String url = buildSruUrl(cqlQuery, DEFAULT_MAX_RECORDS);
 
         log.info("Querying LOC SRU API: {}", url);
-        String marcXmlResponse = http.call(url, () -> restTemplate.getForObject(url, String.class));
-
-        if (marcXmlResponse == null || marcXmlResponse.trim().isEmpty()) {
-            log.warn("Empty response from LOC API for query: {}", cqlQuery);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No response from LOC catalog");
+        String marcXmlResponse = null;
+        List<String> callNumbers = List.of();
+        for (int attempt = 1; attempt <= OMITTED_RECORD_TRIES; attempt++) {
+            marcXmlResponse = http.call(url, () -> restTemplate.getForObject(url, String.class));
+            if (marcXmlResponse == null || marcXmlResponse.trim().isEmpty()) {
+                log.warn("Empty response from LOC API for query: {}", cqlQuery);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No response from LOC catalog");
+            }
+            callNumbers = extractLocCallNumbers(marcXmlResponse);
+            if (!callNumbers.isEmpty() || !recordsOmitted(marcXmlResponse) || attempt == OMITTED_RECORD_TRIES) {
+                break;
+            }
+            log.info("LOC reported records but omitted the MARC payload for title='{}'; retrying",
+                    request.getTitle());
         }
-
-        List<String> callNumbers = extractLocCallNumbers(marcXmlResponse);
         if (callNumbers.isEmpty()) {
             log.info("No LOC call numbers found for title='{}', author='{}'", request.getTitle(), request.getAuthor());
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No LOC call number found for the given title/author");
@@ -163,6 +172,37 @@ public class LocCatalogService {
                 .queryParam("query", cqlQuery)
                 .build()  // Don't call .encode() to avoid double-encoding
                 .toUriString();
+    }
+
+    /**
+     * True when the hit count is positive and the body has no MARC record payload.
+     * A normal miss has zero hits. A diagnostic response keeps the hit count and drops the records.
+     */
+    private boolean recordsOmitted(String sruResponse) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document doc = factory.newDocumentBuilder()
+                    .parse(new ByteArrayInputStream(sruResponse.getBytes(StandardCharsets.UTF_8)));
+            NodeList countNodes = doc.getElementsByTagNameNS("http://www.loc.gov/zing/srw/", "numberOfRecords");
+            if (countNodes.getLength() == 0) {
+                countNodes = doc.getElementsByTagName("numberOfRecords");
+            }
+            if (countNodes.getLength() == 0) {
+                return false;
+            }
+            int count = Integer.parseInt(countNodes.item(0).getTextContent().trim());
+            if (count <= 0) {
+                return false;
+            }
+            NodeList recordData = doc.getElementsByTagNameNS("http://www.loc.gov/zing/srw/", "recordData");
+            if (recordData.getLength() == 0) {
+                recordData = doc.getElementsByTagName("recordData");
+            }
+            return recordData.getLength() == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private List<String> extractLocCallNumbers(String sruResponse) {

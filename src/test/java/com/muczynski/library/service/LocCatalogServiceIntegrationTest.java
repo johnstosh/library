@@ -88,14 +88,16 @@ class LocCatalogServiceIntegrationTest {
      * Note: This book may not be easily findable in the LOC catalog with exact title match.
      * Manual verification recommended for this specific edition.
      *
-     * This test is flaky due to LOC service intermittent failures, so we use retries.
+     * An exact title of "Bible" matches tens of thousands of records. LOC sometimes answers
+     * that query with a hit count and a diagnostic, and no MARC records. This test uses the
+     * edition title, which returns a Bible classification, and retries when LOC omits the payload.
      */
     @Test
     void testGetLocCallNumber_CatholicStudyBible() {
         // Arrange
         LocSearchRequest request = new LocSearchRequest();
-        request.setTitle("Bible");
-        request.setAuthor(""); // Start with a broader search
+        request.setTitle("Catholic Study Bible");
+        request.setAuthor("");
 
         // Act with retries (LOC service is sometimes flaky)
         int maxRetries = 3;
@@ -133,7 +135,7 @@ class LocCatalogServiceIntegrationTest {
                 "Call number should start with 'BS' (Bible classification). Got: " + response.getCallNumber());
 
         // Log the results for manual verification
-        System.out.println("Found LOC Call Number for Bible search: " + response.getCallNumber());
+        System.out.println("Found LOC Call Number for Catholic Study Bible: " + response.getCallNumber());
         System.out.println("Match count: " + response.getMatchCount());
         System.out.println("Note: Catholic Study Bible expected: BS 192.3 .A1 2020 G73");
         System.out.println("For exact edition, try web search at: https://catalog.loc.gov/");
