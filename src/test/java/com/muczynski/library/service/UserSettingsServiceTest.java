@@ -59,6 +59,9 @@ class UserSettingsServiceTest {
             dto.setId(user.getId());
             dto.setUsername(user.getUsername());
             dto.setXaiApiKey(user.getXaiApiKey());
+            dto.setGoogleApiKey(user.getGoogleApiKey());
+            dto.setUseXaiApiKey(user.isUseXaiApiKey());
+            dto.setUseGoogleApiKey(user.isUseGoogleApiKey());
             dto.setGooglePhotosApiKey(user.getGooglePhotosApiKey());
             dto.setGooglePhotosRefreshToken(user.getGooglePhotosRefreshToken());
             dto.setGooglePhotosTokenExpiry(user.getGooglePhotosTokenExpiry());
@@ -189,6 +192,84 @@ class UserSettingsServiceTest {
         UserDto result = userSettingsService.updateUserSettings(1L, dto);
 
         assertThat(result.getXaiApiKey()).isEmpty();
+    }
+
+    @Test
+    void updateUserSettings_shouldUpdateGoogleApiKey() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setGoogleApiKey("google-key");
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getGoogleApiKey()).isEqualTo("google-key");
+    }
+
+    @Test
+    void updateUserSettings_enablingGoogleTurnsOffXai() {
+        testUser.setUseXaiApiKey(true);
+        testUser.setUseGoogleApiKey(false);
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUseGoogleApiKey(true);
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.isUseGoogleApiKey()).isTrue();
+        assertThat(result.isUseXaiApiKey()).isFalse();
+    }
+
+    @Test
+    void updateUserSettings_enablingXaiTurnsOffGoogle() {
+        testUser.setUseXaiApiKey(false);
+        testUser.setUseGoogleApiKey(true);
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUseXaiApiKey(true);
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.isUseXaiApiKey()).isTrue();
+        assertThat(result.isUseGoogleApiKey()).isFalse();
+    }
+
+    @Test
+    void updateUserSettings_rejectsBothProvidersTrue() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUseXaiApiKey(true);
+        dto.setUseGoogleApiKey(true);
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessage("Enable only one AI provider");
+    }
+
+    @Test
+    void updateUserSettings_allowsBothProvidersOff() {
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setUseXaiApiKey(false);
+        dto.setUseGoogleApiKey(false);
+
+        when(userRepository.findById(1L))
+            .thenReturn(java.util.Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.isUseXaiApiKey()).isFalse();
+        assertThat(result.isUseGoogleApiKey()).isFalse();
     }
 
     @Test

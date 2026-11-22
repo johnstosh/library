@@ -14,7 +14,7 @@ Parameters:
 
 None.
 
-Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 
@@ -32,7 +32,7 @@ Parameters:
 
 None.
 
-Response: `200 OK` body Array of `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `200 OK` body Array of `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 
@@ -50,7 +50,7 @@ Parameters:
 
 - Path `id` (`Long`).
 
-Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 
@@ -68,7 +68,7 @@ Parameters:
 
 - Body `CreateUserDto` (required).
 
-Response: `201 Created` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `201 Created` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 
@@ -86,7 +86,7 @@ Parameters:
 
 - Body `CreateUserDto` (required).
 
-Response: `201 Created` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `201 Created` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 
@@ -105,7 +105,7 @@ Parameters:
 - Path `id` (`Long`).
 - Body `CreateUserDto` (required).
 
-Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
+Response: `200 OK` body `UserDto` fields: `id`, `username`, `authorities`, `xaiApiKey`, `googleApiKey`, `useXaiApiKey`, `useGoogleApiKey`, `googlePhotosApiKey`, `googlePhotosRefreshToken`, `googlePhotosTokenExpiry`, `googleClientSecret`, `googlePhotosAlbumId`, `lastPhotoTimestamp`, `ssoProvider`, `ssoSubjectId`, `email`, `phone`, `receiveEmails`, `libraryCardDesign`, `activeLoansCount`, `createdAt`, `lastModified`.
 
 Paging: None.
 

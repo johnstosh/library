@@ -4,6 +4,7 @@
 package com.muczynski.library.dto.importdtos;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.muczynski.library.domain.LibraryCardDesign;
 import lombok.Data;
@@ -13,14 +14,21 @@ import java.util.List;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-@JsonPropertyOrder({"username", "password", "xaiApiKey", "googlePhotosApiKey",
-    "googlePhotosRefreshToken", "googlePhotosTokenExpiry", "googleClientSecret",
+@JsonPropertyOrder({"username", "password", "xaiApiKey", "googleApiKey", "useXaiApiKey", "useGoogleApiKey",
+    "googlePhotosApiKey", "googlePhotosRefreshToken", "googlePhotosTokenExpiry", "googleClientSecret",
     "googlePhotosAlbumId", "lastPhotoTimestamp", "ssoProvider", "ssoSubjectId",
     "email", "phone", "libraryCardDesign", "authorities", "roles", "userIdentifier"})
 public class ImportUserDto {
     private String username;
     private String password;
     private String xaiApiKey;
+    private String googleApiKey;
+    /** Always written, including false, so a round trip does not turn the flag back on. */
+    @JsonInclude(Include.ALWAYS)
+    private Boolean useXaiApiKey;
+    /** Always written, including false, so a round trip does not turn the flag back on. */
+    @JsonInclude(Include.ALWAYS)
+    private Boolean useGoogleApiKey;
     private String googlePhotosApiKey;
     private String googlePhotosRefreshToken;
     private String googlePhotosTokenExpiry;

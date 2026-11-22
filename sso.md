@@ -35,6 +35,9 @@ The application already has Google OAuth implemented for Google Photos integrati
 - `username`
 - `password` (BCrypt hash)
 - `xaiApiKey`
+- `googleApiKey` (Gemini API key)
+- `useXaiApiKey` (default true)
+- `useGoogleApiKey` (default false)
 - `googlePhotosApiKey` (OAuth access token)
 - `googlePhotosRefreshToken`
 - `googlePhotosTokenExpiry`

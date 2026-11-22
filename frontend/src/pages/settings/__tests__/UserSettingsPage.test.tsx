@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserSettingsPage } from '../UserSettingsPage'
 
 const mutateAsync = vi.fn().mockResolvedValue({})
+const harness = vi.hoisted(() => ({ authority: 'USER' }))
 
 vi.mock('@/api/settings', () => {
   const data = {
@@ -22,7 +23,7 @@ vi.mock('@/api/settings', () => {
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: () => ({
-    user: { username: 'pat', authority: 'USER' },
+    user: { username: 'pat', authority: harness.authority },
   }),
 }))
 
@@ -33,6 +34,7 @@ vi.mock('@/utils/auth', () => ({
 describe('UserSettingsPage', () => {
   beforeEach(() => {
     mutateAsync.mockClear()
+    harness.authority = 'USER'
   })
 
   it('lets a patron change email and phone', async () => {
@@ -80,5 +82,29 @@ describe('UserSettingsPage', () => {
         receiveEmails: false,
       })
     })
+  })
+
+  it('saves a Google API key and selects Gemini instead of Grok', async () => {
+    harness.authority = 'LIBRARIAN'
+    render(<UserSettingsPage />)
+
+    fireEvent.click(screen.getByTestId('use-google-api-key'))
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({
+        useXaiApiKey: false,
+        useGoogleApiKey: true,
+      })
+    })
+    expect(screen.getByText('AI provider updated successfully')).toBeInTheDocument()
+    expect(screen.getByTestId('google-api-key-missing')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('google-api-key-input'), { target: { value: 'gemini-key' } })
+    fireEvent.click(screen.getByTestId('save-google-api-key-button'))
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({ googleApiKey: 'gemini-key' })
+    })
+    expect(screen.queryByTestId('google-api-key-missing')).not.toBeInTheDocument()
   })
 })
