@@ -2,6 +2,10 @@
 
 A full-stack library management system with book cataloging, patron tracking, library card generation, and Google Photos integration.
 
+## REST API
+
+Controller mappings are documented in [docs/api](docs/api/README.md), one Markdown file per controller. `ApiDocumentationCoverageTest` fails when a `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`, or `@PatchMapping` has no `## METHOD /path` heading there.
+
 ## Technology Stack
 
 ### Backend
@@ -160,7 +164,8 @@ src/main/java/com/muczynski/library/
 4. Create MapStruct mapper in `mapper/`
 5. Create service in `service/`
 6. Create controller in `controller/`
-7. Add tests in `src/test/java/`
+7. Document each mapping under `docs/api/` (`ApiDocumentationCoverageTest` checks the headings)
+8. Add tests in `src/test/java/`
 
 **Adding a Frontend Feature:**
 1. Create API functions in `frontend/src/api/feature.ts`
