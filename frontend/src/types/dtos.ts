@@ -297,6 +297,9 @@ export interface UserDto {
   username: string
   authorities: string[]
   xaiApiKey?: string
+  googleApiKey?: string
+  useXaiApiKey?: boolean
+  useGoogleApiKey?: boolean
   ssoProvider?: string
   ssoSubjectId?: string
   email?: string

@@ -3,6 +3,8 @@
  */
 package com.muczynski.library.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
@@ -16,31 +18,46 @@ import com.muczynski.library.repository.BookPriceRepository;
 import com.muczynski.library.repository.BookRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Runs the catalog list queries against Postgres so a JPQL mistake fails here
  * instead of on the Books, Prices, or Authors page.
  */
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class CatalogFilterServiceIntegrationTest {
 
     @Autowired
     private CatalogFilterService catalogFilterService;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private BookRepository bookRepository;
@@ -134,6 +151,114 @@ class CatalogFilterServiceIntegrationTest {
         List<Long> authorIds = ids(catalogFilterService.bookSummaries(authors, null, true));
         assertTrue(authorIds.contains(invertedBook.getId()));
         assertFalse(authorIds.contains(lowerTitle.getId()));
+    }
+
+    @Test
+    void bookSummariesFilterByTrimmedDetailedDescriptionLength() throws Exception {
+        String token = "DescLen" + UUID.randomUUID().toString().replace("-", "");
+        Author author = authorRepository.save(authorNamed("Author " + token));
+
+        Book exactMin = bookRepository.save(book(token + " min", author, proper(), "x".repeat(10)));
+        Book belowMin = bookRepository.save(book(token + " below", author, proper(), "x".repeat(9)));
+        Book exactMax = bookRepository.save(book(token + " max", author, "x".repeat(5), "x".repeat(20)));
+        Book aboveMax = bookRepository.save(book(token + " above", author, "x".repeat(5), "x".repeat(21)));
+        Book empty = bookRepository.save(book(token + " empty", author, proper(), null));
+        Book spaces = bookRepository.save(book(token + " spaces", author, proper(), " \t\n\r "));
+        Book padded = bookRepository.save(book(token + " padded", author, "x".repeat(3), "  " + "x".repeat(10) + "\n"));
+        Book review = book(token + " review", author, "x".repeat(12), "x".repeat(1500));
+        review.setFreeTextUrl("https://example.com/" + token);
+        review = bookRepository.save(review);
+        Book bothLong = bookRepository.save(book(token + " both", author, proper(), "x".repeat(1500)));
+        Book blurbWithUrl = book(token + " blurb", author, proper(), "x".repeat(10));
+        blurbWithUrl.setFreeTextUrl("https://example.com/blurb-" + token);
+        blurbWithUrl = bookRepository.save(blurbWithUrl);
+        bookRepository.flush();
+
+        List<Long> open = ids(catalogFilterService.bookSummaries(query(token), null, true));
+        assertTrue(open.contains(exactMin.getId()));
+        assertTrue(open.contains(empty.getId()));
+        assertTrue(open.contains(review.getId()));
+
+        CatalogFilterService.BookCatalogFilter window = query(token);
+        window.descriptionMinChars = 10;
+        window.descriptionMaxChars = 20;
+        List<Long> bounded = ids(catalogFilterService.bookSummaries(window, null, true));
+        assertTrue(bounded.contains(exactMin.getId()));
+        assertTrue(bounded.contains(exactMax.getId()));
+        assertTrue(bounded.contains(padded.getId()));
+        assertTrue(bounded.contains(blurbWithUrl.getId()));
+        assertFalse(bounded.contains(belowMin.getId()));
+        assertFalse(bounded.contains(aboveMax.getId()));
+        assertFalse(bounded.contains(empty.getId()));
+        assertFalse(bounded.contains(spaces.getId()));
+        assertFalse(bounded.contains(review.getId()));
+        assertFalse(bounded.contains(bothLong.getId()));
+
+        CatalogFilterService.BookCatalogFilter minimum = query(token);
+        minimum.descriptionMinChars = 1500;
+        List<Long> longDescriptions = ids(catalogFilterService.bookSummaries(minimum, null, true));
+        assertEquals(List.of(bothLong.getId(), review.getId()).stream().sorted().toList(), longDescriptions);
+
+        CatalogFilterService.BookCatalogFilter plotGap = query(token);
+        plotGap.withoutProperPlotOrDescription = true;
+        List<Long> missingProper = ids(catalogFilterService.bookSummaries(plotGap, null, true));
+        assertTrue(missingProper.contains(review.getId()));
+        assertFalse(missingProper.contains(bothLong.getId()));
+
+        CatalogFilterService.BookCatalogFilter onlyEmpty = query(token);
+        onlyEmpty.descriptionMaxChars = 0;
+        List<Long> blanks = ids(catalogFilterService.bookSummaries(onlyEmpty, null, true));
+        assertTrue(blanks.contains(empty.getId()));
+        assertTrue(blanks.contains(spaces.getId()));
+        assertFalse(blanks.contains(exactMin.getId()));
+
+        CatalogFilterService.BookCatalogFilter includeEmpty = query(token);
+        includeEmpty.descriptionMinChars = 0;
+        assertTrue(ids(catalogFilterService.bookSummaries(includeEmpty, null, true)).contains(empty.getId()));
+
+        CatalogFilterService.BookCatalogFilter impossible = query(token);
+        impossible.descriptionMinChars = 21;
+        impossible.descriptionMaxChars = 9;
+        assertTrue(ids(catalogFilterService.bookSummaries(impossible, null, true)).isEmpty());
+
+        CatalogFilterService.BookCatalogFilter withFreeText = query(token);
+        withFreeText.freeText = true;
+        withFreeText.descriptionMaxChars = 10;
+        assertEquals(List.of(blurbWithUrl.getId()), ids(catalogFilterService.bookSummaries(withFreeText, null, true)));
+
+        String body = mockMvc.perform(get("/api/books/filtered-summaries")
+                        .param("q", token)
+                        .param("descriptionMinChars", "10")
+                        .param("descriptionMaxChars", "10"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertFalse(body.contains("detailedDescription"));
+        assertFalse(body.contains("\"title\""));
+        List<BookSummaryDto> rows = objectMapper.readValue(body, new TypeReference<List<BookSummaryDto>>() {});
+        assertEquals(
+                Set.of(exactMin.getId(), padded.getId(), blurbWithUrl.getId()),
+                rows.stream().map(BookSummaryDto::getId).collect(Collectors.toSet()));
+        assertTrue(rows.stream().allMatch(row -> row.getLastModified() != null && row.getDateAddedToLibrary() != null));
+
+        String freeTextBody = mockMvc.perform(get("/api/books/filtered-summaries")
+                        .param("q", token)
+                        .param("freeText", "true")
+                        .param("descriptionMaxChars", "10"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<BookSummaryDto> freeTextRows = objectMapper.readValue(
+                freeTextBody, new TypeReference<List<BookSummaryDto>>() {});
+        assertEquals(List.of(blurbWithUrl.getId()), freeTextRows.stream().map(BookSummaryDto::getId).toList());
+
+        mockMvc.perform(get("/api/books/filtered-summaries").param("descriptionMinChars", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("zero or greater")));
+        mockMvc.perform(get("/api/books/filtered-summaries").param("descriptionMaxChars", "-3"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

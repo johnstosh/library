@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,5 +23,16 @@ class CatalogFilterServicePlotTest {
                 proper));
         assertFalse(CatalogFilterService.lacksProperPlotOrDescription(proper, proper));
         assertFalse(CatalogFilterService.lacksProperPlotOrDescription("  " + proper + "  ", proper));
+    }
+
+    @Test
+    void descriptionTrimCharsMatchJavaTrimExceptNul() {
+        String chars = CatalogFilterService.DESCRIPTION_TRIM_CHARS;
+        assertEquals(32, chars.length());
+        assertFalse(chars.indexOf('\0') >= 0);
+        assertTrue(chars.indexOf(' ') >= 0);
+        assertTrue(chars.indexOf('\n') >= 0);
+        assertTrue(chars.indexOf('\t') >= 0);
+        assertTrue(chars.indexOf('\r') >= 0);
     }
 }

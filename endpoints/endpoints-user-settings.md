@@ -13,6 +13,9 @@ Returns the current user's settings and profile information.
   "username": "johndoe",
   "authorities": ["USER"],
   "xaiApiKey": "xai-key-123",
+  "googleApiKey": "gemini-key-789",
+  "useXaiApiKey": true,
+  "useGoogleApiKey": false,
   "googlePhotosApiKey": "google-key-456",
   "googleClientSecret": "secret-789",
   "googlePhotosAlbumId": "album-123",
@@ -42,6 +45,9 @@ Updates the current user's settings.
   "currentPassword": "sha256-hashed-current-password",
   "password": "sha256-hashed-new-password",
   "xaiApiKey": "new-xai-key",
+  "googleApiKey": "new-gemini-key",
+  "useXaiApiKey": false,
+  "useGoogleApiKey": true,
   "googlePhotosApiKey": "new-google-key",
   "googleClientSecret": "new-secret",
   "googlePhotosAlbumId": "new-album-id",
@@ -62,6 +68,9 @@ Updates the current user's settings.
 - Passwords must be SHA-256 hashed on client side before sending
 - Username changes check for uniqueness
 - API keys can be set to empty string to clear them
+- `googleApiKey` is the Gemini key from Google AI Studio. It is separate from `googlePhotosApiKey`, which is the Photos OAuth token.
+- `useXaiApiKey` defaults to true and `useGoogleApiKey` defaults to false. Omitting a flag leaves it unchanged. Turning one on turns the other off. Sending both true returns 422. Both false means AI calls are disabled until one provider is selected.
+- When Google is selected, AI calls use the free-tier model `gemini-4-hydrogen`. A missing or invalid key returns 422.
 - Email and phone are optional contact fields. Empty string clears them. Invalid values return 400.
 - `receiveEmails` defaults to true. Set it to false to leave this user's email off loan and application notices. Omitting the field leaves the saved choice unchanged.
 - Authenticated patrons (USER and LIBRARIAN) can change their own email and phone. SSO login fills email only when it is currently blank, so a Settings change is kept.

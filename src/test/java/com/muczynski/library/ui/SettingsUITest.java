@@ -398,6 +398,31 @@ public class SettingsUITest {
     }
 
     @Test
+    @DisplayName("LIBRARIAN: Should save a Google API key and select Gemini")
+    void testLibrarianCanSelectGoogleApiKey() {
+        login("librarian", "password");
+        navigateToSettings();
+
+        page.waitForSelector("[data-test='google-api-key-input']", new Page.WaitForSelectorOptions()
+                .setTimeout(20000L)
+                .setState(WaitForSelectorState.VISIBLE));
+
+        assertThat(page.locator("[data-test='use-xai-api-key']")).isChecked();
+        assertThat(page.locator("[data-test='use-google-api-key']")).not().isChecked();
+
+        page.fill("[data-test='google-api-key-input']", "google-test-key-12345");
+        page.click("[data-test='save-google-api-key-button']");
+        assertThat(page.locator("text=Google API Key updated successfully"))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+
+        page.click("[data-test='use-google-api-key']");
+        assertThat(page.locator("text=AI provider updated successfully"))
+                .isVisible(new LocatorAssertions.IsVisibleOptions().setTimeout(20000L));
+        assertThat(page.locator("[data-test='use-google-api-key']")).isChecked();
+        assertThat(page.locator("[data-test='use-xai-api-key']")).not().isChecked();
+    }
+
+    @Test
     @DisplayName("LIBRARIAN: Should display Google Photos Integration section")
     void testLibrarianCanSeeGooglePhotosConfig() {
         login("librarian", "password");

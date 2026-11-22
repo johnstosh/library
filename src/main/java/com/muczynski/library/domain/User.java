@@ -40,6 +40,22 @@ public class User implements Serializable {
     private String password;
 
     private String xaiApiKey = "";
+    /** Gemini API key from Google AI Studio. Distinct from the Photos OAuth token. */
+    private String googleApiKey = "";
+
+    /**
+     * When true, AI calls use the xAI key. Defaults to true so existing librarians keep Grok.
+     * Only one of the two provider flags may be true.
+     */
+    @Column(columnDefinition = "boolean default true")
+    private boolean useXaiApiKey = true;
+
+    /**
+     * When true, AI calls use the Google API key with the free-tier Gemini model.
+     */
+    @Column(columnDefinition = "boolean default false")
+    private boolean useGoogleApiKey = false;
+
     private String googlePhotosApiKey = ""; // OAuth access token
     private String googlePhotosRefreshToken = ""; // OAuth refresh token
     private String googlePhotosTokenExpiry = ""; // ISO 8601 timestamp

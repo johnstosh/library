@@ -14,6 +14,11 @@ public class UserSettingsDto {
     private String currentPassword;  // For password verification
     private String password;
     private String xaiApiKey;
+    private String googleApiKey;
+    /** Null leaves the saved choice unchanged. */
+    private Boolean useXaiApiKey;
+    /** Null leaves the saved choice unchanged. */
+    private Boolean useGoogleApiKey;
     private String googlePhotosApiKey;
     private String googlePhotosRefreshToken;
     private String googlePhotosTokenExpiry;

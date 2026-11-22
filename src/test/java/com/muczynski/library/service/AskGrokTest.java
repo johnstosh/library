@@ -60,6 +60,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         List<Map<String, Object>> photoDataList = new ArrayList<>();
@@ -115,6 +116,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         List<Map<String, Object>> photoDataList = new ArrayList<>();
@@ -170,6 +172,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn(null);
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         List<Map<String, Object>> photoDataList = new ArrayList<>();
@@ -188,6 +191,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -233,6 +237,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -299,6 +304,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -327,6 +333,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -372,6 +379,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -424,6 +432,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -534,6 +543,7 @@ public class AskGrokTest {
 
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
 
         Map<String, Object> mockResponse = new HashMap<>();
@@ -564,6 +574,7 @@ public class AskGrokTest {
         when(authentication.getName()).thenReturn("123");
         var userDto = mock(com.muczynski.library.dto.UserDto.class);
         when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
         when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
     }
 
@@ -631,5 +642,204 @@ public class AskGrokTest {
         assertFalse(AskGrok.isCreditsExhausted(403, null));
         assertFalse(AskGrok.isCreditsExhausted(400, CREDITS_BODY));
         assertFalse(AskGrok.isCreditsExhausted(500, CREDITS_BODY));
+    }
+
+    @Test
+    void askQuestion_xai401_reportsInvalidKey() {
+        stubAuthenticatedUserWithKey();
+        stubXaiError(HttpStatus.UNAUTHORIZED, "{\"error\":\"Incorrect API key\"}");
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("xAI API key is invalid", ex.getMessage());
+        assertFalse(ex.getMessage().contains("test-api-key"));
+    }
+
+    @Test
+    void askQuestion_googleSelected_callsGeminiFreeModel() {
+        stubGoogleUser("google-test-key");
+
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(geminiBody("essay", true), HttpStatus.OK));
+
+        String result = askGrok.askQuestion("Research Little Women", "Write essays, not blurbs.");
+
+        assertEquals("essay", result);
+        assertTrue(AskGrok.GEMINI_GENERATE_URL.contains(AskGrok.MODEL_GEMINI_FREE));
+        assertEquals("gemini-4-hydrogen", AskGrok.MODEL_GEMINI_FREE);
+        HttpHeaders headers = entityCaptor.getValue().getHeaders();
+        assertEquals("google-test-key", headers.getFirst("x-goog-api-key"));
+        assertNull(headers.getFirst(HttpHeaders.AUTHORIZATION));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        assertFalse(request.containsKey("temperature"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> generation = (Map<String, Object>) request.get("generationConfig");
+        assertEquals(8000, generation.get("maxOutputTokens"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> thinking = (Map<String, Object>) generation.get("thinkingConfig");
+        assertEquals("medium", thinking.get("thinkingLevel"));
+        assertEquals("Write essays, not blurbs.",
+                ((Map<?, ?>) ((List<?>) ((Map<?, ?>) request.get("systemInstruction")).get("parts")).get(0)).get("text"));
+        verify(restTemplate, never()).postForEntity(
+                eq("https://api.x.ai/v1/chat/completions"), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_googleSelected_usesLowThinking() {
+        stubGoogleUser("google-test-key");
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+
+        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> generation = (Map<String, Object>) request.get("generationConfig");
+        assertEquals(500, generation.get("maxOutputTokens"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> thinking = (Map<String, Object>) generation.get("thinkingConfig");
+        assertEquals("low", thinking.get("thinkingLevel"));
+    }
+
+    @Test
+    void analyzePhoto_googleSelected_sendsInlineImage() {
+        stubGoogleUser("google-test-key");
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL),
+                entityCaptor.capture(),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(geminiBody("a card", false), HttpStatus.OK));
+
+        assertEquals("a card", askGrok.analyzePhoto("img".getBytes(), "image/jpeg", "Read the card"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> contents = (List<Map<String, Object>>) request.get("contents");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> parts = (List<Map<String, Object>>) contents.get(0).get("parts");
+        assertEquals("Read the card", parts.get(0).get("text"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inline = (Map<String, Object>) parts.get(1).get("inlineData");
+        assertEquals("image/jpeg", inline.get("mimeType"));
+        assertEquals(java.util.Base64.getEncoder().encodeToString("img".getBytes()), inline.get("data"));
+    }
+
+    @Test
+    void askQuestion_googleSelectedWithoutKey_namesTheMissingKey() {
+        stubGoogleUser("  ");
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("Google API key not configured. Add it in Settings.", ex.getMessage());
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    void askQuestion_googleInvalidKey_reportsInvalidKey() {
+        stubGoogleUser("secret-google-key");
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request",
+                new HttpHeaders(),
+                "{\"error\":{\"status\":\"INVALID_ARGUMENT\",\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("Google API key is invalid", ex.getMessage());
+        assertFalse(ex.getMessage().contains("secret-google-key"));
+    }
+
+    @Test
+    void askQuestion_geminiRateLimit_reportsRateLimit() {
+        stubGoogleUser("google-test-key");
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
+                new HttpHeaders(), "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
+    }
+
+    @Test
+    void askQuestion_neitherProvider_namesTheMissingSelection() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.getXaiApiKey()).thenReturn("test-api-key");
+        when(userDto.isUseXaiApiKey()).thenReturn(false);
+        when(userDto.isUseGoogleApiKey()).thenReturn(false);
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("No AI provider is enabled. Turn on the xAI or Google API key in Settings.", ex.getMessage());
+    }
+
+    @Test
+    void askQuestion_bothProviders_rejectsTheSelection() {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.isUseXaiApiKey()).thenReturn(true);
+        when(userDto.isUseGoogleApiKey()).thenReturn(true);
+        when(userDto.getXaiApiKey()).thenReturn("x");
+        when(userDto.getGoogleApiKey()).thenReturn("g");
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
+        assertEquals("Enable only one AI provider in Settings", ex.getMessage());
+    }
+
+    private void stubGoogleUser(String apiKey) {
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("123");
+        var userDto = mock(com.muczynski.library.dto.UserDto.class);
+        when(userDto.isUseGoogleApiKey()).thenReturn(true);
+        when(userDto.isUseXaiApiKey()).thenReturn(false);
+        when(userDto.getGoogleApiKey()).thenReturn(apiKey);
+        when(userSettingsService.getUserSettings(123L)).thenReturn(userDto);
+    }
+
+    private static Map<String, Object> geminiBody(String answer, boolean includeThought) {
+        List<Map<String, Object>> parts = new ArrayList<>();
+        if (includeThought) {
+            Map<String, Object> thought = new HashMap<>();
+            thought.put("thought", true);
+            thought.put("text", "hidden reasoning");
+            parts.add(thought);
+        }
+        Map<String, Object> text = new HashMap<>();
+        text.put("text", answer);
+        parts.add(text);
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", parts);
+        Map<String, Object> candidate = new HashMap<>();
+        candidate.put("content", content);
+        Map<String, Object> body = new HashMap<>();
+        body.put("candidates", List.of(candidate));
+        return body;
     }
 }

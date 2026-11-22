@@ -38,6 +38,21 @@ public class CatalogFilterService {
      */
     public static final int PROPER_TEXT_MIN_CHARS = 400;
 
+    /**
+     * Characters stripped from both ends when measuring {@code detailedDescription}.
+     * This is the set {@link String#trim()} removes, except NUL. A JDBC string
+     * cannot carry NUL, and PostgreSQL {@code btrim} treats the value as a set.
+     */
+    public static final String DESCRIPTION_TRIM_CHARS = descriptionTrimChars();
+
+    private static String descriptionTrimChars() {
+        char[] chars = new char[0x20];
+        for (int i = 0; i < chars.length; i++) {
+            chars[i] = (char) (i + 1);
+        }
+        return new String(chars);
+    }
+
     private static final int DEFAULT_PRICE_OLDER_DAYS = 90;
     /** Days when a library is selected and the request omits a positive count. */
     public static final int DEFAULT_LIBRARY_CHECKED_OLDER_DAYS = 90;
@@ -254,6 +269,14 @@ public class CatalogFilterService {
         public boolean withoutGenres;
         public boolean withoutFreeTextUrls;
         public boolean withoutProperPlotOrDescription;
+        /**
+         * Inclusive lower bound on the trimmed {@code detailedDescription}.
+         * Null means no minimum. A null or blank description counts as 0.
+         * The plot is not measured. Search leaves this null.
+         */
+        public Integer descriptionMinChars;
+        /** Inclusive upper bound. Null means no maximum. Same rules as {@link #descriptionMinChars}. */
+        public Integer descriptionMaxChars;
         public boolean titleNotChicago;
         public boolean authorNotCanonical;
         public boolean ydlAudio;

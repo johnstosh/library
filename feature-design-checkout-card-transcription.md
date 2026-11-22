@@ -111,8 +111,10 @@ The frontend normalizes dates from Grok to the form's expected MM-DD-YYYY format
 ## Security & Authentication
 
 - Requires authenticated user (either USER or LIBRARIAN authority)
-- Uses existing xAI API key from user settings
-- Each user must have their own xAI API key configured in User Settings
+- Uses the AI provider selected in user settings
+- Each librarian configures their own xAI key, Google API key, or both, and turns on exactly one provider
+- Google selection calls Gemini 4 Hydrogen (`gemini-4-hydrogen`), the free-tier model, with that user's Google API key
+- A missing provider, a missing key, or an invalid key returns an error and does not call the other provider
 - Photo data is not stored permanently (only processed during request)
 
 ## Error Handling

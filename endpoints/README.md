@@ -1,6 +1,6 @@
 # API Endpoints Documentation
 
-This folder contains the complete API endpoint documentation for the Library Management System, organized by subsystem and feature.
+The checked reference for every controller mapping is [docs/api](../docs/api/README.md). `ApiDocumentationCoverageTest` fails when a mapping heading is missing there. This folder is the older subsystem notes.
 
 ## Documentation Index
 

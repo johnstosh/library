@@ -198,6 +198,10 @@ public class BookController {
         filter.desireUnset = unset;
     }
 
+    private static boolean negativeDescriptionBound(Integer chars) {
+        return chars != null && chars < 0;
+    }
+
     private static Long userId(Principal principal) {
         if (principal == null || principal.getName() == null) {
             return null;
@@ -518,6 +522,8 @@ public class BookController {
     /**
      * Summaries for the Books and Prices pages after every active filter.
      * The browser then loads full rows with /by-ids for these ids only.
+     * {@code descriptionMinChars} and {@code descriptionMaxChars} are API-only
+     * bounds on the trimmed detailed description. The pages do not send them.
      */
     @GetMapping("/filtered-summaries")
     @PreAuthorize("permitAll()")
@@ -579,7 +585,13 @@ public class BookController {
             @RequestParam(defaultValue = "90") int libraryCheckedOlderDays,
             @RequestParam(required = false) String libraryLookupError,
             @RequestParam(required = false) Integer freeTextSearchedOlderDays,
+            @RequestParam(required = false) Integer descriptionMinChars,
+            @RequestParam(required = false) Integer descriptionMaxChars,
             Principal principal) {
+        if (negativeDescriptionBound(descriptionMinChars) || negativeDescriptionBound(descriptionMaxChars)) {
+            return ResponseEntity.badRequest().body(
+                    "descriptionMinChars and descriptionMaxChars must be zero or greater");
+        }
         try {
             CatalogFilterService.BookCatalogFilter filter = new CatalogFilterService.BookCatalogFilter();
             filter.query = q == null ? "" : q;
@@ -640,6 +652,8 @@ public class BookController {
             if (freeTextSearchedOlderDays != null && freeTextSearchedOlderDays > 0) {
                 filter.freeTextSearchedOlderDays = freeTextSearchedOlderDays;
             }
+            filter.descriptionMinChars = descriptionMinChars;
+            filter.descriptionMaxChars = descriptionMaxChars;
             return ResponseEntity.ok(catalogFilterService.bookSummaries(filter, userId(principal), isLibrarian()));
         } catch (Exception e) {
             logger.warn("Failed to retrieve filtered book summaries: {}", e.getMessage(), e);

@@ -8,6 +8,9 @@ export interface UserSettingsDto {
   currentPassword?: string  // For password verification
   password?: string
   xaiApiKey?: string
+  googleApiKey?: string
+  useXaiApiKey?: boolean
+  useGoogleApiKey?: boolean
   googlePhotosApiKey?: string
   googlePhotosRefreshToken?: string
   googlePhotosTokenExpiry?: string

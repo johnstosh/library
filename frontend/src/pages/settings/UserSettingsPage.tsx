@@ -31,6 +31,9 @@ export function UserSettingsPage() {
   const [isRetrying, setIsRetrying] = useState(false)
   const [retryHandler, setRetryHandler] = useState<(() => Promise<void>) | null>(null)
   const [xaiApiKey, setXaiApiKey] = useState('')
+  const [googleApiKey, setGoogleApiKey] = useState('')
+  const [useXaiApiKey, setUseXaiApiKey] = useState(true)
+  const [useGoogleApiKey, setUseGoogleApiKey] = useState(false)
   const [googlePhotosAlbumId, setGooglePhotosAlbumId] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -129,6 +132,54 @@ export function UserSettingsPage() {
     }
   }
 
+  const handleSaveGoogleApiKey = async () => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      await updateUserSettings.mutateAsync({
+        googleApiKey: googleApiKey || '',
+      })
+      setSuccessMessage('Google API Key updated successfully')
+    } catch (error) {
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleSaveGoogleApiKey() })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update Google API Key')
+      }
+    }
+  }
+
+  const handleToggleAiProvider = async (provider: 'xai' | 'google', checked: boolean) => {
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    const nextXai = provider === 'xai' ? checked : checked ? false : useXaiApiKey
+    const nextGoogle = provider === 'google' ? checked : checked ? false : useGoogleApiKey
+    setUseXaiApiKey(nextXai)
+    setUseGoogleApiKey(nextGoogle)
+
+    try {
+      await updateUserSettings.mutateAsync({
+        useXaiApiKey: nextXai,
+        useGoogleApiKey: nextGoogle,
+      })
+      setSuccessMessage('AI provider updated successfully')
+    } catch (error) {
+      setUseXaiApiKey(useXaiApiKey)
+      setUseGoogleApiKey(useGoogleApiKey)
+      setPendingError(error)
+      if (isTransientApiError(error)) {
+        setRetryHandler(() => async () => { await handleToggleAiProvider(provider, checked) })
+        setShowTryAgainDialog(true)
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to update AI provider')
+      }
+    }
+  }
+
   const handleSaveGooglePhotosAlbumId = async () => {
     setSuccessMessage('')
     setErrorMessage('')
@@ -184,6 +235,9 @@ export function UserSettingsPage() {
   useEffect(() => {
     if (userSettings) {
       setXaiApiKey(userSettings.xaiApiKey || '')
+      setGoogleApiKey(userSettings.googleApiKey || '')
+      setUseXaiApiKey(userSettings.useXaiApiKey ?? true)
+      setUseGoogleApiKey(userSettings.useGoogleApiKey ?? false)
       setGooglePhotosAlbumId(userSettings.googlePhotosAlbumId || '')
       setEmail(userSettings.email || '')
       setPhone(userSettings.phone || '')
@@ -380,6 +434,53 @@ export function UserSettingsPage() {
                   API key for XAI integration (optional)
                 </p>
               </div>
+              <Checkbox
+                label="Use xAI (Grok)"
+                checked={useXaiApiKey}
+                onChange={(e) => handleToggleAiProvider('xai', e.target.checked)}
+                data-test="use-xai-api-key"
+              />
+            </div>
+          </div>
+        )}
+
+        {isLibrarian && (
+          <div className="border-t pt-6">
+            <h2 className="text-xl font-semibold mb-4">Google API</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="google-api-key" className="block text-sm font-medium mb-1">
+                  Google API Key
+                </label>
+                <div className="flex gap-3">
+                  <Input
+                    id="google-api-key"
+                    type="password"
+                    placeholder="Enter Google API key"
+                    value={googleApiKey}
+                    onChange={(e) => setGoogleApiKey(e.target.value)}
+                    data-test="google-api-key-input"
+                    className="flex-1"
+                  />
+                  <Button onClick={handleSaveGoogleApiKey} data-test="save-google-api-key-button">
+                    Save
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  API key for Gemini. Calls use the free-tier model gemini-4-hydrogen.
+                </p>
+              </div>
+              <Checkbox
+                label="Use Google (Gemini)"
+                checked={useGoogleApiKey}
+                onChange={(e) => handleToggleAiProvider('google', e.target.checked)}
+                data-test="use-google-api-key"
+              />
+              {useGoogleApiKey && !googleApiKey.trim() && (
+                <p className="text-sm text-amber-700" data-test="google-api-key-missing">
+                  Add a Google API key before Gemini calls can run.
+                </p>
+              )}
             </div>
           </div>
         )}

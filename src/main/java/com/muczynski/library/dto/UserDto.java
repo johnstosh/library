@@ -15,6 +15,9 @@ public class UserDto {
     private String username;
     private Set<String> authorities;
     private String xaiApiKey;
+    private String googleApiKey;
+    private boolean useXaiApiKey = true;
+    private boolean useGoogleApiKey = false;
     private String googlePhotosApiKey;
     private String googlePhotosRefreshToken;
     private String googlePhotosTokenExpiry;

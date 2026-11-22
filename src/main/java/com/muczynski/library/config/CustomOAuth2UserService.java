@@ -106,6 +106,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         // Initialize other fields with empty strings (to match existing user pattern)
         user.setXaiApiKey("");
+        user.setGoogleApiKey("");
         user.setGooglePhotosApiKey("");
         user.setGooglePhotosRefreshToken("");
         user.setGooglePhotosTokenExpiry("");

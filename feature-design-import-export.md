@@ -94,7 +94,8 @@ The Data Management page (`/data-management`) includes a **Books Availability** 
   - Uses `@JsonInclude(JsonInclude.Include.NON_EMPTY)` on all DTOs
   - Produces cleaner, smaller JSON without `":null"` or `":""` fields
 - **Import**: Null values are converted back to empty strings for fields that require it
-  - User fields like `xaiApiKey`, `googlePhotosApiKey`, etc. are initialized to empty strings if null
+  - User fields like `xaiApiKey`, `googleApiKey`, `googlePhotosApiKey`, etc. are initialized to empty strings if null
+  - `useXaiApiKey` and `useGoogleApiKey` are always exported, including false, so a round trip keeps the selected provider
 
 ### Book-Specific Fields
 - **`electronicResource`**: Only present in JSON when `true`; absence means `false` (the default).

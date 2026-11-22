@@ -467,6 +467,15 @@ public class ImportService {
         if (uDto.getXaiApiKey() != null) {
             user.setXaiApiKey(uDto.getXaiApiKey());
         }
+        if (uDto.getGoogleApiKey() != null) {
+            user.setGoogleApiKey(uDto.getGoogleApiKey());
+        }
+        if (uDto.getUseXaiApiKey() != null) {
+            user.setUseXaiApiKey(uDto.getUseXaiApiKey());
+        }
+        if (uDto.getUseGoogleApiKey() != null) {
+            user.setUseGoogleApiKey(uDto.getUseGoogleApiKey());
+        }
         if (uDto.getGooglePhotosApiKey() != null) {
             user.setGooglePhotosApiKey(uDto.getGooglePhotosApiKey());
         }
@@ -502,6 +511,7 @@ public class ImportService {
         }
         // Ensure empty fields are initialized properly for new users
         if (user.getXaiApiKey() == null) user.setXaiApiKey("");
+        if (user.getGoogleApiKey() == null) user.setGoogleApiKey("");
         if (user.getGooglePhotosApiKey() == null) user.setGooglePhotosApiKey("");
         if (user.getGooglePhotosRefreshToken() == null) user.setGooglePhotosRefreshToken("");
         if (user.getGooglePhotosTokenExpiry() == null) user.setGooglePhotosTokenExpiry("");
@@ -893,6 +903,9 @@ public class ImportService {
             uDto.setUsername(user.getUsername());
             uDto.setPassword(user.getPassword()); // Export BCrypt hashed password (60 chars)
             uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+            uDto.setGoogleApiKey(emptyToNull(user.getGoogleApiKey()));
+            uDto.setUseXaiApiKey(user.isUseXaiApiKey());
+            uDto.setUseGoogleApiKey(user.isUseGoogleApiKey());
             uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
             uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
             uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
@@ -1087,6 +1100,9 @@ public class ImportService {
                 uDto.setUsername(user.getUsername());
                 uDto.setPassword(user.getPassword());
                 uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+                uDto.setGoogleApiKey(emptyToNull(user.getGoogleApiKey()));
+                uDto.setUseXaiApiKey(user.isUseXaiApiKey());
+                uDto.setUseGoogleApiKey(user.isUseGoogleApiKey());
                 uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
                 uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
                 uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));
@@ -1556,6 +1572,9 @@ public class ImportService {
                 uDto.setUsername(user.getUsername());
                 uDto.setPassword(user.getPassword());
                 uDto.setXaiApiKey(emptyToNull(user.getXaiApiKey()));
+                uDto.setGoogleApiKey(emptyToNull(user.getGoogleApiKey()));
+                uDto.setUseXaiApiKey(user.isUseXaiApiKey());
+                uDto.setUseGoogleApiKey(user.isUseGoogleApiKey());
                 uDto.setGooglePhotosApiKey(emptyToNull(user.getGooglePhotosApiKey()));
                 uDto.setGooglePhotosRefreshToken(emptyToNull(user.getGooglePhotosRefreshToken()));
                 uDto.setGooglePhotosTokenExpiry(emptyToNull(user.getGooglePhotosTokenExpiry()));

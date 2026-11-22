@@ -78,6 +78,12 @@ public class UserSettingsService {
             user.setXaiApiKey(userSettingsDto.getXaiApiKey());
         }
 
+        if (userSettingsDto.getGoogleApiKey() != null) {
+            user.setGoogleApiKey(userSettingsDto.getGoogleApiKey());
+        }
+
+        applyAiProviderSelection(user, userSettingsDto);
+
         if (userSettingsDto.getGooglePhotosApiKey() != null) {
             user.setGooglePhotosApiKey(userSettingsDto.getGooglePhotosApiKey());
         }
@@ -120,6 +126,36 @@ public class UserSettingsService {
 
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
+    }
+
+    /**
+     * A null flag leaves the stored choice. Turning one provider on turns the other off.
+     * Sending both true is rejected. Both false means no AI provider is selected.
+     */
+    private void applyAiProviderSelection(User user, UserSettingsDto userSettingsDto) {
+        Boolean requestedXai = userSettingsDto.getUseXaiApiKey();
+        Boolean requestedGoogle = userSettingsDto.getUseGoogleApiKey();
+        if (requestedXai != null) {
+            user.setUseXaiApiKey(requestedXai);
+        }
+        if (requestedGoogle != null) {
+            user.setUseGoogleApiKey(requestedGoogle);
+        }
+        if (!user.isUseXaiApiKey() || !user.isUseGoogleApiKey()) {
+            return;
+        }
+        if (Boolean.TRUE.equals(requestedXai) && Boolean.TRUE.equals(requestedGoogle)) {
+            throw new LibraryException("Enable only one AI provider");
+        }
+        if (Boolean.TRUE.equals(requestedGoogle)) {
+            user.setUseXaiApiKey(false);
+            return;
+        }
+        if (Boolean.TRUE.equals(requestedXai)) {
+            user.setUseGoogleApiKey(false);
+            return;
+        }
+        throw new LibraryException("Enable only one AI provider");
     }
 
     private String normalizeOptionalEmail(String email) {

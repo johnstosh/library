@@ -51,6 +51,14 @@ public class AskGrok {
     public static final String MODEL_GROK_4 = MODEL_GROK_FLAGSHIP;
     public static final String MODEL_GROK_4_FAST = "grok-4.3";
     public static final String IMAGE_DETAIL_HIGH = "high";
+    /**
+     * Free-tier Gemini model. On the Gemini API pricing page (November 2026),
+     * Gemini 4 Hydrogen input and output are free of charge. Gemini 4 Carbon,
+     * Argon, and Neon are not on the free tier. Hydrogen accepts text and images.
+     */
+    public static final String MODEL_GEMINI_FREE = "gemini-4-hydrogen";
+    public static final String GEMINI_GENERATE_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_GEMINI_FREE + ":generateContent";
     /** Max books per reading-difficulty Grok prompt. */
     public static final int READING_DIFFICULTY_BATCH_SIZE = 10;
 
@@ -513,18 +521,57 @@ public class AskGrok {
         return messages;
     }
 
-    private String requireApiKey() {
+    private enum AiProvider {
+        XAI, GEMINI
+    }
+
+    private record AiCall(AiProvider provider, String apiKey) {}
+
+    private AiCall resolveCall() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new LibraryException("No authenticated user found");
         }
         Long userId = Long.parseLong(authentication.getName());
         UserDto userDto = userSettingsService.getUserSettings(userId);
-        String apiKey = userDto.getXaiApiKey();
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new LibraryException("xAI API key not configured for user ID: " + userId);
+        boolean useXai = userDto.isUseXaiApiKey();
+        boolean useGoogle = userDto.isUseGoogleApiKey();
+        if (useXai && useGoogle) {
+            throw new LibraryException("Enable only one AI provider in Settings");
         }
-        return apiKey;
+        if (useGoogle) {
+            String apiKey = userDto.getGoogleApiKey();
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                throw new LibraryException("Google API key not configured. Add it in Settings.");
+            }
+            return new AiCall(AiProvider.GEMINI, apiKey.trim());
+        }
+        if (useXai) {
+            String apiKey = userDto.getXaiApiKey();
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                throw new LibraryException("xAI API key not configured for user ID: " + userId);
+            }
+            return new AiCall(AiProvider.XAI, apiKey.trim());
+        }
+        throw new LibraryException("No AI provider is enabled. Turn on the xAI or Google API key in Settings.");
+    }
+
+    /**
+     * True when the provider rejected the credential itself: HTTP 401, or a body that
+     * names an invalid API key. A spending-limit 403 is not an invalid key.
+     */
+    static boolean isInvalidApiKey(int status, String body) {
+        if (status == 401) {
+            return true;
+        }
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        String lower = body.toLowerCase(Locale.ROOT);
+        return lower.contains("api_key_invalid")
+                || lower.contains("api key not valid")
+                || lower.contains("invalid api key")
+                || (lower.contains("api key") && (lower.contains("invalid") || lower.contains("not valid")));
     }
 
     /**
@@ -550,8 +597,15 @@ public class AskGrok {
     }
 
     private String complete(String model, List<Map<String, Object>> messages, int maxCompletionTokens, double temperature) {
-        String apiKey = requireApiKey();
+        AiCall call = resolveCall();
+        if (call.provider == AiProvider.GEMINI) {
+            return completeGemini(call.apiKey, messages, maxCompletionTokens);
+        }
+        return completeXai(call.apiKey, model, messages, maxCompletionTokens, temperature);
+    }
 
+    private String completeXai(String apiKey, String model, List<Map<String, Object>> messages,
+                               int maxCompletionTokens, double temperature) {
         Map<String, Object> request = new HashMap<>();
         request.put("model", model);
         request.put("messages", messages);
@@ -578,6 +632,9 @@ public class AskGrok {
                         e.getStatusCode().value());
                 throw new GrokCreditsExhaustedException(e);
             }
+            if (isInvalidApiKey(e.getStatusCode().value(), e.getResponseBodyAsString())) {
+                throw new LibraryException("xAI API key is invalid", e);
+            }
             throw e;
         }
 
@@ -597,5 +654,159 @@ public class AskGrok {
         } else {
             throw new LibraryException("xAI API call failed: " + response.getStatusCode() + " - " + response.getBody());
         }
+    }
+
+    /**
+     * Gemini 4 Hydrogen ignores custom temperature, and thinkingBudget is rejected.
+     * Short prompts use thinking level low so the free-tier answer is not spent on reasoning.
+     */
+    private String completeGemini(String apiKey, List<Map<String, Object>> messages, int maxCompletionTokens) {
+        Map<String, Object> request = geminiRequest(messages, maxCompletionTokens);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("x-goog-api-key", apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.postForEntity(GEMINI_GENERATE_URL, entity, Map.class);
+        } catch (HttpClientErrorException e) {
+            if (isInvalidApiKey(e.getStatusCode().value(), e.getResponseBodyAsString())) {
+                throw new LibraryException("Google API key is invalid", e);
+            }
+            if (e.getStatusCode().value() == 429) {
+                throw new LibraryException("Gemini rate limit reached. Try again later.", e);
+            }
+            throw e;
+        }
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            String text = geminiText(response.getBody());
+            if (text != null) {
+                return text;
+            }
+            throw new LibraryException("Unexpected response format from Gemini API");
+        }
+        throw new LibraryException("Gemini API call failed: " + response.getStatusCode() + " - " + response.getBody());
+    }
+
+    private Map<String, Object> geminiRequest(List<Map<String, Object>> messages, int maxCompletionTokens) {
+        String systemPrompt = null;
+        Object userContent = null;
+        for (Map<String, Object> message : messages) {
+            String role = String.valueOf(message.get("role"));
+            if ("system".equals(role)) {
+                Object content = message.get("content");
+                if (content != null) {
+                    systemPrompt = content.toString();
+                }
+            } else if ("user".equals(role)) {
+                userContent = message.get("content");
+            }
+        }
+
+        Map<String, Object> request = new HashMap<>();
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            Map<String, Object> system = new HashMap<>();
+            system.put("parts", List.of(Map.of("text", systemPrompt)));
+            request.put("systemInstruction", system);
+        }
+        Map<String, Object> content = new HashMap<>();
+        content.put("role", "user");
+        content.put("parts", geminiParts(userContent));
+        request.put("contents", List.of(content));
+
+        Map<String, Object> thinking = new HashMap<>();
+        thinking.put("thinkingLevel", maxCompletionTokens <= FAST_MAX_COMPLETION_TOKENS ? "low" : "medium");
+        Map<String, Object> generation = new HashMap<>();
+        generation.put("maxOutputTokens", maxCompletionTokens);
+        generation.put("thinkingConfig", thinking);
+        request.put("generationConfig", generation);
+        return request;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> geminiParts(Object userContent) {
+        if (userContent instanceof String text) {
+            return List.of(Map.of("text", text));
+        }
+        if (!(userContent instanceof List<?> list)) {
+            throw new LibraryException("Unsupported prompt for Gemini");
+        }
+        List<Map<String, Object>> parts = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                continue;
+            }
+            Map<String, Object> part = (Map<String, Object>) raw;
+            String type = String.valueOf(part.get("type"));
+            if ("text".equals(type)) {
+                parts.add(Map.of("text", String.valueOf(part.get("text"))));
+            } else if ("image_url".equals(type)) {
+                Object imageUrl = part.get("image_url");
+                if (imageUrl instanceof Map<?, ?> image) {
+                    parts.add(inlineImage(String.valueOf(image.get("url"))));
+                }
+            }
+        }
+        if (parts.isEmpty()) {
+            throw new LibraryException("Gemini prompt has no content");
+        }
+        return parts;
+    }
+
+    private static Map<String, Object> inlineImage(String dataUrl) {
+        if (dataUrl == null || !dataUrl.startsWith("data:") || !dataUrl.contains(",")) {
+            throw new LibraryException("Photo data is not a data URL");
+        }
+        int comma = dataUrl.indexOf(',');
+        String meta = dataUrl.substring("data:".length(), comma);
+        int semi = meta.indexOf(';');
+        String mime = semi >= 0 ? meta.substring(0, semi) : meta;
+        Map<String, Object> inline = new HashMap<>();
+        inline.put("mimeType", mime);
+        inline.put("data", dataUrl.substring(comma + 1));
+        Map<String, Object> part = new HashMap<>();
+        part.put("inlineData", inline);
+        return part;
+    }
+
+    /**
+     * Joins answer text and skips thinking parts. Returns null when the body has no answer.
+     */
+    @SuppressWarnings("unchecked")
+    static String geminiText(Map<String, Object> body) {
+        Object candidates = body.get("candidates");
+        if (!(candidates instanceof List<?> list) || list.isEmpty()) {
+            return null;
+        }
+        Object first = list.get(0);
+        if (!(first instanceof Map<?, ?> candidate)) {
+            return null;
+        }
+        Object content = candidate.get("content");
+        if (!(content instanceof Map<?, ?> contentMap)) {
+            return null;
+        }
+        Object parts = contentMap.get("parts");
+        if (!(parts instanceof List<?> partList)) {
+            return null;
+        }
+        StringBuilder text = new StringBuilder();
+        for (Object partObj : partList) {
+            if (!(partObj instanceof Map<?, ?> part)) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(part.get("thought"))) {
+                continue;
+            }
+            Object value = part.get("text");
+            if (value != null) {
+                text.append(value);
+            }
+        }
+        return text.isEmpty() ? null : text.toString();
     }
 }

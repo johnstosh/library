@@ -17,8 +17,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -147,6 +149,9 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
+        assertThat(page.locator("[data-test='filter-description-min-chars']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-description-max-chars']")).hasCount(0);
+        assertThat(page.getByText("Description length")).hasCount(0);
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='status-filter-without-loc']")).containsText("Without LOC");
@@ -1031,15 +1036,17 @@ public class BooksUITest {
             }
             """);
 
-        // Hold the summaries fetch until assertions finish so the overlay stays visible.
-        CompletableFuture<Void> releaseFetch = new CompletableFuture<>();
+        // Leave the summaries response pending until the assertions finish.
+        // Resuming on a timer let a slow runner drop the overlay between checks.
+        // Returning without resume keeps the request pending (Playwright PendingHandler).
+        List<Route> held = Collections.synchronizedList(new ArrayList<>());
+        AtomicBoolean released = new AtomicBoolean(false);
         page.route(Pattern.compile(".*/api/books/(?:filtered-summaries|summaries).*"), route -> {
-            try {
-                releaseFetch.get(20, TimeUnit.SECONDS);
-            } catch (Exception ignored) {
-                // Test finished or timed out; still complete the request so Playwright can close.
+            if (released.get()) {
+                route.resume();
+                return;
             }
-            route.resume();
+            held.add(route);
         });
 
         try {
@@ -1068,7 +1075,19 @@ public class BooksUITest {
             assertThat(page.locator("[data-test='loading-overlay']")).isVisible();
             assertThat(page.locator("[data-test='loading-overlay-spinner'] [data-test='spinner']")).isVisible();
         } finally {
-            releaseFetch.complete(null);
+            released.set(true);
+            List<Route> pending;
+            synchronized (held) {
+                pending = new ArrayList<>(held);
+                held.clear();
+            }
+            for (Route route : pending) {
+                try {
+                    route.resume();
+                } catch (RuntimeException ignored) {
+                    // The route was already settled, or the page is closing.
+                }
+            }
         }
     }
 }

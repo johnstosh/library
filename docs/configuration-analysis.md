@@ -25,7 +25,10 @@ google.oauth.scope=https://www.googleapis.com/auth/photoslibrary https://www.goo
 - `googlePhotosRefreshToken` - OAuth refresh token
 - `googlePhotosTokenExpiry` - Token expiration timestamp
 - `lastPhotoTimestamp` - Last processed photo timestamp
-- `xaiApiKey` - AI service API key
+- `xaiApiKey` - xAI API key
+- `googleApiKey` - Gemini API key from Google AI Studio
+- `useXaiApiKey` - when true, AI calls use xAI (default)
+- `useGoogleApiKey` - when true, AI calls use Gemini
 
 **Analysis:**
 - ✅ Tokens stored per-user (correct - each user authorizes their own Google Photos)
