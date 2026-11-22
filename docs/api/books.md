@@ -693,7 +693,7 @@ Notes:
 
 Not `@Transactional`: Grok HTTP must not hold a pool connection, and service catch-and-return must not leave a controller txn rollback-only (#361).
 
-Not transactional. The Grok call must not hold a database connection.
+Not transactional. The Grok call must not hold a database connection. The prompt is the title, a description excerpt, a short plot excerpt, and the author name. The bulk Lookup Genres button retries that book when the connection drops or Cloud Run returns 502, 503, or 504.
 
 ## POST /api/books/lookup-genres-bulk
 
@@ -713,7 +713,7 @@ Notes:
 
 Not `@Transactional`: same isolation as `lookupGenresForBook`.
 
-Not transactional. Body is a JSON array of book ids. No batch cap in the controller.
+Not transactional. Body is a JSON array of book ids. No batch cap in the controller. The Books page sends one id at a time and retries that id when the connection drops or Cloud Run returns 502, 503, or 504.
 
 ## POST /api/books/lookup-reading-difficulty-bulk
 

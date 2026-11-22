@@ -1,7 +1,7 @@
 // (c) Copyright 2025 by Muczynski
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { api } from './client'
+import { api, ApiError } from './client'
 import { runGrokJob } from './grokJobs'
 import { postByIdsInBatches } from './byIds'
 import { queryKeys } from '@/config/queryClient'
@@ -22,6 +22,45 @@ import type {
 
 /** Must match AskGrok.READING_DIFFICULTY_BATCH_SIZE. */
 export const READING_DIFFICULTY_LOOKUP_BATCH_SIZE = 10
+
+/**
+ * Waits before retrying one genre lookup after Cloud Run drops the instance.
+ * The first pause covers a short blip. The second covers a fresh instance start.
+ */
+export const GENRE_LOOKUP_RETRY_DELAYS_MS = [5_000, 20_000]
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** A dropped connection or a Cloud Run 502/503/504. Gemini errors come back as HTTP 200. */
+export function isGenreLookupRetryable(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504)
+}
+
+/**
+ * One genre lookup, retried when the instance is killed or the connection closes.
+ * Other failures, including a Gemini error in a 200 body, are returned as thrown.
+ */
+export async function postGenreLookupRetrying(
+  id: number,
+  post: (id: number) => Promise<GenreLookupResultDto>,
+  sleep: (ms: number) => Promise<void> = delay,
+): Promise<GenreLookupResultDto> {
+  let attempt = 0
+  for (;;) {
+    try {
+      return await post(id)
+    } catch (error) {
+      const wait = GENRE_LOOKUP_RETRY_DELAYS_MS[attempt]
+      if (wait == null || !isGenreLookupRetryable(error)) {
+        throw error
+      }
+      attempt += 1
+      await sleep(wait)
+    }
+  }
+}
 
 /** Books and Prices catalog filters. Omitted means the unfiltered loan-form catalog. */
 export interface BookListFilters {
@@ -621,7 +660,8 @@ export function useBulkBookFromTitleAuthor(
 export function useLookupGenres() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`),
+    mutationFn: (id: number) =>
+      postGenreLookupRetrying(id, (bookId) => api.post<GenreLookupResultDto>(`/books/${bookId}/lookup-genres`)),
     onSuccess: (data, id) => {
       if (data.updatedBook) {
         queryClient.setQueryData(queryKeys.books.detail(id), data.updatedBook)
@@ -647,7 +687,9 @@ export function useLookupBulkGenresWithProgress(
       for (let i = 0; i < ids.length; i++) {
         const id = ids[i]
         try {
-          const result = await api.post<GenreLookupResultDto>(`/books/${id}/lookup-genres`)
+          const result = await postGenreLookupRetrying(id, (bookId) =>
+            api.post<GenreLookupResultDto>(`/books/${bookId}/lookup-genres`),
+          )
           results.push(result)
           if (result.updatedBook) {
             queryClient.setQueryData(queryKeys.books.detail(id), result.updatedBook)
