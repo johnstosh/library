@@ -19,10 +19,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.text.Normalizer;
 import java.util.*;
+import java.util.function.LongConsumer;
 
 @Service
 public class AskGrok {
@@ -34,6 +37,9 @@ public class AskGrok {
     private UserSettingsService userSettingsService;
 
     private final RestTemplate restTemplate;
+
+    /** Test seam. Production waits one second before a same-model Gemini retry. */
+    private LongConsumer geminiPause = this::sleepBeforeGeminiRetry;
 
     public AskGrok() {
         this.restTemplate = new RestTemplate();
@@ -52,13 +58,22 @@ public class AskGrok {
     public static final String MODEL_GROK_4_FAST = "grok-4.3";
     public static final String IMAGE_DETAIL_HIGH = "high";
     /**
-     * Free-tier Gemini model. On the Gemini API pricing page (November 2026),
-     * Gemini 4 Hydrogen input and output are free of charge. Gemini 4 Carbon,
-     * Argon, and Neon are not on the free tier. Hydrogen accepts text and images.
+     * Preferred free-tier Gemini model. On the Gemini API pricing page (November 2026),
+     * Gemini 4 Hydrogen, Gemini 3.8 Flash, and Gemini 3.5 Flash-Lite input and output
+     * are free of charge. Gemini 4 Carbon, Argon, and Neon are not on the free tier.
+     * Hydrogen accepts text and images. A busy Hydrogen call falls through the free list.
      */
     public static final String MODEL_GEMINI_FREE = "gemini-4-hydrogen";
-    public static final String GEMINI_GENERATE_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_GEMINI_FREE + ":generateContent";
+    static final List<String> GEMINI_FREE_MODELS = List.of(
+            MODEL_GEMINI_FREE,
+            "gemini-3.8-flash",
+            "gemini-3.5-flash-lite");
+    public static final String GEMINI_GENERATE_URL = geminiGenerateUrl(MODEL_GEMINI_FREE);
+    /** One same-model retry after overload. Long enough to ride out a short spike, short enough for a bulk lookup. */
+    private static final long GEMINI_RETRY_PAUSE_MS = 1000L;
+    /** Fast prompts ask for 500 tokens. Thinking shares that budget, so Gemini gets more room. */
+    private static final int GEMINI_FAST_OUTPUT_TOKENS = 2048;
+    private static final int GEMINI_OUTPUT_TOKEN_CEILING = 8192;
     /** Max books per reading-difficulty Grok prompt. */
     public static final int READING_DIFFICULTY_BATCH_SIZE = 10;
 
@@ -658,41 +673,188 @@ public class AskGrok {
 
     /**
      * Gemini 4 Hydrogen ignores custom temperature, and thinkingBudget is rejected.
-     * Short prompts use thinking level low so the free-tier answer is not spent on reasoning.
+     * Thinking tokens count against maxOutputTokens, so every call uses thinking level
+     * low and a budget large enough for the answer. A 503 or an empty thought-only
+     * reply is retried once, then the next free-tier model is tried. The message
+     * returned to the catalog stays short and does not include the request URL.
      */
     private String completeGemini(String apiKey, List<Map<String, Object>> messages, int maxCompletionTokens) {
-        Map<String, Object> request = geminiRequest(messages, maxCompletionTokens);
+        int outputTokens = geminiOutputBudget(maxCompletionTokens);
+        GeminiOutcome last = null;
+        for (String model : GEMINI_FREE_MODELS) {
+            GeminiOutcome outcome = postGemini(apiKey, messages, model, outputTokens, true);
+            outcome = recoverGemini(apiKey, messages, model, outputTokens, outcome);
+            if (outcome.text != null) {
+                return outcome.text;
+            }
+            if (outcome.fatal != null) {
+                throw outcome.fatal;
+            }
+            if (outcome.failure != GeminiFailure.SKIP) {
+                last = outcome;
+            }
+        }
+        if (last == null) {
+            throw new LibraryException("Gemini rejected the request (404).");
+        }
+        throw terminalGeminiFailure(last);
+    }
 
+    private GeminiOutcome recoverGemini(String apiKey, List<Map<String, Object>> messages, String model,
+                                        int outputTokens, GeminiOutcome outcome) {
+        if (outcome.text != null || outcome.fatal != null || outcome.failure == null) {
+            return outcome;
+        }
+        if (outcome.failure == GeminiFailure.BUSY
+                || outcome.failure == GeminiFailure.RATE_LIMIT
+                || outcome.failure == GeminiFailure.IO) {
+            pauseBeforeGeminiRetry();
+            return postGemini(apiKey, messages, model, outputTokens, true);
+        }
+        if (outcome.failure == GeminiFailure.EMPTY) {
+            int raised = geminiRaisedBudget(outputTokens);
+            if (raised > outputTokens) {
+                return postGemini(apiKey, messages, model, raised, true);
+            }
+        }
+        if (outcome.failure == GeminiFailure.THINKING_REJECTED) {
+            return postGemini(apiKey, messages, model, outputTokens, false);
+        }
+        return outcome;
+    }
+
+    private void pauseBeforeGeminiRetry() {
+        geminiPause.accept(GEMINI_RETRY_PAUSE_MS);
+    }
+
+    private void sleepBeforeGeminiRetry(long millis) {
+        if (millis <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LibraryException("Gemini request was interrupted", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private GeminiOutcome postGemini(String apiKey, List<Map<String, Object>> messages, String model,
+                                     int maxOutputTokens, boolean includeThinking) {
+        Map<String, Object> request = geminiRequest(messages, maxOutputTokens, includeThinking);
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-goog-api-key", apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<Map> response;
         try {
-            response = restTemplate.postForEntity(GEMINI_GENERATE_URL, entity, Map.class);
-        } catch (HttpClientErrorException e) {
-            if (isInvalidApiKey(e.getStatusCode().value(), e.getResponseBodyAsString())) {
-                throw new LibraryException("Google API key is invalid", e);
+            ResponseEntity<Map> response = restTemplate.postForEntity(geminiGenerateUrl(model), entity, Map.class);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                return parseGeminiBody(model, response.getBody());
             }
-            if (e.getStatusCode().value() == 429) {
-                throw new LibraryException("Gemini rate limit reached. Try again later.", e);
-            }
-            throw e;
+            String body = response.getBody() == null ? "" : response.getBody().toString();
+            return classifyGeminiStatus(model, response.getStatusCode().value(), body, includeThinking, null);
+        } catch (RestClientResponseException e) {
+            return classifyGeminiStatus(model, e.getStatusCode().value(), e.getResponseBodyAsString(), includeThinking, e);
+        } catch (ResourceAccessException e) {
+            log.warn("Gemini {} request failed ({})", model, e.getClass().getSimpleName());
+            return GeminiOutcome.failure(GeminiFailure.IO, null);
         }
-
-        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            String text = geminiText(response.getBody());
-            if (text != null) {
-                return text;
-            }
-            throw new LibraryException("Unexpected response format from Gemini API");
-        }
-        throw new LibraryException("Gemini API call failed: " + response.getStatusCode() + " - " + response.getBody());
     }
 
-    private Map<String, Object> geminiRequest(List<Map<String, Object>> messages, int maxCompletionTokens) {
+    private GeminiOutcome classifyGeminiStatus(String model, int status, String body, boolean includeThinking,
+                                               RestClientResponseException cause) {
+        if (isInvalidApiKey(status, body)) {
+            log.warn("Gemini rejected the API key (HTTP {})", status);
+            return GeminiOutcome.fatal(new LibraryException("Google API key is invalid", cause));
+        }
+        if (status == 429) {
+            log.warn("Gemini {} returned HTTP 429", model);
+            return GeminiOutcome.failure(GeminiFailure.RATE_LIMIT, null);
+        }
+        if (status == 500 || status == 502 || status == 503 || status == 504) {
+            log.warn("Gemini {} returned HTTP {}", model, status);
+            return GeminiOutcome.failure(GeminiFailure.BUSY, null);
+        }
+        if (status == 404) {
+            log.warn("Gemini {} returned HTTP 404", model);
+            return GeminiOutcome.failure(GeminiFailure.SKIP, null);
+        }
+        if (status == 400 && includeThinking && isThinkingConfigRejected(body)) {
+            log.warn("Gemini {} rejected thinkingConfig", model);
+            return GeminiOutcome.failure(GeminiFailure.THINKING_REJECTED, null);
+        }
+        log.warn("Gemini {} returned HTTP {}", model, status);
+        String message = "Gemini rejected the request (" + status + ").";
+        LibraryException fatal = cause == null
+                ? new LibraryException(message)
+                : new LibraryException(message, cause);
+        return GeminiOutcome.fatal(fatal);
+    }
+
+    private GeminiOutcome parseGeminiBody(String model, Map<String, Object> body) {
+        String block = geminiBlockReason(body);
+        if (block != null) {
+            String token = safeGeminiToken(block);
+            log.warn("Gemini {} blocked the prompt ({})", model, token);
+            return GeminiOutcome.fatal(new LibraryException("Gemini blocked the prompt (" + token + ")."));
+        }
+        String finish = geminiFinishReason(body);
+        if (finish != null && "SAFETY".equalsIgnoreCase(finish.trim())) {
+            log.warn("Gemini {} blocked the prompt (SAFETY)", model);
+            return GeminiOutcome.fatal(new LibraryException("Gemini blocked the prompt (SAFETY)."));
+        }
+        String text = body == null ? null : geminiText(body);
+        if (text != null) {
+            return GeminiOutcome.text(text);
+        }
+        String reason = safeGeminiToken(finish);
+        log.warn("Gemini {} returned no answer (finishReason={}, parts={})", model, reason, geminiPartCount(body));
+        return GeminiOutcome.failure(GeminiFailure.EMPTY, reason);
+    }
+
+    private static LibraryException terminalGeminiFailure(GeminiOutcome last) {
+        if (last.failure == GeminiFailure.RATE_LIMIT) {
+            return new LibraryException("Gemini rate limit reached. Try again later.");
+        }
+        if (last.failure == GeminiFailure.EMPTY) {
+            return new LibraryException("Gemini returned no answer (" + safeGeminiToken(last.finishReason) + ").");
+        }
+        return new LibraryException("Gemini is busy right now. Try again later.");
+    }
+
+    static String geminiGenerateUrl(String model) {
+        return "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent";
+    }
+
+    /** Fast calls (500 requested) get 2048 so low thinking and the answer both fit. Catalog calls keep their budget. */
+    static int geminiOutputBudget(int requested) {
+        return requested <= FAST_MAX_COMPLETION_TOKENS ? GEMINI_FAST_OUTPUT_TOKENS : requested;
+    }
+
+    /** One larger budget after a thought-only MAX_TOKENS reply. Doubled, at least 4096, and at most 8192. */
+    static int geminiRaisedBudget(int current) {
+        long raised = Math.max((long) current * 2, 4096L);
+        return (int) Math.min(raised, GEMINI_OUTPUT_TOKEN_CEILING);
+    }
+
+    static boolean isThinkingConfigRejected(String body) {
+        return body != null && body.toLowerCase(Locale.ROOT).contains("thinking");
+    }
+
+    private static String safeGeminiToken(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "EMPTY";
+        }
+        String token = raw.trim();
+        if (token.length() > 40 || !token.chars().allMatch(ch -> Character.isLetterOrDigit(ch) || ch == '_')) {
+            return "EMPTY";
+        }
+        return token;
+    }
+
+    private Map<String, Object> geminiRequest(List<Map<String, Object>> messages, int maxOutputTokens,
+                                              boolean includeThinking) {
         String systemPrompt = null;
         Object userContent = null;
         for (Map<String, Object> message : messages) {
@@ -718,11 +880,11 @@ public class AskGrok {
         content.put("parts", geminiParts(userContent));
         request.put("contents", List.of(content));
 
-        Map<String, Object> thinking = new HashMap<>();
-        thinking.put("thinkingLevel", maxCompletionTokens <= FAST_MAX_COMPLETION_TOKENS ? "low" : "medium");
         Map<String, Object> generation = new HashMap<>();
-        generation.put("maxOutputTokens", maxCompletionTokens);
-        generation.put("thinkingConfig", thinking);
+        generation.put("maxOutputTokens", maxOutputTokens);
+        if (includeThinking) {
+            generation.put("thinkingConfig", Map.of("thinkingLevel", "low"));
+        }
         request.put("generationConfig", generation);
         return request;
     }
@@ -808,5 +970,83 @@ public class AskGrok {
             }
         }
         return text.isEmpty() ? null : text.toString();
+    }
+
+    static String geminiFinishReason(Map<String, Object> body) {
+        Map<?, ?> candidate = firstGeminiCandidate(body);
+        if (candidate == null) {
+            return null;
+        }
+        Object reason = candidate.get("finishReason");
+        return reason == null ? null : reason.toString();
+    }
+
+    static String geminiBlockReason(Map<String, Object> body) {
+        if (body == null) {
+            return null;
+        }
+        Object feedback = body.get("promptFeedback");
+        if (!(feedback instanceof Map<?, ?> map)) {
+            return null;
+        }
+        Object reason = map.get("blockReason");
+        if (reason == null || reason.toString().isBlank()) {
+            return null;
+        }
+        return reason.toString();
+    }
+
+    static int geminiPartCount(Map<String, Object> body) {
+        Map<?, ?> candidate = firstGeminiCandidate(body);
+        if (candidate == null) {
+            return 0;
+        }
+        Object content = candidate.get("content");
+        if (!(content instanceof Map<?, ?> contentMap)) {
+            return 0;
+        }
+        Object parts = contentMap.get("parts");
+        return parts instanceof List<?> partList ? partList.size() : 0;
+    }
+
+    private static Map<?, ?> firstGeminiCandidate(Map<String, Object> body) {
+        if (body == null) {
+            return null;
+        }
+        Object candidates = body.get("candidates");
+        if (!(candidates instanceof List<?> list) || list.isEmpty() || !(list.get(0) instanceof Map<?, ?> candidate)) {
+            return null;
+        }
+        return candidate;
+    }
+
+    private enum GeminiFailure {
+        BUSY, RATE_LIMIT, IO, EMPTY, THINKING_REJECTED, SKIP
+    }
+
+    private static final class GeminiOutcome {
+        private final String text;
+        private final LibraryException fatal;
+        private final GeminiFailure failure;
+        private final String finishReason;
+
+        private GeminiOutcome(String text, LibraryException fatal, GeminiFailure failure, String finishReason) {
+            this.text = text;
+            this.fatal = fatal;
+            this.failure = failure;
+            this.finishReason = finishReason;
+        }
+
+        static GeminiOutcome text(String text) {
+            return new GeminiOutcome(text, null, null, null);
+        }
+
+        static GeminiOutcome fatal(LibraryException fatal) {
+            return new GeminiOutcome(null, fatal, null, null);
+        }
+
+        static GeminiOutcome failure(GeminiFailure failure, String finishReason) {
+            return new GeminiOutcome(null, null, failure, finishReason);
+        }
     }
 }

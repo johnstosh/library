@@ -15,9 +15,12 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.LongConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -42,6 +45,7 @@ public class AskGrokTest {
         // Inject mocks using reflection
         ReflectionTestUtils.setField(askGrok, "restTemplate", restTemplate);
         ReflectionTestUtils.setField(askGrok, "userSettingsService", userSettingsService);
+        ReflectionTestUtils.setField(askGrok, "geminiPause", (LongConsumer) millis -> { });
 
         SecurityContextHolder.setContext(securityContext);
     }
@@ -683,7 +687,7 @@ public class AskGrokTest {
         assertEquals(8000, generation.get("maxOutputTokens"));
         @SuppressWarnings("unchecked")
         Map<String, Object> thinking = (Map<String, Object>) generation.get("thinkingConfig");
-        assertEquals("medium", thinking.get("thinkingLevel"));
+        assertEquals("low", thinking.get("thinkingLevel"));
         assertEquals("Write essays, not blurbs.",
                 ((Map<?, ?>) ((List<?>) ((Map<?, ?>) request.get("systemInstruction")).get("parts")).get(0)).get("text"));
         verify(restTemplate, never()).postForEntity(
@@ -707,7 +711,7 @@ public class AskGrokTest {
         Map<String, Object> request = (Map<String, Object>) entityCaptor.getValue().getBody();
         @SuppressWarnings("unchecked")
         Map<String, Object> generation = (Map<String, Object>) request.get("generationConfig");
-        assertEquals(500, generation.get("maxOutputTokens"));
+        assertEquals(2048, generation.get("maxOutputTokens"));
         @SuppressWarnings("unchecked")
         Map<String, Object> thinking = (Map<String, Object>) generation.get("thinkingConfig");
         assertEquals("low", thinking.get("thinkingLevel"));
@@ -764,21 +768,125 @@ public class AskGrokTest {
         LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
         assertEquals("Google API key is invalid", ex.getMessage());
         assertFalse(ex.getMessage().contains("secret-google-key"));
+        verify(restTemplate, times(1)).postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
+        verify(restTemplate, never()).postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class));
     }
 
     @Test
     void askQuestion_geminiRateLimit_reportsRateLimit() {
         stubGoogleUser("google-test-key");
-        when(restTemplate.postForEntity(
-                eq(AskGrok.GEMINI_GENERATE_URL),
-                any(HttpEntity.class),
-                eq(Map.class)
-        )).thenThrow(HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
-                new HttpHeaders(), "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                java.nio.charset.StandardCharsets.UTF_8));
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(Map.class)))
+                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"));
 
         LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
         assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
+        assertFalse(ex.getMessage().contains("generativelanguage.googleapis.com"));
+        verify(restTemplate, times(AskGrok.GEMINI_FREE_MODELS.size() * 2)).postForEntity(
+                anyString(), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_gemini503_fallsBackToNextFreeModel() {
+        stubGoogleUser("google-test-key");
+        java.util.concurrent.atomic.AtomicLong paused = new java.util.concurrent.atomic.AtomicLong(-1);
+        ReflectionTestUtils.setField(askGrok, "geminiPause", (LongConsumer) paused::set);
+        HttpServerErrorException unavailable = geminiServerError(HttpStatus.SERVICE_UNAVAILABLE,
+                "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\",\"message\":\"high demand\"}}");
+        when(restTemplate.postForEntity(eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
+                .thenThrow(unavailable);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+
+        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
+        assertEquals(1000L, paused.get());
+        verify(restTemplate, times(2)).postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
+        verify(restTemplate, never()).postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.5-flash-lite")), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_gemini503OnEveryFreeModel_hidesTheRawError() {
+        stubGoogleUser("google-test-key");
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(Map.class)))
+                .thenThrow(geminiServerError(HttpStatus.SERVICE_UNAVAILABLE,
+                        "{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\"}}"));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag this"));
+        assertEquals("Gemini is busy right now. Try again later.", ex.getMessage());
+        assertFalse(ex.getMessage().contains("generativelanguage.googleapis.com"));
+        assertFalse(ex.getMessage().contains("UNAVAILABLE"));
+        verify(restTemplate, times(AskGrok.GEMINI_FREE_MODELS.size() * 2)).postForEntity(
+                anyString(), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_thoughtOnlyMaxTokens_retriesWithALargerBudget() {
+        stubGoogleUser("google-test-key");
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), entityCaptor.capture(), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(geminiThoughtsOnly("MAX_TOKENS"), HttpStatus.OK))
+                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+
+        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
+        assertEquals(2, entityCaptor.getAllValues().size());
+        assertEquals(2048, outputTokens(entityCaptor.getAllValues().get(0)));
+        assertEquals(4096, outputTokens(entityCaptor.getAllValues().get(1)));
+        verify(restTemplate, never()).postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_thoughtOnlyOnEveryModel_namesTheFinishReason() {
+        stubGoogleUser("google-test-key");
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(geminiThoughtsOnly("MAX_TOKENS"), HttpStatus.OK));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag this"));
+        assertEquals("Gemini returned no answer (MAX_TOKENS).", ex.getMessage());
+        assertFalse(ex.getMessage().contains("Unexpected response format"));
+    }
+
+    @Test
+    void askQuestionFast_safetyBlock_doesNotTryAnotherModel() {
+        stubGoogleUser("google-test-key");
+        when(restTemplate.postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(geminiThoughtsOnly("SAFETY"), HttpStatus.OK));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag this"));
+        assertEquals("Gemini blocked the prompt (SAFETY).", ex.getMessage());
+        verify(restTemplate, never()).postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_fallbackRejectsThinking_retriesWithoutThinkingConfig() {
+        stubGoogleUser("google-test-key");
+        when(restTemplate.postForEntity(eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
+                .thenThrow(geminiServerError(HttpStatus.SERVICE_UNAVAILABLE, "{\"error\":{\"code\":503}}"));
+        @SuppressWarnings("rawtypes")
+        org.mockito.ArgumentCaptor<HttpEntity> entityCaptor =
+                org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), entityCaptor.capture(), eq(Map.class)))
+                .thenThrow(geminiClientError(HttpStatus.BAD_REQUEST,
+                        "{\"error\":{\"message\":\"Thinking level is not supported for this model\"}}"))
+                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+
+        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
+        assertEquals(2, entityCaptor.getAllValues().size());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> generation = (Map<String, Object>)
+                ((Map<String, Object>) entityCaptor.getAllValues().get(1).getBody()).get("generationConfig");
+        assertFalse(generation.containsKey("thinkingConfig"));
+        assertEquals(2048, generation.get("maxOutputTokens"));
     }
 
     @Test
@@ -841,5 +949,36 @@ public class AskGrokTest {
         Map<String, Object> body = new HashMap<>();
         body.put("candidates", List.of(candidate));
         return body;
+    }
+
+    private static Map<String, Object> geminiThoughtsOnly(String finishReason) {
+        Map<String, Object> thought = new HashMap<>();
+        thought.put("thought", true);
+        thought.put("text", "hidden reasoning");
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", List.of(thought));
+        Map<String, Object> candidate = new HashMap<>();
+        candidate.put("content", content);
+        candidate.put("finishReason", finishReason);
+        Map<String, Object> body = new HashMap<>();
+        body.put("candidates", List.of(candidate));
+        return body;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static int outputTokens(HttpEntity<?> entity) {
+        Map<String, Object> request = (Map<String, Object>) entity.getBody();
+        Map<String, Object> generation = (Map<String, Object>) request.get("generationConfig");
+        return (Integer) generation.get("maxOutputTokens");
+    }
+
+    private static HttpClientErrorException geminiClientError(HttpStatus status, String body) {
+        return HttpClientErrorException.create(status, status.getReasonPhrase(), new HttpHeaders(),
+                body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    private static HttpServerErrorException geminiServerError(HttpStatus status, String body) {
+        return HttpServerErrorException.create(status, status.getReasonPhrase(), new HttpHeaders(),
+                body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
     }
 }
