@@ -149,6 +149,9 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-3-letter-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='book-type-filter-chips']")).isVisible();
         assertThat(page.locator("[data-test='book-source-filter-chips']")).isVisible();
+        assertThat(page.locator("[data-test='filter-description-min-chars']")).hasCount(0);
+        assertThat(page.locator("[data-test='filter-description-max-chars']")).hasCount(0);
+        assertThat(page.getByText("Description length")).hasCount(0);
         assertThat(page.locator("[data-test='filter-most-recent']")).isVisible();
         assertThat(page.locator("[data-test='filter-without-loc']")).hasCount(0);
         assertThat(page.locator("[data-test='status-filter-without-loc']")).containsText("Without LOC");

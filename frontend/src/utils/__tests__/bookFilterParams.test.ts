@@ -4,6 +4,7 @@ import { defaultBookChipFilters, type BookChipFilters } from '@/utils/bookChipFi
 import {
   bookFilterParamsForUrl,
   booksPathFromFilters,
+  CHIP_URL_KEYS,
   booksPathFromPriceFilters,
   pricesPathFromFilters,
   chipsFromSearchParams,
@@ -541,5 +542,35 @@ describe('library lookup error', () => {
       chips: chips(),
       libraryLookupError: 'acla',
     })).toBe('libraryLookupError=ACLA')
+  })
+})
+
+describe('description length stays off the pages', () => {
+  it('does not send descriptionMinChars or descriptionMaxChars', () => {
+    const allOn = chips(
+      Object.fromEntries(
+        (Object.keys(defaultBookChipFilters) as (keyof BookChipFilters)[]).map((key) => [key, true]),
+      ) as BookChipFilters,
+    )
+    const query = bookListFilterQuery({
+      chips: allOn,
+      labels: ['fiction'],
+      q: 'augustine',
+      statuses: ['in-library'],
+      readingDifficulties: ['advanced'],
+      bindings: ['HARDCOVER'],
+      favoriteLists: ['mine'],
+      desireToPurchase: [1],
+      priceOlderDays: 30,
+      libraryCheckedOlder: 'YDL',
+      libraryCheckedOlderDays: 10,
+      libraryLookupError: 'EMU',
+      freeTextSearchedOlderDays: 20,
+    })
+    expect(query).not.toContain('descriptionMinChars')
+    expect(query).not.toContain('descriptionMaxChars')
+    expect(booksPathFromFilters({ chips: allOn, labels: [], q: '' })).not.toContain('descriptionMinChars')
+    expect(pricesPathFromFilters({ chips: allOn, labels: [], q: '' })).not.toContain('descriptionMaxChars')
+    expect(Object.values(CHIP_URL_KEYS).join(' ')).not.toMatch(/descriptionMinChars|descriptionMaxChars/)
   })
 })

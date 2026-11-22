@@ -186,6 +186,7 @@ public class CatalogCriteria {
         List<Predicate> parts = new ArrayList<>();
         addBookText(cb, book, author, filter, true, parts);
         parts.add(bookChips(cb, query, book, filter));
+        addDescriptionLength(cb, book, filter, parts);
         addLabels(cb, query, book, filter, parts);
         parts.add(listExtras(cb, query, book, filter));
         return and(cb, parts);
@@ -279,6 +280,37 @@ public class CatalogCriteria {
             parts.add(idsIn(cb, book.get("id"), filter.favoriteBookIds));
         }
         return and(cb, parts);
+    }
+
+    /**
+     * Inclusive bounds on the trimmed detailed description. Either side may
+     * be unset. Null and blank count as 0. Search does not use this predicate.
+     */
+    private void addDescriptionLength(HibernateCriteriaBuilder cb, Root<Book> book,
+            BookCatalogFilter filter, List<Predicate> parts) {
+        if (filter.descriptionMinChars == null && filter.descriptionMaxChars == null) {
+            return;
+        }
+        Expression<Integer> length = trimmedDescriptionLength(cb, book.get("detailedDescription"));
+        if (filter.descriptionMinChars != null) {
+            parts.add(cb.greaterThanOrEqualTo(length, filter.descriptionMinChars));
+        }
+        if (filter.descriptionMaxChars != null) {
+            parts.add(cb.lessThanOrEqualTo(length, filter.descriptionMaxChars));
+        }
+    }
+
+    /**
+     * Character length after stripping {@link CatalogFilterService#DESCRIPTION_TRIM_CHARS}
+     * from both ends. A null column counts as 0.
+     */
+    private Expression<Integer> trimmedDescriptionLength(HibernateCriteriaBuilder cb, Path<String> field) {
+        Expression<String> trimmed = cb.function(
+                "btrim",
+                String.class,
+                field,
+                cb.literal(CatalogFilterService.DESCRIPTION_TRIM_CHARS));
+        return cb.coalesce(cb.length(trimmed), 0);
     }
 
     /**
