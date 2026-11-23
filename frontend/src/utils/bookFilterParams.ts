@@ -206,6 +206,10 @@ export function chipsFromSearchParams(
     if (chip === 'mostRecent' && (mode === 'books' || mode === 'prices')) continue
     chips[chip] = params.get(CHIP_URL_KEYS[chip]) === 'true'
   }
+  // No genres sits with the genre chips. Search keeps it and still drops the other cataloger chips.
+  if (mode === 'search') {
+    chips.withoutGenres = params.get(CHIP_URL_KEYS.withoutGenres) === 'true'
+  }
   if (mode === 'prices') {
     chips.mostRecent = params.get(CHIP_URL_KEYS.mostRecent) === 'true'
   }
@@ -346,6 +350,10 @@ export function bookFilterParamsForUrl(
     params[CHIP_URL_KEYS.mostRecent] = 'true'
   }
 
+  if (mode === 'search' && state.chips.withoutGenres) {
+    params[CHIP_URL_KEYS.withoutGenres] = 'true'
+  }
+
   if (mode === 'search') {
     if ((state.bookPage ?? 0) > 0) params.bookPage = String(state.bookPage)
     if ((state.authorPage ?? 0) > 0) params.authorPage = String(state.authorPage)
@@ -400,8 +408,10 @@ export function booksPathFromFilters(state: {
     if (key === 'mostRecent') continue
     discoveryChips[key] = state.chips[key]
   }
-  // Cataloger chips (including withoutProperPlotOrDescription) are intentionally omitted from discovery handoff
-  // so Books page defaults to mostRecent intake when only cataloger filters are active.
+  // No genres is the one cataloger flag Search shows, so the Books handoff keeps it.
+  discoveryChips.withoutGenres = state.chips.withoutGenres
+  // Other cataloger chips (including withoutProperPlotOrDescription) stay off this handoff
+  // so Books page defaults to mostRecent intake when only those filters are active.
   const params = bookFilterParamsForUrl(
     {
       chips: discoveryChips,

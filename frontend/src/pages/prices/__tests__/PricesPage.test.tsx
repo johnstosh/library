@@ -1,10 +1,11 @@
 // (c) Copyright 2025 by Muczynski
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { PricesPage } from '../PricesPage'
+import { useAuthStore } from '@/stores/authStore'
 import type { BookDto, BookPriceDto } from '@/types/dtos'
 
 const { prices, books, filterBooks, priceHooks } = vi.hoisted(() => {
@@ -155,6 +156,7 @@ const { prices, books, filterBooks, priceHooks } = vi.hoisted(() => {
       fetching: false,
       loadMore: vi.fn(),
       total: null as number | null,
+      filters: undefined as { chips?: { withoutGenres?: boolean } } | undefined,
     },
   }
 })
@@ -172,6 +174,7 @@ vi.mock('@/api/prices', () => ({
 vi.mock('@/api/books', () => ({
   useFilteredBookIds: (filters?: Parameters<typeof filterBooks>[0], options?: { pageSize?: number }) => {
     priceHooks.options = options
+    priceHooks.filters = filters
     const data = filterBooks(filters)
     const pageSize = options?.pageSize
     const window = pageSize == null ? data : data.slice(0, pageSize)
@@ -203,11 +206,17 @@ vi.mock('@/api/favorites', () => ({
   listNameToTestId: (name: string) => name,
 }))
 
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-test="location">{`${location.pathname}${location.search}`}</div>
+}
+
 function pricesTree(path = '/prices') {
   return (
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={[path]}>
       <PricesPage />
+      <LocationProbe />
     </MemoryRouter>
     </QueryClientProvider>
   )
@@ -229,7 +238,33 @@ function nearBottom(scrollY: number) {
 afterEach(() => {
   priceHooks.fetching = false
   priceHooks.total = null
+  priceHooks.filters = undefined
   priceHooks.loadMore.mockClear()
+  useAuthStore.setState({ user: null, isAuthenticated: false })
+})
+
+describe('PricesPage No genres', () => {
+  it('shows the librarian chip with the genre filters', async () => {
+    useAuthStore.setState({
+      user: { id: 1, username: 'librarian', authority: 'LIBRARIAN' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    renderPrices('/prices?labels=fiction')
+
+    const chip = screen.getByTestId('filter-without-genres')
+    expect(screen.getByTestId('book-label-filters')).toContainElement(chip)
+    expect(chip).toHaveTextContent('No genres')
+
+    fireEvent.click(chip)
+
+    await waitFor(() => {
+      const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1])
+      expect(params.get('withoutGenres')).toBe('true')
+      expect(params.get('labels')).toBeNull()
+    })
+    expect(priceHooks.filters?.chips?.withoutGenres).toBe(true)
+  })
 })
 
 describe('PricesPage', () => {

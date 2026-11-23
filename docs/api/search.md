@@ -26,7 +26,7 @@ Parameters:
 - Query `filterThreeLetterLoc` (`boolean`, optional, default `false`).
 - Query `filterWithoutGrokipedia` (`boolean`, optional, default `false`).
 - Query `filterWithGrokipedia` (`boolean`, optional, default `false`).
-- Query `filterWithoutGenres` (`boolean`, optional, default `false`).
+- Query `filterWithoutGenres` (`boolean`, optional, default `false`). Titles with no genre tags. The Search page shows this chip only to librarians.
 - Query `filterNotActiveStatus` (`boolean`, optional, default `false`).
 - Query `filterWithoutFreeTextUrls` (`boolean`, optional, default `false`).
 - Query `filterYdlAudio` (`boolean`, optional, default `false`).

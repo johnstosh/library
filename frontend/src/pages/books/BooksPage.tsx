@@ -45,13 +45,24 @@ import {
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { useIsLibrarian } from '@/stores/authStore'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
-import { toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  clearGenreSelection,
+  toggleBookChip,
+  toggleGenreLabel,
+  toggleWithoutGenres,
+  withoutGenresForViewer,
+  type BookChipFilters,
+} from '@/utils/bookChipFilters'
 import type { BookDto } from '@/types/dtos'
 
 export function BooksPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const chips = chipsFromSearchParams(searchParams, 'books')
+  const isLibrarian = useIsLibrarian()
+  const chips = useMemo(
+    () => withoutGenresForViewer(chipsFromSearchParams(searchParams, 'books'), isLibrarian),
+    [searchParams, isLibrarian],
+  )
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
@@ -79,7 +90,6 @@ export function BooksPage() {
   }
   const { selectedIds, selectAll } = useBooksTableSelection()
   const { toggleRowSelection, toggleSelectAll, clearSelection, setSelectedIds } = useUiStore()
-  const isLibrarian = useIsLibrarian()
   const queryClient = useQueryClient()
 
   const writeUrl = (next: {
@@ -137,8 +147,8 @@ export function BooksPage() {
     libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
     libraryLookupError: libraryLookupErrorFromSearchParams(searchParams),
     freeTextSearchedOlderDays: freeTextSearchedOlderDaysFromSearchParams(searchParams),
-    chips: chipsFromSearchParams(searchParams, 'books'),
-  }), [searchParams])
+    chips,
+  }), [searchParams, chips])
 
   const {
     data: books = [],
@@ -186,10 +196,7 @@ export function BooksPage() {
   }
 
   const handleToggleLabel = (label: string) => {
-    const nextLabels = selectedLabels.includes(label)
-      ? selectedLabels.filter((l) => l !== label)
-      : [...selectedLabels, label]
-    writeUrl({ labels: nextLabels })
+    writeUrl(toggleGenreLabel(chips, selectedLabels, label))
   }
 
   const handleToggleDifficulty = (value: ReadingDifficulty) => {
@@ -352,7 +359,10 @@ export function BooksPage() {
           <BookLabelFilters
             selectedLabels={selectedLabels}
             onToggleLabel={handleToggleLabel}
-            onClearLabels={() => writeUrl({ labels: [] })}
+            onClearLabels={() => writeUrl(clearGenreSelection(chips))}
+            showNone={isLibrarian}
+            noneSelected={chips.withoutGenres}
+            onToggleNone={() => writeUrl(toggleWithoutGenres(chips, selectedLabels))}
           />
           <StatusFilters
             selected={selectedStatuses}

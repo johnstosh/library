@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
@@ -31,7 +31,10 @@ const { catalog, librarianState, filterCatalog, favoriteState, lastBookFilters }
     current: { lists: [] as { listName: string; bookIds: number[]; authorIds: number[] }[] },
   }
   const lastBookFilters = {
-    current: null as { favoriteLists?: readonly string[] } | null,
+    current: null as {
+      favoriteLists?: readonly string[]
+      chips?: { withoutGenres?: boolean }
+    } | null,
   }
   function filterCatalog(filters?: {
     q?: string
@@ -158,6 +161,36 @@ function renderBooksPage(path = '/books') {
     </QueryClientProvider>,
   )
 }
+
+beforeEach(() => {
+  librarianState.current = true
+})
+
+describe('BooksPage No genres', () => {
+  it('shows the chip to a librarian and selects titles with no genres', () => {
+    renderBooksPage('/books?mostRecent=false&labels=fiction')
+
+    const chip = screen.getByTestId('filter-without-genres')
+    expect(screen.getByTestId('book-label-filters')).toContainElement(chip)
+    expect(screen.getByTestId('book-source-filter-chips')).not.toContainElement(chip)
+    expect(chip).toHaveTextContent('No genres')
+
+    fireEvent.click(chip)
+
+    const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1])
+    expect(params.get('withoutGenres')).toBe('true')
+    expect(params.get('labels')).toBeNull()
+    expect(lastBookFilters.current?.chips?.withoutGenres).toBe(true)
+  })
+
+  it('hides the chip from a patron and ignores the URL flag', () => {
+    librarianState.current = false
+    renderBooksPage('/books?mostRecent=false&withoutGenres=true')
+
+    expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
+    expect(lastBookFilters.current?.chips?.withoutGenres).toBe(false)
+  })
+})
 
 describe('BooksPage Pricing filters', () => {
   it('shows Pricing at the bottom of the filters for librarians', () => {

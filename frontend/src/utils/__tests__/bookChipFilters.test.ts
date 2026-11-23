@@ -4,7 +4,11 @@ import type { BookDto, BookPriceDto } from '@/types/dtos'
 import {
   applyBookPriceFilters,
   applyChipFilters,
+  clearGenreSelection,
   toggleBookChip,
+  toggleGenreLabel,
+  toggleWithoutGenres,
+  withoutGenresForViewer,
   defaultBookChipFilters,
   isAnyChipActive,
   isOtherBookChipActive,
@@ -90,8 +94,25 @@ describe('applyChipFilters', () => {
   it('withoutGenres keeps books with no tags', () => {
     const tagged = book({ id: 1, tagsList: ['fiction'] })
     const untagged = book({ id: 2, tagsList: [] })
-    const result = applyChipFilters([tagged, untagged], chips({ withoutGenres: true }))
-    expect(result.map((b) => b.id)).toEqual([2])
+    const missing = book({ id: 3, tagsList: undefined })
+    const result = applyChipFilters([tagged, untagged, missing], chips({ withoutGenres: true }))
+    expect(result.map((b) => b.id)).toEqual([2, 3])
+  })
+
+  it('No genres is librarian-only and clears selected genres', () => {
+    const on = chips({ withoutGenres: true })
+    expect(withoutGenresForViewer(on, false).withoutGenres).toBe(false)
+    expect(withoutGenresForViewer(on, true)).toBe(on)
+
+    const turnedOn = toggleWithoutGenres(chips(), ['fiction'])
+    expect(turnedOn.chips.withoutGenres).toBe(true)
+    expect(turnedOn.labels).toEqual([])
+
+    const genre = toggleGenreLabel(chips({ withoutGenres: true }), [], 'fiction')
+    expect(genre.labels).toEqual(['fiction'])
+    expect(genre.chips.withoutGenres).toBe(false)
+
+    expect(clearGenreSelection(on)).toEqual({ chips: { ...on, withoutGenres: false }, labels: [] })
   })
 
   it('withoutFreeTextUrls keeps books with no freeTextUrl', () => {

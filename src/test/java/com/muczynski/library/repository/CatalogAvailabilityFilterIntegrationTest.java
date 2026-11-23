@@ -137,6 +137,23 @@ class CatalogAvailabilityFilterIntegrationTest {
         assertFalse(containsAuthor(audioWithoutEbook, paperAuthor.getId()));
     }
 
+    @Test
+    void withoutGenresKeepsTitlesThatHaveNoGenreTags() {
+        String marker = "NoGenre " + UUID.randomUUID();
+        Book tagged = saveBook(marker + " tagged", null);
+        tagged.getTagsList().add("fiction");
+        bookRepository.saveAndFlush(tagged);
+
+        Book bare = saveBook(marker + " bare", null);
+        bookRepository.saveAndFlush(bare);
+
+        BookCatalogFilter filter = new BookCatalogFilter();
+        filter.query = marker;
+        filter.withoutGenres = true;
+        assertFalse(containsTitle(filter, tagged.getTitle()));
+        assertTrue(containsTitle(filter, bare.getTitle()));
+    }
+
     private Book saveBook(String title, Author author) {
         Book book = new Book();
         book.setTitle(title);

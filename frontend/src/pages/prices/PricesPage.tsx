@@ -27,7 +27,15 @@ import { usePrices } from '@/api/prices'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import { useBookCount, useFilteredBookIds, type BookListFilters } from '@/api/books'
 import { useBranches } from '@/api/branches'
-import { isLookupError, toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  clearGenreSelection,
+  isLookupError,
+  toggleBookChip,
+  toggleGenreLabel,
+  toggleWithoutGenres,
+  withoutGenresForViewer,
+  type BookChipFilters,
+} from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   booksPathFromPriceFilters,
@@ -52,6 +60,7 @@ import {
 } from '@/utils/bookStatus'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { favoriteListChips, useFavoriteSummary } from '@/api/favorites'
+import { useIsLibrarian } from '@/stores/authStore'
 import {
   applyPriceFilters,
   maxTotalFromSearchParams,
@@ -65,7 +74,11 @@ import { summarizeBookPrices } from '@/utils/priceStatistics'
 export function PricesPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  const chips = chipsFromSearchParams(searchParams, 'prices')
+  const isLibrarian = useIsLibrarian()
+  const chips = useMemo(
+    () => withoutGenresForViewer(chipsFromSearchParams(searchParams, 'prices'), isLibrarian),
+    [searchParams, isLibrarian],
+  )
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const libraryCheckedOlder = libraryCheckedOlderFromSearchParams(searchParams)
   const libraryCheckedOlderDays = libraryCheckedOlderDaysFromSearchParams(searchParams)
@@ -154,8 +167,8 @@ export function PricesPage() {
     libraryCheckedOlder: libraryCheckedOlderFromSearchParams(searchParams),
     libraryCheckedOlderDays: libraryCheckedOlderDaysFromSearchParams(searchParams),
     libraryLookupError: libraryLookupErrorFromSearchParams(searchParams),
-    chips: chipsFromSearchParams(searchParams, 'prices'),
-  }), [searchParams])
+    chips,
+  }), [searchParams, chips])
 
   const {
     ids: matchingBookIdsList,
@@ -326,13 +339,11 @@ export function PricesPage() {
           />
           <BookLabelFilters
             selectedLabels={selectedLabels}
-            onToggleLabel={(label) => {
-              const nextLabels = selectedLabels.includes(label)
-                ? selectedLabels.filter((item) => item !== label)
-                : [...selectedLabels, label]
-              writeUrl({ labels: nextLabels })
-            }}
-            onClearLabels={() => writeUrl({ labels: [] })}
+            onToggleLabel={(label) => writeUrl(toggleGenreLabel(chips, selectedLabels, label))}
+            onClearLabels={() => writeUrl(clearGenreSelection(chips))}
+            showNone={isLibrarian}
+            noneSelected={chips.withoutGenres}
+            onToggleNone={() => writeUrl(toggleWithoutGenres(chips, selectedLabels))}
           />
           <StatusFilters
             selected={selectedStatuses}

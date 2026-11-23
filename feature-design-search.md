@@ -153,7 +153,7 @@ Search and Books share the same chip/label query-key vocabulary (`bookFilterPara
 - `readingDifficulty` (string, optional) - Comma-separated reading-difficulty keys (OR with each other; Unset matches null/blank)
 - `favoriteLists` (string, optional) - Comma-separated favorite list names for the current user. A name that contains a comma is `~` plus a percent-encoded name. Selected lists OR together, then AND with the other filters. Ignored when the caller is not logged in.
 
-Cataloger chips (`mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGenres`, `withoutFreeTextUrls`, `titleNotChicago`, `authorNotCanonical`) are **not** shown or written on Search. They remain on `/books` (and on `/prices`, which shares that cataloger row). `titleNotChicago` keeps books whose title is not Chicago title case, including a title that still ends with a catalog credit such as `by Jack Stong`. `authorNotCanonical` keeps books whose author is comma-inverted, has birth or death years, has initials that can be expanded, still carries an editor or translator credit, still has a `[from old catalog]` note, or is written in all capitals or all lowercase. A comma inside a phrase, such as a community name, is left in place. Edition notes stay on the name. Status chips (including Without LOC) are shown on Search, Books, and Prices.
+Cataloger chips (`withoutGrokipedia`, `withGrokipedia`, `withoutFreeTextUrls`, `titleNotChicago`, `authorNotCanonical`) are **not** shown or written on Search. They remain on `/books` (and on `/prices` and `/savings`, which share that cataloger row). `withoutGenres` is the librarian **No genres** chip beside the genre filters on Search, Books, Prices, and Savings (`data-test="filter-without-genres"`). It keeps titles that have no genre tags. Turning it on clears selected genres, and selecting a genre turns it off. Search reads and writes `withoutGenres=true`. A patron does not see the chip, and Search and Books ignore that parameter unless the viewer is a librarian. Open in Books copies it. Recent Arrivals (`mostRecent`) is shown on Search. `titleNotChicago` keeps books whose title is not Chicago title case, including a title that still ends with a catalog credit such as `by Jack Stong`. `authorNotCanonical` keeps books whose author is comma-inverted, has birth or death years, has initials that can be expanded, still carries an editor or translator credit, still has a `[from old catalog]` note, or is written in all capitals or all lowercase. A comma inside a phrase, such as a community name, is left in place. Edition notes stay on the name. Status chips (including Without LOC) are shown on Search, Books, and Prices.
 
 **Examples**:
 - `/search?q=Augustine` - Search for "Augustine" (no filter)
@@ -161,6 +161,7 @@ Cataloger chips (`mostRecent`, `withoutGrokipedia`, `withGrokipedia`, `withoutGe
 - `/search?q=Augustine&status=in-library,electronic-resource` - "Augustine" in Active in-library OR Active electronic books
 - `/search?audio=true` - All LibriVox audio books
 - `/search?q=Narnia&labels=fiction,classic` - Query plus genre filters
+- `/search?withoutGenres=true` - Librarian: titles with no genres
 - `/search?readingDifficulty=children,unset` - Children or Unset (including books with a blank difficulty)
 - `/search?q=Augustine&bookPage=1&authorPage=0` - Independent list pages
 
@@ -201,6 +202,7 @@ Discovery chips only (availability + type). Cataloger chips stay on the Books pa
 | Has free online text | `filter-free-text` |
 | Has free online audio | `filter-audio` |
 | Genres | `label-filter-<genre>` |
+| No genres (librarians only) | `filter-without-genres` |
 
 Note: When any filter chip, label, library-data age, or library lookup error is active, the author list shows only authors who have at least one book in the filtered book result set — not authors matching the search string by name. The age filter matches a title whose chosen library was last checked more than that many days ago, including a not-held or error result, and a title that has never been checked for that library. The lookup-error filter matches a stored message that starts with `Error:` for the chosen library. Not-held and not-ready messages stay out. The two filters AND. A blank query with either library selected still searches. Open in Books keeps the library, the days, and the lookup-error library.
 

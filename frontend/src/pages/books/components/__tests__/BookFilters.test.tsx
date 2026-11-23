@@ -12,7 +12,7 @@ describe('BookFilters', () => {
 
     expect(screen.queryByTestId('filter-without-loc')).not.toBeInTheDocument()
     expect(screen.getByTestId('filter-without-grokipedia')).toBeInTheDocument()
-    expect(screen.getByTestId('filter-without-genres')).toBeInTheDocument()
+    expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
     expect(screen.getByTestId('filter-without-free-text-urls')).toBeInTheDocument()
     expect(screen.getByTestId('filter-without-proper-plot-or-description')).toBeInTheDocument()
     expect(screen.queryByTestId('filter-description-min-chars')).not.toBeInTheDocument()

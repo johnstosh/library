@@ -132,14 +132,44 @@ interface BookLabelFiltersProps {
   selectedLabels: string[]
   onToggleLabel: (label: string) => void
   onClearLabels: () => void
+  /** Librarian-only chip for titles that have no genre tags. */
+  showNone?: boolean
+  noneSelected?: boolean
+  onToggleNone?: () => void
 }
 
-export function BookLabelFilters({ selectedLabels, onToggleLabel, onClearLabels }: BookLabelFiltersProps) {
+export function BookLabelFilters({
+  selectedLabels,
+  onToggleLabel,
+  onClearLabels,
+  showNone = false,
+  noneSelected = false,
+  onToggleNone,
+}: BookLabelFiltersProps) {
+  const showClear = selectedLabels.length > 0 || (showNone && noneSelected)
+
   return (
     <div className="mt-3" data-test="book-label-filters">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <span className="text-sm font-medium text-gray-700">Genres</span>
-        {selectedLabels.length > 0 && (
+        {showNone && (
+          <button
+            type="button"
+            onClick={onToggleNone}
+            data-test="filter-without-genres"
+            title="Only titles with no genres assigned"
+            aria-pressed={noneSelected}
+            className={[
+              'px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap',
+              noneSelected
+                ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 hover:border-gray-400',
+            ].join(' ')}
+          >
+            No genres
+          </button>
+        )}
+        {showClear && (
           <button
             type="button"
             onClick={onClearLabels}

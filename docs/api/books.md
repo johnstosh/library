@@ -559,7 +559,7 @@ Parameters:
 - Query `mostRecent` (`boolean`, optional, default `false`).
 - Query `withoutGrokipedia` (`boolean`, optional, default `false`).
 - Query `withGrokipedia` (`boolean`, optional, default `false`).
-- Query `withoutGenres` (`boolean`, optional, default `false`).
+- Query `withoutGenres` (`boolean`, optional, default `false`). Titles with no genre tags. The genre-filter chip is shown only to librarians.
 - Query `withoutFreeTextUrls` (`boolean`, optional, default `false`).
 - Query `withoutProperPlotOrDescription` (`boolean`, optional, default `false`).
 - Query `titleNotChicago` (`boolean`, optional, default `false`).
