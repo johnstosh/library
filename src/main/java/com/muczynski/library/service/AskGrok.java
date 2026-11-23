@@ -83,8 +83,8 @@ public class AskGrok {
     /** One same-model retry after a busy or dropped call. A 429 is not retried on that model. */
     private static final long GEMINI_RETRY_PAUSE_MS = 1000L;
     /**
-     * How long a model that returned HTTP 429 stays out of the free-model list.
-     * Long enough that a bulk lookup does not probe it on every book.
+     * How long every free model stays uncalled after any model returns HTTP 429.
+     * The web request does not sleep for this pause. The caller waits, then tries again.
      */
     static final long GEMINI_RATE_LIMIT_COOLDOWN_MS = 60_000L;
     /** Fast prompts ask for 500 tokens. Thinking shares that budget, so Gemini gets more room. */
@@ -691,53 +691,37 @@ public class AskGrok {
      * Gemini 4 Hydrogen ignores custom temperature, and thinkingBudget is rejected.
      * Thinking tokens count against maxOutputTokens, so every call uses thinking level
      * low and a budget large enough for the answer. A 503 or an empty thought-only
-     * reply is retried once, then the next free-tier model is tried. A 429 is not
-     * retried on that model; the model is skipped for {@link #GEMINI_RATE_LIMIT_COOLDOWN_MS}.
-     * If every free model is in that pause, the call waits for the soonest one and tries
-     * once more. The message returned to the catalog stays short and does not include the request URL.
+     * reply is retried once, then the next free-tier model is tried. A 429 stops the
+     * call immediately. No other model is called until {@link #GEMINI_RATE_LIMIT_COOLDOWN_MS}
+     * has passed, and this request does not sleep for that pause. The message returned
+     * to the catalog stays short and does not include the request URL.
      */
     private String completeGemini(String apiKey, List<Map<String, Object>> messages, int maxCompletionTokens) {
         int outputTokens = geminiOutputBudget(maxCompletionTokens);
+        long now = geminiNow.getAsLong();
+        for (String model : GEMINI_FREE_MODELS) {
+            if (geminiLimitedUntil.getOrDefault(model, 0L) > now) {
+                throw new LibraryException("Gemini rate limit reached. Try again later.");
+            }
+        }
         GeminiOutcome last = null;
-        boolean waitedForRateLimit = false;
-        while (true) {
-            long soonest = Long.MAX_VALUE;
-            boolean cooling = false;
-            for (String model : GEMINI_FREE_MODELS) {
-                long now = geminiNow.getAsLong();
-                long until = geminiLimitedUntil.getOrDefault(model, 0L);
-                if (until > now) {
-                    cooling = true;
-                    soonest = Math.min(soonest, until);
-                    continue;
-                }
-                GeminiOutcome outcome = postGemini(apiKey, messages, model, outputTokens, true);
-                outcome = recoverGemini(apiKey, messages, model, outputTokens, outcome);
-                if (outcome.text != null) {
-                    return outcome.text;
-                }
-                if (outcome.fatal != null) {
-                    throw outcome.fatal;
-                }
-                if (outcome.failure == GeminiFailure.RATE_LIMIT) {
-                    long resumeAt = geminiNow.getAsLong() + GEMINI_RATE_LIMIT_COOLDOWN_MS;
-                    geminiLimitedUntil.merge(model, resumeAt, Math::max);
-                    cooling = true;
-                    soonest = Math.min(soonest, resumeAt);
-                }
-                if (outcome.failure != GeminiFailure.SKIP) {
-                    last = outcome;
-                }
+        for (String model : GEMINI_FREE_MODELS) {
+            GeminiOutcome outcome = postGemini(apiKey, messages, model, outputTokens, true);
+            outcome = recoverGemini(apiKey, messages, model, outputTokens, outcome);
+            if (outcome.text != null) {
+                return outcome.text;
             }
-            if (cooling && !waitedForRateLimit) {
-                long wait = soonest - geminiNow.getAsLong();
-                if (wait > 0) {
-                    waitedForRateLimit = true;
-                    geminiPause.accept(wait);
-                    continue;
-                }
+            if (outcome.fatal != null) {
+                throw outcome.fatal;
             }
-            break;
+            if (outcome.failure == GeminiFailure.RATE_LIMIT) {
+                long resumeAt = geminiNow.getAsLong() + GEMINI_RATE_LIMIT_COOLDOWN_MS;
+                geminiLimitedUntil.merge(model, resumeAt, Math::max);
+                throw new LibraryException("Gemini rate limit reached. Try again later.");
+            }
+            if (outcome.failure != GeminiFailure.SKIP) {
+                last = outcome;
+            }
         }
         if (last == null) {
             throw new LibraryException("Gemini rejected the request (404).");
