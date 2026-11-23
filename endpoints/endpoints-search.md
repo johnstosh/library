@@ -91,7 +91,7 @@ Boolean chips AND labels AND status (OR within that list) AND reading-difficulty
 **Use Case:**
 - Public search across library catalog
 - Case-insensitive partial matching on book titles and author names
-- Filter books by AND-combined chip filters (Search UI shows discovery chips including Recent Arrivals; Books keeps cataloger chips)
+- Filter books by AND-combined chip filters (Search UI shows discovery chips including Recent Arrivals; the librarian No genres chip is with the genre filters on Search, Books, Prices, and Savings; other cataloger chips stay off Search)
 - Independently paginated book and author results (`bookPage` / `authorPage`)
 - Powers `/search` page with real-time search and filter chips
 

@@ -26,8 +26,11 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.mockito.ArgumentCaptor;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,12 +74,7 @@ class BookServiceGenreLookupTest {
         author.setName("Augustine");
         book.setAuthor(author);
 
-        BookDto bookDto = new BookDto();
-        bookDto.setId(7L);
-        bookDto.setTitle("Confessions");
-
         when(bookRepository.findById(7L)).thenReturn(Optional.of(book));
-        when(bookMapper.toDto(book)).thenReturn(bookDto);
         when(askGrok.suggestGenres(anyString(), anyString()))
                 .thenThrow(new LibraryException("xAI API call failed: 429"));
 
@@ -102,7 +100,7 @@ class BookServiceGenreLookupTest {
 
         when(bookRepository.findById(3L)).thenReturn(Optional.of(book));
         when(bookMapper.toDto(book)).thenReturn(bookDto);
-        when(askGrok.suggestGenres(anyString(), any())).thenReturn("theology, early-church");
+        when(askGrok.suggestGenres(anyString(), nullable(String.class))).thenReturn("theology, early-church");
         when(bookRepository.save(book)).thenReturn(book);
 
         GenreLookupResultDto result = bookService.lookupGenresForBook(3L);
@@ -126,6 +124,47 @@ class BookServiceGenreLookupTest {
 
         assertFalse(result.isSuccess());
         assertTrue(result.getErrorMessage().contains("no description"));
-        verify(askGrok, never()).suggestGenres(anyString(), any());
+        verify(askGrok, never()).suggestGenres(anyString(), nullable(String.class));
+    }
+
+    @Test
+    void lookupGenresForBook_sendsTitleAuthorAndExcerptsOnly() {
+        Book book = new Book();
+        book.setId(4L);
+        book.setTitle("Confessions");
+        book.setPublisher("Image");
+        book.setPublicationYear(1960);
+        book.setDetailedDescription("D".repeat(BookService.GENRE_DESCRIPTION_LIMIT + 40));
+        book.setPlotEssay("P".repeat(BookService.GENRE_PLOT_LIMIT + 40));
+        Author author = new Author();
+        author.setName("Augustine");
+        author.setBiographicalEssay("ESSAY-NOT-SENT");
+        author.setReligiousAffiliation("Catholic");
+        book.setAuthor(author);
+
+        when(bookRepository.findById(4L)).thenReturn(Optional.of(book));
+        when(bookMapper.toDto(book)).thenReturn(new BookDto());
+        when(askGrok.suggestGenres(anyString(), anyString())).thenReturn("theology");
+        when(bookRepository.save(book)).thenReturn(book);
+
+        GenreLookupResultDto result = bookService.lookupGenresForBook(4L);
+
+        assertTrue(result.isSuccess());
+        ArgumentCaptor<String> bookJson = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> authorJson = ArgumentCaptor.forClass(String.class);
+        verify(askGrok).suggestGenres(bookJson.capture(), authorJson.capture());
+        String sentBook = bookJson.getValue();
+        String sentAuthor = authorJson.getValue();
+        assertTrue(sentBook.contains("Confessions"));
+        assertTrue(sentBook.contains("Image"));
+        assertTrue(sentBook.contains("1960"));
+        assertTrue(sentBook.contains("D".repeat(BookService.GENRE_DESCRIPTION_LIMIT)));
+        assertFalse(sentBook.contains("D".repeat(BookService.GENRE_DESCRIPTION_LIMIT + 1)));
+        assertTrue(sentBook.contains("P".repeat(BookService.GENRE_PLOT_LIMIT)));
+        assertFalse(sentBook.contains("P".repeat(BookService.GENRE_PLOT_LIMIT + 1)));
+        assertFalse(sentBook.contains("ESSAY-NOT-SENT"));
+        assertFalse(sentAuthor.contains("ESSAY-NOT-SENT"));
+        assertFalse(sentAuthor.contains("Catholic"));
+        assertTrue(sentAuthor.contains("Augustine"));
     }
 }

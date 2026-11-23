@@ -25,7 +25,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.Normalizer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 
 @Service
 public class AskGrok {
@@ -38,8 +40,17 @@ public class AskGrok {
 
     private final RestTemplate restTemplate;
 
-    /** Test seam. Production waits one second before a same-model Gemini retry. */
+    /** Test seam. Production waits before a Gemini retry or a rate-limit cooldown. */
     private LongConsumer geminiPause = this::sleepBeforeGeminiRetry;
+
+    /** Test seam. Production reads the wall clock. */
+    private LongSupplier geminiNow = System::currentTimeMillis;
+
+    /**
+     * Models that returned HTTP 429, with the epoch millis when they may be tried again.
+     * A bulk genre run otherwise calls the same exhausted model on every book.
+     */
+    private final Map<String, Long> geminiLimitedUntil = new ConcurrentHashMap<>();
 
     public AskGrok() {
         this.restTemplate = new RestTemplate();
@@ -69,8 +80,13 @@ public class AskGrok {
             "gemini-3.8-flash",
             "gemini-3.5-flash-lite");
     public static final String GEMINI_GENERATE_URL = geminiGenerateUrl(MODEL_GEMINI_FREE);
-    /** One same-model retry after overload. Long enough to ride out a short spike, short enough for a bulk lookup. */
+    /** One same-model retry after a busy or dropped call. A 429 is not retried on that model. */
     private static final long GEMINI_RETRY_PAUSE_MS = 1000L;
+    /**
+     * How long a model that returned HTTP 429 stays out of the free-model list.
+     * Long enough that a bulk lookup does not probe it on every book.
+     */
+    static final long GEMINI_RATE_LIMIT_COOLDOWN_MS = 60_000L;
     /** Fast prompts ask for 500 tokens. Thinking shares that budget, so Gemini gets more room. */
     private static final int GEMINI_FAST_OUTPUT_TOKENS = 2048;
     private static final int GEMINI_OUTPUT_TOKEN_CEILING = 8192;
@@ -675,24 +691,53 @@ public class AskGrok {
      * Gemini 4 Hydrogen ignores custom temperature, and thinkingBudget is rejected.
      * Thinking tokens count against maxOutputTokens, so every call uses thinking level
      * low and a budget large enough for the answer. A 503 or an empty thought-only
-     * reply is retried once, then the next free-tier model is tried. The message
-     * returned to the catalog stays short and does not include the request URL.
+     * reply is retried once, then the next free-tier model is tried. A 429 is not
+     * retried on that model; the model is skipped for {@link #GEMINI_RATE_LIMIT_COOLDOWN_MS}.
+     * If every free model is in that pause, the call waits for the soonest one and tries
+     * once more. The message returned to the catalog stays short and does not include the request URL.
      */
     private String completeGemini(String apiKey, List<Map<String, Object>> messages, int maxCompletionTokens) {
         int outputTokens = geminiOutputBudget(maxCompletionTokens);
         GeminiOutcome last = null;
-        for (String model : GEMINI_FREE_MODELS) {
-            GeminiOutcome outcome = postGemini(apiKey, messages, model, outputTokens, true);
-            outcome = recoverGemini(apiKey, messages, model, outputTokens, outcome);
-            if (outcome.text != null) {
-                return outcome.text;
+        boolean waitedForRateLimit = false;
+        while (true) {
+            long soonest = Long.MAX_VALUE;
+            boolean cooling = false;
+            for (String model : GEMINI_FREE_MODELS) {
+                long now = geminiNow.getAsLong();
+                long until = geminiLimitedUntil.getOrDefault(model, 0L);
+                if (until > now) {
+                    cooling = true;
+                    soonest = Math.min(soonest, until);
+                    continue;
+                }
+                GeminiOutcome outcome = postGemini(apiKey, messages, model, outputTokens, true);
+                outcome = recoverGemini(apiKey, messages, model, outputTokens, outcome);
+                if (outcome.text != null) {
+                    return outcome.text;
+                }
+                if (outcome.fatal != null) {
+                    throw outcome.fatal;
+                }
+                if (outcome.failure == GeminiFailure.RATE_LIMIT) {
+                    long resumeAt = geminiNow.getAsLong() + GEMINI_RATE_LIMIT_COOLDOWN_MS;
+                    geminiLimitedUntil.merge(model, resumeAt, Math::max);
+                    cooling = true;
+                    soonest = Math.min(soonest, resumeAt);
+                }
+                if (outcome.failure != GeminiFailure.SKIP) {
+                    last = outcome;
+                }
             }
-            if (outcome.fatal != null) {
-                throw outcome.fatal;
+            if (cooling && !waitedForRateLimit) {
+                long wait = soonest - geminiNow.getAsLong();
+                if (wait > 0) {
+                    waitedForRateLimit = true;
+                    geminiPause.accept(wait);
+                    continue;
+                }
             }
-            if (outcome.failure != GeminiFailure.SKIP) {
-                last = outcome;
-            }
+            break;
         }
         if (last == null) {
             throw new LibraryException("Gemini rejected the request (404).");
@@ -705,9 +750,7 @@ public class AskGrok {
         if (outcome.text != null || outcome.fatal != null || outcome.failure == null) {
             return outcome;
         }
-        if (outcome.failure == GeminiFailure.BUSY
-                || outcome.failure == GeminiFailure.RATE_LIMIT
-                || outcome.failure == GeminiFailure.IO) {
+        if (outcome.failure == GeminiFailure.BUSY || outcome.failure == GeminiFailure.IO) {
             pauseBeforeGeminiRetry();
             return postGemini(apiKey, messages, model, outputTokens, true);
         }

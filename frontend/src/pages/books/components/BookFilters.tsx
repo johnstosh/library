@@ -323,13 +323,6 @@ export function BookFilters({
           dataTest="filter-with-grokipedia"
         />
         <FilterChip
-          label="Without Genres"
-          active={chips.withoutGenres}
-          onClick={() => toggle('withoutGenres')}
-          tooltip="Only books with no genres assigned"
-          dataTest="filter-without-genres"
-        />
-        <FilterChip
           label="Without Free-Text URLs"
           active={chips.withoutFreeTextUrls}
           onClick={() => toggle('withoutFreeTextUrls')}

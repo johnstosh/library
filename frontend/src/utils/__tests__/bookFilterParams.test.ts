@@ -37,6 +37,7 @@ describe('isSearchVisibleChip', () => {
     expect(isSearchVisibleChip('hasMsuBook')).toBe(true)
     expect(isSearchVisibleChip('withoutMsuEbook')).toBe(true)
     expect(isSearchVisibleChip('withoutGrokipedia')).toBe(false)
+    expect(isSearchVisibleChip('withoutGenres')).toBe(false)
     expect(isSearchVisibleChip('withoutProperPlotOrDescription')).toBe(false)
     expect(isSearchVisibleChip('titleNotChicago')).toBe(false)
     expect(isSearchVisibleChip('authorNotCanonical')).toBe(false)
@@ -79,6 +80,15 @@ describe('chipsFromSearchParams search mode', () => {
     expect(result.freeText).toBe(true)
     expect(result.withoutGrokipedia).toBe(false)
     expect(result.mostRecent).toBe(true)
+  })
+
+  it('reads the librarian No genres chip and still ignores other cataloger params', () => {
+    const result = chipsFromSearchParams(
+      new URLSearchParams('withoutGenres=true&withoutGrokipedia=true'),
+      'search',
+    )
+    expect(result.withoutGenres).toBe(true)
+    expect(result.withoutGrokipedia).toBe(false)
   })
 })
 
@@ -251,6 +261,18 @@ describe('bookFilterParamsForUrl', () => {
     })
   })
 
+  it('writes No genres on Search and still omits other cataloger chips', () => {
+    const params = bookFilterParamsForUrl(
+      {
+        chips: chips({ withoutGenres: true, withoutGrokipedia: true }),
+        labels: [],
+        q: '',
+      },
+      'search',
+    )
+    expect(params).toEqual({ withoutGenres: 'true' })
+  })
+
   it('emits a blank q when includeBlankQuery is set', () => {
     expect(
       bookFilterParamsForUrl(
@@ -287,6 +309,16 @@ describe('booksPathFromFilters', () => {
         q: '',
       }),
     ).toBe('/books?freeText=true&mostRecent=true')
+  })
+
+  it('copies No genres onto Books', () => {
+    expect(
+      booksPathFromFilters({
+        chips: chips({ withoutGenres: true }),
+        labels: [],
+        q: 'Summa',
+      }),
+    ).toBe('/books?q=Summa&withoutGenres=true&mostRecent=true')
   })
 })
 

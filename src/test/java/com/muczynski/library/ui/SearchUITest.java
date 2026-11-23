@@ -158,6 +158,30 @@ public class SearchUITest {
     }
 
     @Test
+    @DisplayName("Librarian sees No genres with the genre filters")
+    void testLibrarianSeesNoGenresWithGenreFilters() {
+        page.navigate(getBaseUrl() + "/login");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        page.waitForSelector("[data-test='login-username']",
+                new Page.WaitForSelectorOptions().setTimeout(30000L)
+                        .setState(WaitForSelectorState.VISIBLE));
+        page.fill("[data-test='login-username']", "librarian");
+        page.fill("[data-test='login-password']", "password");
+        page.click("[data-test='login-submit']");
+        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+
+        page.navigate(getBaseUrl() + "/search");
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+        Locator none = page.locator("[data-test='book-label-filters'] [data-test='filter-without-genres']");
+        assertThat(none).isVisible();
+        assertThat(none).containsText("No genres");
+        none.click();
+        page.waitForURL(url -> url.contains("withoutGenres=true"),
+                new Page.WaitForURLOptions().setTimeout(10000L));
+        assertThat(none).hasAttribute("aria-pressed", "true");
+    }
+
+    @Test
     @DisplayName("Should omit cataloger chips on phone as well")
     void testSearchPageHidesCatalogerFiltersOnPhone() {
         BrowserContext mobileContext = browser.newContext(new Browser.NewContextOptions()

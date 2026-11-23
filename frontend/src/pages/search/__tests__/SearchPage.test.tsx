@@ -1,13 +1,13 @@
 // (c) Copyright 2025 by Muczynski
 import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SearchPage } from '../SearchPage'
 import type { AuthorDto, BookDto } from '@/types/dtos'
 import type { SearchResponse } from '@/api/search'
 
-const { searchResult, librarianState } = vi.hoisted(() => {
+const { searchResult, librarianState, searchCalls } = vi.hoisted(() => {
   const books: BookDto[] = [
     {
       id: 1,
@@ -49,15 +49,28 @@ const { searchResult, librarianState } = vi.hoisted(() => {
     bookPage: { totalPages: 1, totalElements: 2, currentPage: 0, pageSize: 20 },
     authorPage: { totalPages: 1, totalElements: 1, currentPage: 0, pageSize: 20 },
   }
-  return { searchResult, librarianState: { current: false } }
+  return {
+    searchResult,
+    librarianState: { current: false },
+    searchCalls: { filters: null as { withoutGenres?: boolean } | null },
+  }
 })
 
 vi.mock('@/api/search', () => ({
-  useSearch: () => ({
-    data: searchResult,
-    isLoading: false,
-    error: null,
-  }),
+  useSearch: (
+    _query: string,
+    _bookPage: number,
+    _authorPage: number,
+    _pageSize: number,
+    filters: { withoutGenres?: boolean },
+  ) => {
+    searchCalls.filters = filters
+    return {
+      data: searchResult,
+      isLoading: false,
+      error: null,
+    }
+  },
 }))
 
 vi.mock('@/api/books', () => ({
@@ -87,11 +100,17 @@ vi.mock('@/hooks/useToast', () => ({
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }))
 
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-test="location">{`${location.pathname}${location.search}`}</div>
+}
+
 function renderSearch(path = '/search?q=Summa') {
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter initialEntries={[path]}>
       <SearchPage />
+      <LocationProbe />
     </MemoryRouter>
     </QueryClientProvider>,
   )
@@ -173,6 +192,35 @@ describe('SearchPage covers', () => {
     expect(meta).toHaveTextContent('Catholic Press')
     expect(meta).toHaveTextContent('St. Martin de Porres')
     expect(screen.queryByTestId('book-result-meta-8')).not.toBeInTheDocument()
+  })
+})
+
+describe('SearchPage No genres', () => {
+  it('hides the chip from a patron and does not apply the URL flag', () => {
+    renderSearch('/search?withoutGenres=true')
+
+    expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
+    expect(searchCalls.filters?.withoutGenres).toBe(false)
+  })
+
+  it('lets a librarian select titles with no genres', () => {
+    librarianState.current = true
+    renderSearch('/search?labels=fiction')
+
+    const chip = screen.getByTestId('filter-without-genres')
+    expect(screen.getByTestId('book-label-filters')).toContainElement(chip)
+    expect(chip).toHaveTextContent('No genres')
+
+    fireEvent.click(chip)
+
+    const params = new URLSearchParams(screen.getByTestId('location').textContent?.split('?')[1])
+    expect(params.get('withoutGenres')).toBe('true')
+    expect(params.get('labels')).toBeNull()
+    expect(searchCalls.filters?.withoutGenres).toBe(true)
+    expect(screen.getByTestId('open-in-books')).toHaveAttribute(
+      'href',
+      '/books?withoutGenres=true&mostRecent=true',
+    )
   })
 })
 

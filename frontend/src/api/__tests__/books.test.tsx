@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryKeys } from '@/config/queryClient'
 import type { BookDto } from '@/types/dtos'
 import { useAuthors } from '../authors'
-import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBulkBookFromImage, useBooks } from '../books'
-import { api } from '../client'
+import { useTitleAuthorFromPhoto, useLookupBulkReadingDifficultyWithProgress, useBulkBookFromTitleAuthor, useBulkBookFromImage, useBooks, postGenreLookupRetrying } from '../books'
+import { api, ApiError } from '../client'
 import { grokJobDefaults } from '../grokJobs'
 
 afterEach(() => {
@@ -208,5 +208,29 @@ describe('useBulkBookFromImage', () => {
     ])
     expect(queryClient.getQueryData(queryKeys.books.detail(1))).toEqual(originalBook)
     expect(queryClient.getQueryData(queryKeys.books.detail(2))).toEqual({ ...originalBook, id: 2 })
+  })
+})
+
+describe('postGenreLookupRetrying', () => {
+  it('retries a killed instance and then returns the genres', async () => {
+    const post = vi.fn()
+      .mockRejectedValueOnce(new ApiError('Service Unavailable', 503, 'Service Unavailable'))
+      .mockResolvedValueOnce({ bookId: 7, success: true, suggestedGenres: ['theology'] })
+    const sleeps: number[] = []
+
+    const result = await postGenreLookupRetrying(7, post, async (ms) => {
+      sleeps.push(ms)
+    })
+
+    expect(result.suggestedGenres).toEqual(['theology'])
+    expect(post).toHaveBeenCalledTimes(2)
+    expect(sleeps).toEqual([5_000])
+  })
+
+  it('does not retry a Gemini error that arrived with HTTP 200', async () => {
+    const post = vi.fn().mockRejectedValueOnce(new ApiError('Gemini rate limit reached. Try again later.', 422, 'Unprocessable Entity'))
+
+    await expect(postGenreLookupRetrying(7, post, async () => {})).rejects.toThrow('Gemini rate limit reached')
+    expect(post).toHaveBeenCalledTimes(1)
   })
 })

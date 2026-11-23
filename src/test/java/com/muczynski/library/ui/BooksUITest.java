@@ -179,7 +179,9 @@ public class BooksUITest {
         assertThat(page.locator("[data-test='filter-author-not-canonical']")).isVisible();
         assertThat(page.locator("[data-test='filter-author-not-canonical']")).containsText("Author not canonical");
         assertThat(page.locator("[data-test='filter-with-grokipedia']")).isVisible();
-        assertThat(page.locator("[data-test='filter-without-genres']")).isVisible();
+        assertThat(page.locator("[data-test='book-source-filter-chips'] [data-test='filter-without-genres']")).hasCount(0);
+        assertThat(page.locator("[data-test='book-label-filters'] [data-test='filter-without-genres']")).isVisible();
+        assertThat(page.locator("[data-test='book-label-filters'] [data-test='filter-without-genres']")).containsText("No genres");
         assertThat(page.locator("[data-test='status-filters']")).isVisible();
         assertThat(page.locator("[data-test='status-filters']")).containsText("Status");
         assertThat(page.locator("[data-test='status-filter-in-library']")).containsText("In-library");

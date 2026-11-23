@@ -64,6 +64,12 @@ public class BookService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookService.class);
 
+    /** Genre prompts keep this much of the description. The rest is not sent. */
+    static final int GENRE_DESCRIPTION_LIMIT = 6000;
+
+    /** Genre prompts keep this much of the plot. The author essay is not sent. */
+    static final int GENRE_PLOT_LIMIT = 2000;
+
     private static final String CATALOG_SYSTEM_PROMPT = """
             You write Catholic library catalog cards. The prose fields are essays, not blurbs or jacket copy.
             Be frank, polite, and charitable. Do not hedge with a balanced viewpoint.
@@ -1370,23 +1376,45 @@ public class BookService {
         }
 
         try {
-            BookDto bookDto = bookMapper.toDto(book);
-            String bookJson = objectMapper.writeValueAsString(bookDto);
+            Map<String, Object> bookMap = new LinkedHashMap<>();
+            bookMap.put("title", book.getTitle());
+            if (book.getPublicationYear() != null) {
+                bookMap.put("publicationYear", book.getPublicationYear());
+            }
+            if (book.getPublisher() != null && !book.getPublisher().isBlank()) {
+                bookMap.put("publisher", book.getPublisher());
+            }
+            bookMap.put("detailedDescription", excerpt(description, GENRE_DESCRIPTION_LIMIT));
+            String plot = excerpt(book.getPlotEssay(), GENRE_PLOT_LIMIT);
+            if (plot != null) {
+                bookMap.put("plotSummary", plot);
+            }
+            String bookJson = objectMapper.writeValueAsString(bookMap);
 
             String authorJson = null;
-            if (book.getAuthor() != null) {
-                Map<String, Object> authorMap = new HashMap<>();
-                authorMap.put("name", book.getAuthor().getName());
-                authorMap.put("religiousAffiliation", book.getAuthor().getReligiousAffiliation());
-                authorMap.put("birthCountry", book.getAuthor().getBirthCountry());
-                authorMap.put("nationality", book.getAuthor().getNationality());
-                authorMap.put("biographicalEssay", book.getAuthor().getBiographicalEssay());
-                authorJson = objectMapper.writeValueAsString(authorMap);
+            if (book.getAuthor() != null && book.getAuthor().getName() != null
+                    && !book.getAuthor().getName().isBlank()) {
+                authorJson = objectMapper.writeValueAsString(Map.of("name", book.getAuthor().getName()));
             }
             return GenrePrep.ready(book.getTitle(), bookJson, authorJson);
         } catch (Exception e) {
             throw new LibraryException("Failed to serialize book for genre lookup: " + e.getMessage(), e);
         }
+    }
+
+    /** Trimmed text for a genre prompt. Blank text is omitted. */
+    private static String excerpt(String text, int limit) {
+        if (text == null) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() <= limit) {
+            return trimmed;
+        }
+        return trimmed.substring(0, limit);
     }
 
     private GenreLookupResultDto applyGenreLookup(Long bookId, String title, List<String> genres) {

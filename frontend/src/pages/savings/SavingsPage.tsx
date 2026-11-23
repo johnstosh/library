@@ -27,7 +27,14 @@ import { BookPriceFilters } from '@/pages/books/components/BookPriceFilters'
 import type { BookDto, BookListingDto } from '@/types/dtos'
 import type { BookCoverType, ReadingDifficulty } from '@/types/enums'
 import { bindingsFromSearchParams } from '@/utils/bookBinding'
-import { toggleBookChip, type BookChipFilters } from '@/utils/bookChipFilters'
+import {
+  clearGenreSelection,
+  toggleBookChip,
+  toggleGenreLabel,
+  toggleWithoutGenres,
+  withoutGenresForViewer,
+  type BookChipFilters,
+} from '@/utils/bookChipFilters'
 import {
   bookFilterParamsForUrl,
   chipsFromSearchParams,
@@ -47,6 +54,7 @@ import {
   type SavingsListing,
   type SavingsReport,
 } from '@/utils/shippingSavings'
+import { useIsLibrarian } from '@/stores/authStore'
 
 interface SelectedTitle {
   id: number
@@ -78,7 +86,8 @@ function seconds(ms: number): string {
 
 export function SavingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const chips = chipsFromSearchParams(searchParams, 'books')
+  const isLibrarian = useIsLibrarian()
+  const chips = withoutGenresForViewer(chipsFromSearchParams(searchParams, 'books'), isLibrarian)
   const priceOlderDays = priceOlderDaysFromSearchParams(searchParams)
   const selectedLabels = labelsFromSearchParams(searchParams)
   const selectedDifficulties = readingDifficultiesFromSearchParams(searchParams)
@@ -135,7 +144,7 @@ export function SavingsPage() {
     bindings: bindingsFromSearchParams(searchParams),
     favoriteLists: favoriteListsFromSearchParams(searchParams),
     priceOlderDays: priceOlderDaysFromSearchParams(searchParams),
-    chips: chipsFromSearchParams(searchParams, 'books'),
+    chips,
   }
 
   const {
@@ -308,13 +317,11 @@ export function SavingsPage() {
           />
           <BookLabelFilters
             selectedLabels={selectedLabels}
-            onToggleLabel={(label) => {
-              const nextLabels = selectedLabels.includes(label)
-                ? selectedLabels.filter((item) => item !== label)
-                : [...selectedLabels, label]
-              writeUrl({ labels: nextLabels })
-            }}
-            onClearLabels={() => writeUrl({ labels: [] })}
+            onToggleLabel={(label) => writeUrl(toggleGenreLabel(chips, selectedLabels, label))}
+            onClearLabels={() => writeUrl(clearGenreSelection(chips))}
+            showNone={isLibrarian}
+            noneSelected={chips.withoutGenres}
+            onToggleNone={() => writeUrl(toggleWithoutGenres(chips, selectedLabels))}
           />
           <StatusFilters
             selected={selectedStatuses}

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CATALOG_PAGE_SIZE } from '@/api/byIds'
 import type { BookDto } from '@/types/dtos'
 import { SavingsPage } from '../SavingsPage'
+import { useAuthStore } from '@/stores/authStore'
 
 const catalog = vi.hoisted(() => {
   const first: BookDto[] = [
@@ -28,7 +29,7 @@ const catalog = vi.hoisted(() => {
     books: first,
     loadMore: vi.fn(),
     options: undefined as { pageSize?: number } | undefined,
-    filters: undefined as { chips?: { mostRecent?: boolean } } | undefined,
+    filters: undefined as { chips?: { mostRecent?: boolean; withoutGenres?: boolean } } | undefined,
   }
 })
 
@@ -37,7 +38,7 @@ const listings = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/books', () => ({
-  useBooks: (filters: { chips?: { mostRecent?: boolean } }, options?: { pageSize?: number }) => {
+  useBooks: (filters: { chips?: { mostRecent?: boolean; withoutGenres?: boolean } }, options?: { pageSize?: number }) => {
     catalog.filters = filters
     catalog.options = options
     return {
@@ -82,6 +83,25 @@ beforeEach(() => {
   catalog.loadMore.mockClear()
   listings.fetch.mockReset()
   listings.fetch.mockResolvedValue([])
+  useAuthStore.setState({ user: null, isAuthenticated: false })
+})
+
+describe('SavingsPage No genres', () => {
+  it('shows the librarian chip with the genre filters', () => {
+    useAuthStore.setState({
+      user: { id: 1, username: 'librarian', authority: 'LIBRARIAN' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    renderSavings()
+
+    const chip = screen.getByTestId('filter-without-genres')
+    expect(screen.getByTestId('book-label-filters')).toContainElement(chip)
+    expect(chip).toHaveTextContent('No genres')
+
+    fireEvent.click(chip)
+    expect(catalog.filters?.chips?.withoutGenres).toBe(true)
+  })
 })
 
 describe('SavingsPage', () => {

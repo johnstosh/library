@@ -1,5 +1,6 @@
 // (c) Copyright 2025 by Muczynski
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { vi } from 'vitest'
 import {
   BookLabelFilters,
   formatBookLabel,
@@ -49,6 +50,42 @@ describe('BookLabelFilters', () => {
     expect(screen.getByTestId('label-filter-slice-of-life')).toHaveTextContent('Slice of Life')
     expect(screen.getByTestId('label-filter-talking-animals')).toHaveTextContent('Talking Animals')
     expect(screen.getByTestId('label-filter-hagiography')).toHaveTextContent('Hagiography')
+  })
+
+  it('hides No genres from patrons', () => {
+    render(
+      <BookLabelFilters
+        selectedLabels={[]}
+        onToggleLabel={() => {}}
+        onClearLabels={() => {}}
+      />,
+    )
+    expect(screen.queryByTestId('filter-without-genres')).not.toBeInTheDocument()
+  })
+
+  it('shows a librarian No genres chip with the genre filters', () => {
+    const onToggleNone = vi.fn()
+    const onClearLabels = vi.fn()
+    render(
+      <BookLabelFilters
+        selectedLabels={['fiction']}
+        onToggleLabel={() => {}}
+        onClearLabels={onClearLabels}
+        showNone
+        noneSelected
+        onToggleNone={onToggleNone}
+      />,
+    )
+
+    const chip = screen.getByTestId('filter-without-genres')
+    expect(screen.getByTestId('book-label-filters')).toContainElement(chip)
+    expect(chip).toHaveTextContent('No genres')
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(chip)
+    expect(onToggleNone).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByTestId('label-filter-clear'))
+    expect(onClearLabels).toHaveBeenCalledTimes(1)
   })
 })
 

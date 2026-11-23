@@ -16,8 +16,9 @@ export const PROPER_TEXT_MIN_CHARS = 400
  *
  * Row 1: has/without YDL, EMU, ACLA, WCC, and MSU audio, book, and ebook
  * Row 2: freeText, audio, mostRecent
- * Row 3: withoutGrokipedia, withGrokipedia, withoutGenres, withoutFreeTextUrls,
- *   withoutProperPlotOrDescription, titleNotChicago, authorNotCanonical
+ * Row 3: withoutGrokipedia, withGrokipedia, withoutFreeTextUrls,
+ *   withoutProperPlotOrDescription, titleNotChicago, authorNotCanonical.
+ *   withoutGenres is the librarian "No genres" chip next to the genre filters.
  * Pricing (Books, librarians): withPrices, noPrices, priceOlder, lookupErrors
  *
  * Status (in-library, electronic-resource, without-loc, lost, withdrawn,
@@ -123,6 +124,46 @@ const TEMP_TITLE_RE = /^\d{4}-\d{1,2}-\d{1,2}/
 
 export function isAnyChipActive(chips: BookChipFilters): boolean {
   return (Object.keys(chips) as (keyof BookChipFilters)[]).some((key) => chips[key])
+}
+
+/**
+ * Patrons do not see or apply the No genres chip. Librarians keep the URL value.
+ */
+export function withoutGenresForViewer(chips: BookChipFilters, isLibrarian: boolean): BookChipFilters {
+  if (isLibrarian || !chips.withoutGenres) return chips
+  return { ...chips, withoutGenres: false }
+}
+
+/** Selecting a genre turns No genres off. Removing a genre leaves it off. */
+export function toggleGenreLabel(
+  chips: BookChipFilters,
+  selectedLabels: string[],
+  label: string,
+): { chips: BookChipFilters; labels: string[] } {
+  const selected = selectedLabels.includes(label)
+  const labels = selected
+    ? selectedLabels.filter((item) => item !== label)
+    : [...selectedLabels, label]
+  return {
+    labels,
+    chips: selected ? chips : { ...chips, withoutGenres: false },
+  }
+}
+
+/** No genres clears selected genres, because a title cannot have both. */
+export function toggleWithoutGenres(
+  chips: BookChipFilters,
+  selectedLabels: string[],
+): { chips: BookChipFilters; labels: string[] } {
+  const withoutGenres = !chips.withoutGenres
+  return {
+    chips: { ...chips, withoutGenres },
+    labels: withoutGenres ? [] : selectedLabels,
+  }
+}
+
+export function clearGenreSelection(chips: BookChipFilters): { chips: BookChipFilters; labels: string[] } {
+  return { chips: { ...chips, withoutGenres: false }, labels: [] }
 }
 
 /** True if any chip other than mostRecent is on. */
