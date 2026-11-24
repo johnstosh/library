@@ -69,16 +69,16 @@ public class AskGrok {
     public static final String MODEL_GROK_4_FAST = "grok-4.3";
     public static final String IMAGE_DETAIL_HIGH = "high";
     /**
-     * Preferred free-tier Gemini model. On the Gemini API pricing page (November 2026),
-     * Gemini 4 Hydrogen, Gemini 3.8 Flash, and Gemini 3.5 Flash-Lite input and output
-     * are free of charge. Gemini 4 Carbon, Argon, and Neon are not on the free tier.
-     * Hydrogen accepts text and images. A busy Hydrogen call falls through the free list.
+     * Free-tier model for catalog calls. Gemini 3.5 Flash-Lite is the free model with
+     * a few hundred requests a day. Gemini 4 Hydrogen and Gemini 3.8 Flash are free of
+     * charge but only about 20 requests a day, so Hydrogen is not called and Flash is
+     * only the fallback when Flash-Lite is busy or returns no answer. Gemini 4 Carbon,
+     * Argon, and Neon are not on the free tier. Flash-Lite accepts text and images.
      */
-    public static final String MODEL_GEMINI_FREE = "gemini-4-hydrogen";
+    public static final String MODEL_GEMINI_FREE = "gemini-3.5-flash-lite";
     static final List<String> GEMINI_FREE_MODELS = List.of(
             MODEL_GEMINI_FREE,
-            "gemini-3.8-flash",
-            "gemini-3.5-flash-lite");
+            "gemini-3.8-flash");
     public static final String GEMINI_GENERATE_URL = geminiGenerateUrl(MODEL_GEMINI_FREE);
     /** One same-model retry after a busy or dropped call. A 429 is not retried on that model. */
     private static final long GEMINI_RETRY_PAUSE_MS = 1000L;
@@ -688,7 +688,7 @@ public class AskGrok {
     }
 
     /**
-     * Gemini 4 Hydrogen ignores custom temperature, and thinkingBudget is rejected.
+     * These free models ignore custom temperature, and thinkingBudget is rejected.
      * Thinking tokens count against maxOutputTokens, so every call uses thinking level
      * low and a budget large enough for the answer. A 503 or an empty thought-only
      * reply is retried once, then the next free-tier model is tried. A 429 stops the

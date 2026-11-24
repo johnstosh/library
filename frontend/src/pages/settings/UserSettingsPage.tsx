@@ -467,7 +467,7 @@ export function UserSettingsPage() {
                   </Button>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  API key for Gemini. Calls use the free-tier model gemini-4-hydrogen.
+                  API key for Gemini. Calls use the free-tier model gemini-3.5-flash-lite.
                 </p>
               </div>
               <Checkbox

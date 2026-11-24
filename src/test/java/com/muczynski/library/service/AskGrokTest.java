@@ -677,7 +677,8 @@ public class AskGrokTest {
 
         assertEquals("essay", result);
         assertTrue(AskGrok.GEMINI_GENERATE_URL.contains(AskGrok.MODEL_GEMINI_FREE));
-        assertEquals("gemini-4-hydrogen", AskGrok.MODEL_GEMINI_FREE);
+        assertEquals("gemini-3.5-flash-lite", AskGrok.MODEL_GEMINI_FREE);
+        assertEquals(List.of("gemini-3.5-flash-lite", "gemini-3.8-flash"), AskGrok.GEMINI_FREE_MODELS);
         HttpHeaders headers = entityCaptor.getValue().getHeaders();
         assertEquals("google-test-key", headers.getFirst("x-goog-api-key"));
         assertNull(headers.getFirst(HttpHeaders.AUTHORIZATION));
@@ -862,7 +863,7 @@ public class AskGrokTest {
         verify(restTemplate, times(2)).postForEntity(
                 eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
         verify(restTemplate, never()).postForEntity(
-                eq(AskGrok.geminiGenerateUrl("gemini-3.5-flash-lite")), any(HttpEntity.class), eq(Map.class));
+                eq(AskGrok.geminiGenerateUrl("gemini-4-hydrogen")), any(HttpEntity.class), eq(Map.class));
     }
 
     @Test
