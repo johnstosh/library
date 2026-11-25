@@ -594,6 +594,8 @@ public class ImportService {
         book.setPublisher(bDto.getPublisher());
         book.setPlotEssay(bDto.getPlotSummary());
         book.setRelatedWorks(bDto.getRelatedWorks());
+        book.setRelatedFeastDay(bDto.getRelatedFeastDay());
+        book.setRelatedFeastDayExplanation(FeastMonthDayConverter.explanationOrNull(bDto.getRelatedFeastDayExplanation()));
         book.setDetailedDescription(bDto.getDetailedDescription());
         book.setGrokipediaUrl(bDto.getGrokipediaUrl());
         if (bDto.getInvalidGrokipediaUrls() != null) {
@@ -1240,6 +1242,8 @@ public class ImportService {
         bDto.setPublisher(emptyToNull(book.getPublisher()));
         bDto.setPlotSummary(emptyToNull(book.getPlotEssay()));
         bDto.setRelatedWorks(emptyToNull(book.getRelatedWorks()));
+        bDto.setRelatedFeastDay(book.getRelatedFeastDay());
+        bDto.setRelatedFeastDayExplanation(emptyToNull(book.getRelatedFeastDayExplanation()));
         bDto.setDetailedDescription(emptyToNull(book.getDetailedDescription()));
         bDto.setGrokipediaUrl(emptyToNull(book.getGrokipediaUrl()));
         if (book.getInvalidGrokipediaUrls() != null && !book.getInvalidGrokipediaUrls().isEmpty()) {

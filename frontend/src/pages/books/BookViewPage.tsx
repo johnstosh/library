@@ -10,6 +10,7 @@ import { useLookupSingleAcla } from '@/api/acla-lookup'
 import { useLookupSingleWcc } from '@/api/wcc-lookup'
 import { useLookupSingleMsu } from '@/api/msu-lookup'
 import { formatBookStatus, formatDateTime, parseISODateSafe, parseSpaceSeparatedUrls, grokipediaUrls, extractDomain } from '@/utils/formatters'
+import { formatFeastDay } from '@/utils/feastDay'
 import { formatBookLabel } from './components/BookLabelFilters'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import { loansNewPathFromBook } from '@/utils/loanCheckout'
@@ -437,6 +438,20 @@ export function BookViewPage() {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm font-medium text-gray-500">Related Works</p>
                 <p className="text-gray-900 whitespace-pre-wrap">{book.relatedWorks}</p>
+              </div>
+            )}
+
+            {book.relatedFeastDay && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm font-medium text-gray-500">Related Feast Day</p>
+                <p className="text-gray-900" data-test="book-related-feast-day">{formatFeastDay(book.relatedFeastDay)}</p>
+              </div>
+            )}
+
+            {book.relatedFeastDayExplanation && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm font-medium text-gray-500">Related Feast Day Explanation</p>
+                <p className="text-gray-900 whitespace-pre-wrap" data-test="book-related-feast-day-explanation">{book.relatedFeastDayExplanation}</p>
               </div>
             )}
 

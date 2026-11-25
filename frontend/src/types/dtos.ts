@@ -137,6 +137,10 @@ export interface BookDto {
   publisher?: string
   plotSummary?: string
   relatedWorks?: string
+  /** Yearless month and day, `--MM-DD` (for example `--08-11`). Absent when unset. */
+  relatedFeastDay?: string
+  /** Why more than one feast date exists. Empty when the feast has only one date. */
+  relatedFeastDayExplanation?: string
   detailedDescription?: string
   grokipediaUrl?: string
   invalidGrokipediaUrls?: RejectedUrl[]
