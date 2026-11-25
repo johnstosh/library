@@ -36,12 +36,23 @@ public class LogEmailSender implements EmailSender {
     @Override
     public void send(EmailMessage message, GlobalSettings settings) {
         logger.info(
-                "Email [{}] from={} <{}> to={} subject={} body={}",
+                "Email [{}] from={} <{}> to={} subject={} headers={} body={}",
                 message.getEvent() != null ? message.getEvent() : "message",
                 message.getFromName(),
                 message.getFromAddress(),
                 message.getTo(),
                 message.getSubject(),
-                message.getTextBody());
+                String.join(",", message.getHeaders().keySet()),
+                redact(message.getTextBody()));
+    }
+
+    /**
+     * Header names are logged. Unsubscribe URLs are not, because they contain the token.
+     */
+    static String redact(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("(/mailing-lists/unsubscribe/)[^\\s\"'<>]+", "$1[redacted]");
     }
 }

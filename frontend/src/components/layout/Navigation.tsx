@@ -82,6 +82,7 @@ export function Navigation() {
               {/* Desktop nav — hidden on mobile */}
               <nav className="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
                 <NavLink to="/search" className={desktopNavCls} data-test="nav-search">Search</NavLink>
+                <NavLink to="/mailing-lists" className={desktopNavCls} data-test="nav-mailing-lists">Mailing Lists</NavLink>
                 {isAuthenticated && (
                   <>
                     <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
@@ -202,6 +203,7 @@ export function Navigation() {
           <DisclosurePanel className="md:hidden border-t border-gray-200 bg-white">
             <nav className="mx-[2%] py-2 space-y-1" aria-label="Primary mobile">
               <NavLink to="/search" className={mobileNavCls} data-test="nav-search-mobile" onClick={() => close()}>Search</NavLink>
+              <NavLink to="/mailing-lists" className={mobileNavCls} data-test="nav-mailing-lists-mobile" onClick={() => close()}>Mailing Lists</NavLink>
               {isAuthenticated && (
                 <>
                   <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>

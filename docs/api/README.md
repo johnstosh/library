@@ -48,16 +48,17 @@ The heading line is the method, a space, and the full path, for example `## GET 
 | [library-card.md](library-card.md) | `LibraryCardController` | `/api/library-card` | 3 |
 | [loans.md](loans.md) | `LoanController` | `/api/loans` | 10 |
 | [loc-bulk-lookup.md](loc-bulk-lookup.md) | `LocBulkLookupController` | `/api/loc-bulk-lookup` | 4 |
+| [mailing-lists.md](mailing-lists.md) | `MailingListController` | `(none)` | 3 |
 | [maintenance.md](maintenance.md) | `MaintenanceController` | `/api/maintenance` | 13 |
 | [msu-lookup.md](msu-lookup.md) | `MsuLookupController` | `/api/msu-lookup` | 1 |
 | [photos.md](photos.md) | `PhotoController` | `/api/photos` | 8 |
 | [photo-export.md](photo-export.md) | `PhotoExportController` | `/api/photo-export` | 14 |
 | [search.md](search.md) | `SearchController` | `/api/search` | 1 |
-| [spa.md](spa.md) | `SpaController` | `(none)` | 41 |
+| [spa.md](spa.md) | `SpaController` | `(none)` | 42 |
 | [test-data.md](test-data.md) | `TestDataController` | `/api/test-data` | 6 |
 | [users.md](users.md) | `UserController` | `/api/users` | 8 |
 | [user-settings.md](user-settings.md) | `UserSettingsController` | `/api/user-settings` | 3 |
 | [wcc-lookup.md](wcc-lookup.md) | `WccLookupController` | `/api/wcc-lookup` | 1 |
 | [ydl-lookup.md](ydl-lookup.md) | `YdlLookupController` | `/api/ydl-lookup` | 1 |
 
-253 mappings.
+257 mappings.

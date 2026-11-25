@@ -23,7 +23,7 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
                 GlobalSettings.class, Authority.class, PhotoUploadSession.class,
                 RandomBook.class, RandomAuthor.class, RandomLoan.class,
                 RandomPhoto.class, RandomUser.class, Favorite.class, BookPrice.class,
-                AbeSeller.class, BookListing.class }) {
+                AbeSeller.class, BookListing.class, MailingListSubscription.class }) {
             hints.reflection().registerType(cls,
                 MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                 MemberCategory.INVOKE_DECLARED_METHODS,
@@ -39,6 +39,8 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(ReadingDifficulty.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(FavoriteItemType.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(BookCoverType.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(MailingListTopic.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(MailingFrequency.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(AdditionalShippingSource.class, MemberCategory.INVOKE_DECLARED_METHODS);
 
         // Spring Session JDBC serializes the full SecurityContext object graph to bytes.

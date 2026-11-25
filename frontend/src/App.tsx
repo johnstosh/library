@@ -36,6 +36,7 @@ const UserNewPage = lazy(() => import('@/pages/users/UserNewPage').then(m => ({ 
 const UserEditPage = lazy(() => import('@/pages/users/UserEditPage').then(m => ({ default: m.UserEditPage })))
 const UserViewPage = lazy(() => import('@/pages/users/UserViewPage').then(m => ({ default: m.UserViewPage })))
 const SearchPage = lazy(() => import('@/pages/search/SearchPage').then(m => ({ default: m.SearchPage })))
+const MailingListsPage = lazy(() => import('@/pages/mailing-lists/MailingListsPage').then(m => ({ default: m.MailingListsPage })))
 const MyLibraryCardPage = lazy(() => import('@/pages/library-cards/MyLibraryCardPage').then(m => ({ default: m.MyLibraryCardPage })))
 const ApplicationsPage = lazy(() => import('@/pages/library-cards/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
 const UserSettingsPage = lazy(() => import('@/pages/settings/UserSettingsPage').then(m => ({ default: m.UserSettingsPage })))
@@ -89,6 +90,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/mailing-lists" element={<MailingListsPage />} />
             <Route path="/apply" element={<ApplyForCardPage />} />
             <Route path="/books/:id" element={<BookViewPage />} />
             <Route path="/authors/:id" element={<AuthorViewPage />} />

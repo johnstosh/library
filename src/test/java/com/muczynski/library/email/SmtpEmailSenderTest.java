@@ -66,6 +66,30 @@ class SmtpEmailSenderTest {
     }
 
     @Test
+    void send_setsListUnsubscribeHeaders() throws Exception {
+        SmtpEmailSender sender = new SmtpEmailSender(mailTransport);
+        GlobalSettings settings = new GlobalSettings();
+        settings.setSmtpHost("smtp.example.com");
+        settings.setSmtpPort(587);
+        settings.setEmailFromAddress("library@example.com");
+        EmailMessage message = new EmailMessage();
+        message.getTo().add("patron@example.com");
+        message.setSubject("Lives of Saints (daily)");
+        message.setTextBody("text");
+        message.setHtmlBody("<p>html</p>");
+        message.setListUnsubscribe("https://library.example/mailing-lists/unsubscribe/abc123");
+
+        sender.send(message, settings);
+
+        ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailTransport).send(captor.capture());
+        MimeMessage mime = captor.getValue();
+        assertEquals("<https://library.example/mailing-lists/unsubscribe/abc123>",
+                mime.getHeader(EmailMessage.LIST_UNSUBSCRIBE)[0]);
+        assertEquals("List-Unsubscribe=One-Click", mime.getHeader(EmailMessage.LIST_UNSUBSCRIBE_POST)[0]);
+    }
+
+    @Test
     void send_withoutConfig_throws() {
         SmtpEmailSender sender = new SmtpEmailSender(mailTransport);
         EmailMessage message = new EmailMessage();

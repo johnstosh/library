@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -77,6 +78,11 @@ public class SmtpEmailSender implements EmailSender {
                 mime.addRecipient(Message.RecipientType.TO, new InternetAddress(to));
             }
             mime.setSubject(message.getSubject() != null ? message.getSubject() : "", StandardCharsets.UTF_8.name());
+            for (Map.Entry<String, String> header : message.getHeaders().entrySet()) {
+                if (header.getKey() != null && !header.getKey().isBlank() && header.getValue() != null) {
+                    mime.setHeader(header.getKey(), header.getValue());
+                }
+            }
 
             MimeMultipart multipart = new MimeMultipart("alternative");
             MimeBodyPart textPart = new MimeBodyPart();

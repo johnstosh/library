@@ -43,6 +43,38 @@ public class OutgoingEmail {
         message.setHtmlBody(html(brand.name(), brand.subName(), htmlBody));
     }
 
+    /**
+     * Mailing-list letter. {@link #apply} puts the sign-off and then repeats the
+     * heading, which would bury the final unsubscribe link, so this path does
+     * not call it. Loan and application mail keep using {@link #apply}.
+     * Order: library name, website, unsubscribe, topic, frequency, issue,
+     * sign-off, and a last Unsubscribe link.
+     */
+    public void composeMailingList(EmailMessage message,
+                                   String topic,
+                                   String frequencyLine,
+                                   String issueText,
+                                   String issueHtml,
+                                   String unsubscribeUrl) {
+        Brand brand = currentBrand();
+        String site = website();
+        message.setTextBody(mailingListText(
+                brand.name(), brand.subName(), site, topic, frequencyLine, issueText, unsubscribeUrl));
+        message.setHtmlBody(mailingListHtml(
+                brand.name(), brand.subName(), site, topic, frequencyLine, issueHtml, unsubscribeUrl));
+    }
+
+    public String website() {
+        String base = externalBaseUrl == null ? "" : externalBaseUrl.trim();
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        if (base.isEmpty()) {
+            return "https://library.muczynskifamily.com";
+        }
+        return base;
+    }
+
     Brand currentBrand() {
         return brandFor(externalBaseUrl, branchRepository.findAll());
     }
@@ -123,6 +155,55 @@ public class OutgoingEmail {
         }
         heading.append("</div>");
         return heading.toString();
+    }
+
+    static String mailingListText(String name,
+                                  String subName,
+                                  String website,
+                                  String topic,
+                                  String frequencyLine,
+                                  String issueText,
+                                  String unsubscribeUrl) {
+        String books = issueText == null || issueText.isBlank()
+                ? "There are no books in this issue."
+                : stripTrailingNewlines(issueText);
+        StringBuilder letter = new StringBuilder();
+        String header = plainHeader(name, subName);
+        if (!header.isEmpty()) {
+            letter.append(header).append("\n");
+        }
+        letter.append(website == null ? "" : website).append("\n\n");
+        letter.append("Unsubscribe\n").append(unsubscribeUrl == null ? "" : unsubscribeUrl).append("\n\n");
+        letter.append(topic == null ? "" : topic).append("\n\n");
+        letter.append(frequencyLine == null ? "" : frequencyLine).append("\n\n");
+        letter.append(books).append("\n\n");
+        letter.append(SIGN_OFF_TEXT).append("\n\n");
+        letter.append("Unsubscribe\n").append(unsubscribeUrl == null ? "" : unsubscribeUrl);
+        return letter.toString();
+    }
+
+    static String mailingListHtml(String name,
+                                  String subName,
+                                  String website,
+                                  String topic,
+                                  String frequencyLine,
+                                  String issueHtml,
+                                  String unsubscribeUrl) {
+        String site = website == null ? "" : website;
+        String unsub = unsubscribeUrl == null ? "" : unsubscribeUrl;
+        String books = issueHtml == null || issueHtml.isBlank()
+                ? "<p>There are no books in this issue.</p>"
+                : issueHtml;
+        return "<div style=\"font-family:" + FONT + ";\">"
+                + htmlHeading(name, subName)
+                + "<p><a href=\"" + HtmlText.escape(site) + "\">" + HtmlText.escape(site) + "</a></p>"
+                + "<p><a href=\"" + HtmlText.escape(unsub) + "\">Unsubscribe</a></p>"
+                + "<p>" + HtmlText.escape(topic) + "</p>"
+                + "<p>" + HtmlText.escape(frequencyLine) + "</p>"
+                + books
+                + "<p>" + SIGN_OFF_HTML + "</p>"
+                + "<p><a href=\"" + HtmlText.escape(unsub) + "\">Unsubscribe</a></p>"
+                + "</div>";
     }
 
     private static String stripTrailingNewlines(String value) {
