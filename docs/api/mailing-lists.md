@@ -16,7 +16,7 @@ Parameters:
 
 - Body `MailingListSignupRequest` fields: `lists` (`MailingListTopic` list, required, one or more), `frequency` (`MailingFrequency`, required). Any `email` in the body is ignored.
 
-`MailingListTopic` values: `LIVES_OF_SAINTS`, `CHILDRENS_FICTION`, `READ_ALOUD_BOOKS`, `NEW_CATALOG_ENTRIES`, `ADULT_FICTION`.
+`MailingListTopic` values: `LIVES_OF_SAINTS`, `LIVES_OF_MEN_SAINTS`, `LIVES_OF_WOMEN_SAINTS`, `CHILDRENS_FICTION`, `READ_ALOUD_BOOKS`, `NEW_CATALOG_ENTRIES`, `ADULT_FICTION`. `LIVES_OF_SAINTS` includes every saint in the window. The men and women lists keep only books whose main character is male or female. A blank main character stays on `LIVES_OF_SAINTS` only.
 
 Response: `200 OK` body `MailingListSignupResponse` field `results`, a list of lines. Each line has `list`, `displayName`, `frequency`, `status` (`created`, `resubscribed`, or `already_subscribed`), `message`, and `sent`. `401 Unauthorized` when the caller is not logged in. `400 Bad Request` body `ErrorResponse` when the frequency or list selection is missing or invalid, or the account has no email address. An SSO account cannot add an email here.
 

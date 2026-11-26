@@ -15,8 +15,10 @@ import { useUpdateUserSettings, useUserSettings } from '@/api/settings'
 import { isValidOptionalEmail } from '@/utils/contact'
 import { isSsoAccount } from '@/utils/sso'
 
-const LISTS: { id: MailingListId; label: string }[] = [
-  { id: 'LIVES_OF_SAINTS', label: 'Lives of Saints' },
+const LISTS: { id: MailingListId; label: string; hint?: string }[] = [
+  { id: 'LIVES_OF_SAINTS', label: 'Lives of Saints', hint: 'Men and women' },
+  { id: 'LIVES_OF_MEN_SAINTS', label: 'Lives of Men Saints' },
+  { id: 'LIVES_OF_WOMEN_SAINTS', label: 'Lives of Women Saints' },
   { id: 'CHILDRENS_FICTION', label: 'Childrens Fiction' },
   { id: 'READ_ALOUD_BOOKS', label: 'Read-aloud Books' },
   { id: 'NEW_CATALOG_ENTRIES', label: 'New Catalog Entries' },
@@ -171,7 +173,10 @@ export function MailingListsPage() {
                     onChange={() => toggle(list.id)}
                     data-test={`mailing-list-${list.id}`}
                   />
-                  {list.label}
+                  <span>
+                    {list.label}
+                    {list.hint ? <span className="text-gray-500"> — {list.hint}</span> : null}
+                  </span>
                 </label>
               ))}
             </fieldset>
