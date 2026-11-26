@@ -2,6 +2,7 @@
 package com.muczynski.library.service;
 import com.muczynski.library.exception.LibraryException;
 
+import com.muczynski.library.domain.SsoAccounts;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.UserDto;
 import com.muczynski.library.dto.UserSettingsDto;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -34,6 +36,9 @@ public class UserSettingsService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private MailingListService mailingListService;
 
     @Transactional(readOnly = true)
     public UserDto getUserSettings(Long userId) {
@@ -113,7 +118,15 @@ public class UserSettingsService {
         }
 
         if (userSettingsDto.getEmail() != null) {
-            user.setEmail(normalizeOptionalEmail(userSettingsDto.getEmail()));
+            String normalized = normalizeOptionalEmail(userSettingsDto.getEmail());
+            if (SsoAccounts.isSso(user) && !sameEmail(user.getEmail(), normalized)) {
+                throw new LibraryException("Email cannot be changed for an SSO user");
+            }
+            String previous = user.getEmail();
+            if (!sameEmail(previous, normalized)) {
+                mailingListService.moveEmail(previous, normalized);
+            }
+            user.setEmail(normalized);
         }
 
         if (userSettingsDto.getPhone() != null) {
@@ -156,6 +169,12 @@ public class UserSettingsService {
             return;
         }
         throw new LibraryException("Enable only one AI provider");
+    }
+
+    private static boolean sameEmail(String current, String requested) {
+        String left = current == null || current.isBlank() ? null : current;
+        String right = requested == null || requested.isBlank() ? null : requested;
+        return Objects.equals(left, right);
     }
 
     private String normalizeOptionalEmail(String email) {

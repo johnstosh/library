@@ -112,12 +112,33 @@ public class SettingsUITest {
     }
 
     /**
-     * Navigate to Global Settings via the nav link (client-side navigation preserves auth state).
-     * This is more reliable than direct URL navigation since auth state is already loaded.
+     * Open Global Settings from the account menu. It is not in the primary nav.
+     * Client-side navigation preserves auth state.
      */
     private void navigateToGlobalSettings() {
-        page.click("[data-test='nav-global-settings']");
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        Locator globalSettings = page.locator("[data-test='nav-global-settings']");
+        PlaywrightException lastError = null;
+        for (int attempt = 0; attempt < 5; attempt++) {
+            userMenu.click();
+            try {
+                globalSettings.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000L));
+                // The anchored account menu replaces its DOM node when the header
+                // reflows, so a normal click waits on a detached item until timeout.
+                globalSettings.evaluate("el => el.click()");
+                page.waitForURL("**/global-settings", new Page.WaitForURLOptions().setTimeout(10000L));
+                page.waitForLoadState(LoadState.NETWORKIDLE);
+                return;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new AssertionError("Could not open Global Settings from the account menu");
     }
 
     // ==================== USER AUTHORITY TESTS ====================
@@ -298,6 +319,26 @@ public class SettingsUITest {
     @DisplayName("USER: Should NOT have access to Global Settings")
     void testUserCannotAccessGlobalSettings() {
         login("testuser", "password");
+
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        Locator settings = page.locator("[data-test='nav-settings']");
+        PlaywrightException lastError = null;
+        boolean menuOpened = false;
+        for (int attempt = 0; attempt < 5 && !menuOpened; attempt++) {
+            userMenu.click();
+            try {
+                settings.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000L));
+                menuOpened = true;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (!menuOpened && lastError != null) {
+            throw lastError;
+        }
+        assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
 
         // Try to navigate directly to global settings
         page.navigate(getBaseUrl() + "/global-settings");

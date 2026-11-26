@@ -37,6 +37,9 @@ class UserSettingsServiceTest {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private MailingListService mailingListService;
+
     @InjectMocks
     private UserSettingsService userSettingsService;
 
@@ -461,6 +464,91 @@ class UserSettingsServiceTest {
             .isInstanceOf(LibraryException.class)
             .hasMessageContaining("Invalid email address");
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUserSettings_rejectsEmailChangeForSsoProvider() {
+        testUser.setSsoProvider("google");
+        testUser.setEmail("sso@example.com");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("other@example.com");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("Email cannot be changed for an SSO user");
+        assertThat(testUser.getEmail()).isEqualTo("sso@example.com");
+        verify(userRepository, never()).save(any());
+        verify(mailingListService, never()).moveEmail(any(), any());
+    }
+
+    @Test
+    void updateUserSettings_rejectsEmailChangeWhenOnlySsoSubjectIsSet() {
+        testUser.setSsoProvider("local");
+        testUser.setSsoSubjectId("subject-1");
+        testUser.setEmail("sso@example.com");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("other@example.com");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        assertThatThrownBy(() -> userSettingsService.updateUserSettings(1L, dto))
+            .isInstanceOf(LibraryException.class)
+            .hasMessageContaining("Email cannot be changed for an SSO user");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUserSettings_allowsSsoUserToSendTheSameEmail() {
+        testUser.setSsoProvider("google");
+        testUser.setSsoSubjectId("subject-1");
+        testUser.setEmail("sso@example.com");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("sso@example.com");
+        dto.setPhone("555-0100");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getEmail()).isEqualTo("sso@example.com");
+        assertThat(result.getPhone()).isEqualTo("555-0100");
+        verify(mailingListService, never()).moveEmail(any(), any());
+    }
+
+    @Test
+    void updateUserSettings_allowsSsoUserToOmitEmail() {
+        testUser.setSsoSubjectId("subject-1");
+        testUser.setEmail("sso@example.com");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setPhone("555-0199");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getEmail()).isEqualTo("sso@example.com");
+        assertThat(result.getPhone()).isEqualTo("555-0199");
+        verify(mailingListService, never()).moveEmail(any(), any());
+    }
+
+    @Test
+    void updateUserSettings_localUserCanChangeEmailAndMovesSubscriptions() {
+        testUser.setSsoProvider("local");
+        testUser.setEmail("old@example.com");
+        UserSettingsDto dto = new UserSettingsDto();
+        dto.setEmail("new@example.com");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+
+        UserDto result = userSettingsService.updateUserSettings(1L, dto);
+
+        assertThat(result.getEmail()).isEqualTo("new@example.com");
+        verify(mailingListService).moveEmail("old@example.com", "new@example.com");
     }
 
     @Test

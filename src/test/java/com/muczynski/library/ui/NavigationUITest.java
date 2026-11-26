@@ -186,7 +186,9 @@ public class NavigationUITest {
             // Open the mobile hamburger and confirm My Card is not in the primary panel
             mobilePage.click("[data-test='mobile-menu-button']");
             assertThat(mobilePage.locator("[data-test='nav-loans-mobile']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='nav-mailing-lists-mobile']")).isVisible();
             assertThat(mobilePage.locator("[data-test='nav-my-card']")).not().isVisible();
+            assertThat(mobilePage.locator("[data-test='nav-global-settings']")).not().isVisible();
 
             // My Card lives in the account menu
             Locator mobileUserMenu = mobilePage.locator("[data-test='nav-user-menu']");
@@ -195,6 +197,7 @@ public class NavigationUITest {
                     new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(10000L));
 
             Locator myCardLink = mobilePage.locator("[data-test='nav-my-card']");
+            assertThat(mobilePage.locator("[data-test='nav-global-settings']")).isVisible();
             assertThat(myCardLink).isVisible();
             assertThat(myCardLink).containsText("My Card");
             assertThat(myCardLink).hasAttribute("href", "/my-card");
@@ -205,7 +208,7 @@ public class NavigationUITest {
     }
 
     @Test
-    @DisplayName("Account menu should contain Settings, My Card, and Logout when logged in")
+    @DisplayName("Account menu should contain Settings, Global Settings, My Card, and Logout for a librarian")
     void testAuthenticatedNavigationItemsVisible() {
         // Login as librarian
         loginAsLibrarian();
@@ -219,14 +222,18 @@ public class NavigationUITest {
                 new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
 
         assertThat(page.locator("[data-test='nav-loans']")).isVisible();
+        assertThat(page.locator("[data-test='nav-mailing-lists']")).isVisible();
         assertThat(page.locator("[data-test='nav-user-menu']")).isVisible();
+        assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
 
         openAccountMenu();
 
         assertThat(page.locator("[data-test='nav-settings']")).isVisible();
+        assertThat(page.locator("[data-test='nav-global-settings']")).isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).isVisible();
         assertThat(page.locator("[data-test='nav-logout']")).isVisible();
         assertThat(page.locator("[data-test='nav-settings']")).hasAttribute("href", "/settings");
+        assertThat(page.locator("[data-test='nav-global-settings']")).hasAttribute("href", "/global-settings");
     }
 
     @Test
@@ -245,8 +252,10 @@ public class NavigationUITest {
 
         // Verify authenticated navigation items are NOT visible
         assertThat(page.locator("[data-test='nav-loans']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-mailing-lists']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-user-menu']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-settings']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-logout']")).not().isVisible();
     }

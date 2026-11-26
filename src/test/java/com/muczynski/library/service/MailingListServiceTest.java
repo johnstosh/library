@@ -64,6 +64,10 @@ class MailingListServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(subscriptions.findByEmail(anyString())).thenAnswer(invocation -> {
+            String email = invocation.getArgument(0);
+            return rows.stream().filter(row -> row.getEmail().equals(email)).toList();
+        });
         lenient().when(subscriptions.findByEmailAndTopic(anyString(), any())).thenAnswer(invocation -> {
             String email = invocation.getArgument(0);
             MailingListTopic topic = invocation.getArgument(1);
@@ -221,6 +225,62 @@ class MailingListServiceTest {
         } finally {
             logger.detachAppender(appender);
         }
+    }
+
+    @Test
+    void moveEmailKeepsTheListAndTokenOnTheNewAddress() {
+        MailingListSubscription row = subscription("old@example.com", MailingListTopic.ADULT_FICTION,
+                MailingFrequency.MONTHLY, true, "token-old");
+        rows.add(row);
+
+        service.moveEmail("old@example.com", "new@example.com");
+
+        assertEquals("new@example.com", row.getEmail());
+        assertEquals("token-old", row.getUnsubscribeToken());
+        assertTrue(row.isActive());
+        assertTrue(subscriptions.findByEmailAndTopic("old@example.com", MailingListTopic.ADULT_FICTION).isEmpty());
+    }
+
+    @Test
+    void moveEmailStopsTheOldAddressWhenTheNewAddressAlreadyHasTheList() {
+        MailingListSubscription oldRow = subscription("old@example.com", MailingListTopic.ADULT_FICTION,
+                MailingFrequency.MONTHLY, true, "token-old");
+        MailingListSubscription kept = subscription("new@example.com", MailingListTopic.ADULT_FICTION,
+                MailingFrequency.WEEKLY, false, "token-new");
+        rows.add(oldRow);
+        rows.add(kept);
+
+        service.moveEmail("old@example.com", "new@example.com");
+
+        assertEquals("old@example.com", oldRow.getEmail());
+        assertFalse(oldRow.isActive());
+        assertTrue(kept.isActive());
+        assertEquals(MailingFrequency.MONTHLY, kept.getFrequency());
+        assertEquals("token-new", kept.getUnsubscribeToken());
+    }
+
+    @Test
+    void moveEmailTurnsOffMailWhenTheAddressIsCleared() {
+        MailingListSubscription row = subscription("old@example.com", MailingListTopic.READ_ALOUD_BOOKS,
+                MailingFrequency.DAILY, true, "token-old");
+        rows.add(row);
+
+        service.moveEmail("old@example.com", null);
+
+        assertEquals("old@example.com", row.getEmail());
+        assertFalse(row.isActive());
+    }
+
+    private static MailingListSubscription subscription(String email, MailingListTopic topic,
+                                                        MailingFrequency frequency, boolean active, String token) {
+        MailingListSubscription row = new MailingListSubscription();
+        row.setId((long) token.hashCode());
+        row.setEmail(email);
+        row.setTopic(topic);
+        row.setFrequency(frequency);
+        row.setActive(active);
+        row.setUnsubscribeToken(token);
+        return row;
     }
 
     private static int count(String text, String needle) {

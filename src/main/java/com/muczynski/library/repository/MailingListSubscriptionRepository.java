@@ -17,6 +17,8 @@ public interface MailingListSubscriptionRepository extends JpaRepository<Mailing
 
     Optional<MailingListSubscription> findByEmailAndTopic(String email, MailingListTopic topic);
 
+    List<MailingListSubscription> findByEmail(String email);
+
     Optional<MailingListSubscription> findByUnsubscribeToken(String unsubscribeToken);
 
     List<MailingListSubscription> findByActiveTrueAndFrequency(MailingFrequency frequency);

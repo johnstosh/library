@@ -12,7 +12,6 @@ export type MailingListId =
 export type MailingFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY'
 
 export interface MailingListSignupRequest {
-  email: string
   lists: MailingListId[]
   frequency: MailingFrequency
 }
@@ -33,8 +32,6 @@ export interface MailingListSignupResponse {
 export function useJoinMailingLists() {
   return useMutation({
     mutationFn: (data: MailingListSignupRequest) =>
-      api.post<MailingListSignupResponse>('/public/mailing-lists/subscriptions', data, {
-        requireAuth: false,
-      }),
+      api.post<MailingListSignupResponse>('/mailing-lists/subscriptions', data),
   })
 }

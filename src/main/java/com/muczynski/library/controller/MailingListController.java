@@ -4,16 +4,20 @@
 package com.muczynski.library.controller;
 
 import com.muczynski.library.domain.MailingListTopic;
+import com.muczynski.library.domain.SsoAccounts;
+import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.ErrorResponse;
 import com.muczynski.library.dto.MailingListSignupRequest;
 import com.muczynski.library.dto.MailingListSignupResponse;
 import com.muczynski.library.email.EmailAddresses;
 import com.muczynski.library.email.HtmlText;
+import com.muczynski.library.repository.UserRepository;
 import com.muczynski.library.service.MailingListService;
 import com.muczynski.library.service.MailingListUnsubscribe;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,12 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Public signup and one-click unsubscribe. Neither requires a login.
+ * Logged-in signup and public one-click unsubscribe.
+ * Signup uses the account email and ignores any address in the body.
  * The unsubscribe token is a path secret and is not logged.
  */
 @RestController
@@ -36,17 +42,17 @@ public class MailingListController {
     private static final MediaType TEXT = new MediaType("text", "plain", StandardCharsets.UTF_8);
 
     private final MailingListService mailingListService;
+    private final UserRepository userRepository;
 
-    public MailingListController(MailingListService mailingListService) {
+    public MailingListController(MailingListService mailingListService, UserRepository userRepository) {
         this.mailingListService = mailingListService;
+        this.userRepository = userRepository;
     }
 
-    @PostMapping("/api/public/mailing-lists/subscriptions")
-    public ResponseEntity<?> subscribe(@RequestBody MailingListSignupRequest request) {
-        if (request == null || !EmailAddresses.isValid(request.getEmail())) {
-            return bad("INVALID_EMAIL", "Enter a valid email address.");
-        }
-        if (request.getFrequency() == null) {
+    @PostMapping("/api/mailing-lists/subscriptions")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> subscribe(@RequestBody MailingListSignupRequest request, Principal principal) {
+        if (request == null || request.getFrequency() == null) {
             return bad("INVALID_FREQUENCY", "Choose a frequency.");
         }
         List<MailingListTopic> lists = new ArrayList<>();
@@ -56,9 +62,24 @@ public class MailingListController {
         if (lists.isEmpty()) {
             return bad("INVALID_LIST", "Choose at least one mailing list.");
         }
+        User user = userRepository.findById(extractUserId(principal))
+                .orElseThrow(() -> new IllegalStateException("No authenticated user"));
+        if (!EmailAddresses.isValid(user.getEmail())) {
+            if (SsoAccounts.isSso(user)) {
+                return bad("SSO_EMAIL_REQUIRED", "An email address cannot be added here.");
+            }
+            return bad("INVALID_EMAIL", "Save an email address before joining a list.");
+        }
         MailingListSignupResponse response = mailingListService.subscribe(
-                request.getEmail(), lists, request.getFrequency());
+                user.getEmail(), lists, request.getFrequency());
         return ResponseEntity.ok(response);
+    }
+
+    private Long extractUserId(Principal principal) {
+        if (principal == null) {
+            throw new IllegalStateException("No authenticated user");
+        }
+        return Long.parseLong(principal.getName());
     }
 
     @GetMapping(value = "/mailing-lists/unsubscribe/{token}", produces = MediaType.TEXT_HTML_VALUE)

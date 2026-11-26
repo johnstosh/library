@@ -147,6 +147,68 @@ public class MailingListService {
         return new MailingListUnsubscribe(MailingListUnsubscribe.Kind.UNSUBSCRIBED, listName);
     }
 
+    /**
+     * Move this address's list rows onto the new account email.
+     * A blank new address turns the old rows off so mail stops.
+     * A list already stored at the new address stays; the old row is turned off
+     * when it was active, and an inactive destination is turned back on.
+     */
+    @Transactional
+    public void moveEmail(String oldEmail, String newEmail) {
+        if (oldEmail == null || oldEmail.isBlank()) {
+            return;
+        }
+        if (newEmail == null || newEmail.isBlank()) {
+            deactivateEmail(oldEmail);
+            return;
+        }
+        if (oldEmail.equals(newEmail)) {
+            return;
+        }
+        List<MailingListSubscription> rows = new ArrayList<>(subscriptions.findByEmail(oldEmail));
+        for (MailingListSubscription row : rows) {
+            Optional<MailingListSubscription> clash = subscriptions.findByEmailAndTopic(newEmail, row.getTopic());
+            if (clash.isPresent() && !sameRow(clash.get(), row)) {
+                keepListAtNewAddress(row, clash.get());
+                continue;
+            }
+            row.setEmail(newEmail);
+            subscriptions.save(row);
+        }
+    }
+
+    private void keepListAtNewAddress(MailingListSubscription oldRow, MailingListSubscription kept) {
+        if (oldRow.isActive() && !kept.isActive()) {
+            kept.setActive(true);
+            kept.setFrequency(oldRow.getFrequency());
+            kept.setUnsubscribedAt(null);
+            subscriptions.save(kept);
+        }
+        if (oldRow.isActive()) {
+            oldRow.setActive(false);
+            oldRow.setUnsubscribedAt(LocalDateTime.now(ZoneOffset.UTC));
+            subscriptions.save(oldRow);
+        }
+    }
+
+    private void deactivateEmail(String email) {
+        for (MailingListSubscription row : subscriptions.findByEmail(email)) {
+            if (!row.isActive()) {
+                continue;
+            }
+            row.setActive(false);
+            row.setUnsubscribedAt(LocalDateTime.now(ZoneOffset.UTC));
+            subscriptions.save(row);
+        }
+    }
+
+    private static boolean sameRow(MailingListSubscription left, MailingListSubscription right) {
+        if (left == right) {
+            return true;
+        }
+        return left.getId() != null && left.getId().equals(right.getId());
+    }
+
     private MailingListSignupResponse.Line subscribeOne(String email,
                                                         MailingListTopic topic,
                                                         MailingFrequency frequency,

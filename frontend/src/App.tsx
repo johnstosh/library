@@ -90,7 +90,6 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/mailing-lists" element={<MailingListsPage />} />
             <Route path="/apply" element={<ApplyForCardPage />} />
             <Route path="/books/:id" element={<BookViewPage />} />
             <Route path="/authors/:id" element={<AuthorViewPage />} />
@@ -114,6 +113,7 @@ function App() {
               <Route path="/loans/:id" element={<LoanViewPage />} />
               <Route path="/loans/:id/edit" element={<LoanEditPage />} />
               <Route path="/my-card" element={<MyLibraryCardPage />} />
+              <Route path="/mailing-lists" element={<MailingListsPage />} />
               <Route path="/settings" element={<UserSettingsPage />} />
 
               {/* Librarian-only routes */}

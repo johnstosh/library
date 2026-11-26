@@ -113,7 +113,7 @@ Ordering: Not specified by this endpoint.
 
 Notes:
 
-None.
+An SSO user (`ssoProvider` set and not `local`, or `ssoSubjectId` set) cannot change `email`. Sending the same email, or omitting it, still saves. A local user can change email. A changed address moves that user's mailing-list subscriptions onto the new address.
 
 ## DELETE /api/users/{id}
 

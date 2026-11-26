@@ -6,6 +6,7 @@ import com.muczynski.library.exception.LibraryException;
 
 import com.muczynski.library.domain.Applied;
 import com.muczynski.library.domain.Authority;
+import com.muczynski.library.domain.SsoAccounts;
 import com.muczynski.library.domain.User;
 import com.muczynski.library.dto.CreateUserDto;
 import com.muczynski.library.dto.UserDto;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -48,6 +50,9 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MailingListService mailingListService;
 
     public List<UserDto> getAllUsers() {
         List<UserDto> userDtos = userRepository.findAll().stream()
@@ -163,7 +168,15 @@ public class UserService {
             user.setAuthorities(Collections.singleton(authority));
         }
         if (dto.getEmail() != null) {
-            user.setEmail(normalizeOptionalEmail(dto.getEmail()));
+            String normalized = normalizeOptionalEmail(dto.getEmail());
+            if (SsoAccounts.isSso(user) && !sameEmail(user.getEmail(), normalized)) {
+                throw new LibraryException("Email cannot be changed for an SSO user");
+            }
+            String previous = user.getEmail();
+            if (!sameEmail(previous, normalized)) {
+                mailingListService.moveEmail(previous, normalized);
+            }
+            user.setEmail(normalized);
         }
         if (dto.getPhone() != null) {
             user.setPhone(normalizeOptionalPhone(dto.getPhone()));
@@ -231,6 +244,12 @@ public class UserService {
             return ssoUsers.get(0).getId();
         }
         return null;
+    }
+
+    private static boolean sameEmail(String current, String requested) {
+        String left = current == null || current.isBlank() ? null : current;
+        String right = requested == null || requested.isBlank() ? null : requested;
+        return Objects.equals(left, right);
     }
 
     private String normalizeOptionalEmail(String email) {

@@ -332,7 +332,7 @@ Notes:
 
 ## GET /mailing-lists
 
-Auth: Public. no `@PreAuthorize`; HTTP GET `/mailing-lists` is permitAll.
+Auth: Authenticated. no `@PreAuthorize`; HTTP `anyRequest` requires a logged-in user.
 
 Parameters:
 
@@ -346,7 +346,7 @@ Ordering: Not specified by this endpoint.
 
 Notes:
 
-The signup page. Unsubscribe stays on `MailingListController` and is not forwarded here.
+The signup page for a logged-in user. Unsubscribe stays on `MailingListController` and is not forwarded here.
 
 ## GET /my-card
 

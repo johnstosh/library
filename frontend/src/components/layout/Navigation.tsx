@@ -82,9 +82,9 @@ export function Navigation() {
               {/* Desktop nav — hidden on mobile */}
               <nav className="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
                 <NavLink to="/search" className={desktopNavCls} data-test="nav-search">Search</NavLink>
-                <NavLink to="/mailing-lists" className={desktopNavCls} data-test="nav-mailing-lists">Mailing Lists</NavLink>
                 {isAuthenticated && (
                   <>
+                    <NavLink to="/mailing-lists" className={desktopNavCls} data-test="nav-mailing-lists">Mailing Lists</NavLink>
                     <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
                     <NavLink to="/authors"  className={desktopNavCls} data-test="nav-authors">Authors</NavLink>
                     <NavLink to="/loans"    className={desktopNavCls} data-test="nav-loans">Loans</NavLink>
@@ -101,7 +101,6 @@ export function Navigation() {
                     <NavLink to="/sellers" className={desktopNavCls} data-test="nav-sellers">Sellers</NavLink>
                     <NavLink to="/savings" className={desktopNavCls} data-test="nav-savings">Savings</NavLink>
                     <NavLink to="/photos-management" className={desktopNavCls} data-test="nav-photos">Photos</NavLink>
-                    <NavLink to="/global-settings" className={desktopNavCls} data-test="nav-global-settings">Global Settings</NavLink>
                   </>
                 )}
               </nav>
@@ -158,6 +157,19 @@ export function Navigation() {
                             </NavLink>
                           )}
                         </MenuItem>
+                        {isLibrarian && (
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/global-settings"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-global-settings"
+                              >
+                                Global Settings
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                        )}
                         <MenuItem>
                           {({ focus }) => (
                             <NavLink
@@ -203,9 +215,9 @@ export function Navigation() {
           <DisclosurePanel className="md:hidden border-t border-gray-200 bg-white">
             <nav className="mx-[2%] py-2 space-y-1" aria-label="Primary mobile">
               <NavLink to="/search" className={mobileNavCls} data-test="nav-search-mobile" onClick={() => close()}>Search</NavLink>
-              <NavLink to="/mailing-lists" className={mobileNavCls} data-test="nav-mailing-lists-mobile" onClick={() => close()}>Mailing Lists</NavLink>
               {isAuthenticated && (
                 <>
+                  <NavLink to="/mailing-lists" className={mobileNavCls} data-test="nav-mailing-lists-mobile" onClick={() => close()}>Mailing Lists</NavLink>
                   <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>
                   <NavLink to="/authors"  className={mobileNavCls} data-test="nav-authors-mobile"  onClick={() => close()}>Authors</NavLink>
                   <NavLink to="/loans"    className={mobileNavCls} data-test="nav-loans-mobile"    onClick={() => close()}>Loans</NavLink>
@@ -225,7 +237,6 @@ export function Navigation() {
                   <NavLink to="/sellers"           className={mobileNavCls} data-test="nav-sellers-mobile"       onClick={() => close()}>Sellers</NavLink>
                   <NavLink to="/savings"           className={mobileNavCls} data-test="nav-savings-mobile"       onClick={() => close()}>Savings</NavLink>
                   <NavLink to="/photos-management" className={mobileNavCls} data-test="nav-photos-mobile"        onClick={() => close()}>Photos</NavLink>
-                  <NavLink to="/global-settings"   className={mobileNavCls} data-test="nav-global-settings-mobile" onClick={() => close()}>Global Settings</NavLink>
                 </>
               )}
             </nav>
