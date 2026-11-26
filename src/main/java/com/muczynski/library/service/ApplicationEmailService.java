@@ -17,6 +17,7 @@ import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.email.HtmlText;
+import com.muczynski.library.email.LogEmailSender;
 import com.muczynski.library.email.OutgoingEmail;
 import com.muczynski.library.email.PendingApplicationNotice;
 import com.muczynski.library.repository.UserRepository;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -50,6 +52,7 @@ public class ApplicationEmailService implements EmailChangeHandler {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final OutgoingEmail outgoingEmail;
+    private final AccountNoticeMail accountNoticeMail;
     private final Map<EmailMethod, EmailSender> senders;
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
@@ -59,11 +62,13 @@ public class ApplicationEmailService implements EmailChangeHandler {
                                    UserRepository userRepository,
                                    ObjectMapper objectMapper,
                                    OutgoingEmail outgoingEmail,
+                                   AccountNoticeMail accountNoticeMail,
                                    List<EmailSender> senderList) {
         this.globalSettingsService = globalSettingsService;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.outgoingEmail = outgoingEmail;
+        this.accountNoticeMail = accountNoticeMail;
         this.senders = new EnumMap<>(EmailMethod.class);
         for (EmailSender sender : senderList) {
             this.senders.put(sender.getMethod(), sender);
@@ -102,13 +107,13 @@ public class ApplicationEmailService implements EmailChangeHandler {
                     "PENDING"));
         } catch (RuntimeException e) {
             logger.error("Failed to send application email for '{}': {}",
-                    notice.getApplicantName(), e.getMessage(), e);
+                    notice.getApplicantName(), LogEmailSender.redact(e.getMessage()));
         }
     }
 
     /**
-     * One message, every recipient in To. Librarians and the applicant are not
-     * split into separate emails.
+     * One message per recipient. A user gets that account's unsubscribe link.
+     * An address that is not a user is sent without it.
      */
     public void sendApplicationChange(ApplicationMailSnapshot before, ApplicationMailSnapshot after) {
         if (before == null && after == null) {
@@ -182,17 +187,19 @@ public class ApplicationEmailService implements EmailChangeHandler {
             return;
         }
         String reviewUrl = reviewApplicationsUrl();
-        EmailMessage message = baseMessage(settings, recipients);
-        message.setEvent(event);
-        message.setSubject(subject);
-        outgoingEmail.apply(message,
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("applicationId", shown.id());
+        payload.put("applicantName", shown.name());
+        payload.put("applicantEmail", shown.email());
+        payload.put("status", shown.status());
+        accountNoticeMail.send(sender, settings, recipients, new AccountNoticeMail.Draft(
+                trim(settings.getEmailFromAddress()),
+                trim(settings.getEmailFromName()),
+                event,
+                subject,
+                payload,
                 ChangeDescription.text(intro, lines, reviewUrl),
-                ChangeDescription.html(intro, lines, reviewUrl));
-        message.getEventPayload().put("applicationId", shown.id());
-        message.getEventPayload().put("applicantName", shown.name());
-        message.getEventPayload().put("applicantEmail", shown.email());
-        message.getEventPayload().put("status", shown.status());
-        sender.send(message, settings);
+                ChangeDescription.html(intro, lines, reviewUrl)));
     }
 
     public TestEmailResultDto sendTestEmail(String toOverride) {
@@ -215,10 +222,12 @@ public class ApplicationEmailService implements EmailChangeHandler {
         }
 
         List<String> recipients;
+        boolean accountNotice = false;
         if (EmailAddresses.isValid(toOverride)) {
             recipients = List.of(toOverride.trim());
         } else {
             recipients = withoutOptedOutUsers(resolveLibrarianRecipients(settings));
+            accountNotice = true;
         }
         if (recipients.isEmpty()) {
             result.setSent(false);
@@ -227,7 +236,18 @@ public class ApplicationEmailService implements EmailChangeHandler {
         }
 
         try {
-            sender.send(composeTestMessage(recipients, settings), settings);
+            if (accountNotice) {
+                accountNoticeMail.send(sender, settings, recipients, new AccountNoticeMail.Draft(
+                        trim(settings.getEmailFromAddress()),
+                        trim(settings.getEmailFromName()),
+                        EVENT_TEST,
+                        "Library email test",
+                        Map.of(),
+                        testText(settings),
+                        testHtml(settings)));
+            } else {
+                sender.send(composeTestMessage(recipients, settings), settings);
+            }
             result.setSent(true);
             result.setRecipients(recipients);
             result.setMessage("Test email sent via " + method + " to " + recipients);
@@ -301,15 +321,25 @@ public class ApplicationEmailService implements EmailChangeHandler {
         EmailMessage message = baseMessage(settings, recipients);
         message.setEvent(EVENT_TEST);
         message.setSubject("Library email test");
-        outgoingEmail.apply(message,
-                "This is a test message from the library application.\n"
-                        + "Email method: " + effectiveMethod(settings) + "\n"
-                        + "If you received this, outbound email is working.\n",
-                "<p>This is a test message from the library application.</p>"
-                        + "<p>Email method: <strong>" + HtmlText.escape(effectiveMethod(settings).name())
-                        + "</strong></p>"
-                        + "<p>If you received this, outbound email is working.</p>");
+        outgoingEmail.apply(message, testText(settings), testHtml(settings));
         return message;
+    }
+
+    private String testText(GlobalSettings settings) {
+        return "This is a test message from the library application.\n"
+                + "Email method: " + effectiveMethod(settings) + "\n"
+                + "If you received this, outbound email is working.\n";
+    }
+
+    private String testHtml(GlobalSettings settings) {
+        return "<p>This is a test message from the library application.</p>"
+                + "<p>Email method: <strong>" + HtmlText.escape(effectiveMethod(settings).name())
+                + "</strong></p>"
+                + "<p>If you received this, outbound email is working.</p>";
+    }
+
+    private static String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private ApplicationMailSnapshot readSnapshot(String json) throws JsonProcessingException {

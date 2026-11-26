@@ -11,22 +11,22 @@ import com.muczynski.library.email.ChangeDescription;
 import com.muczynski.library.email.EmailAddresses;
 import com.muczynski.library.email.EmailChangeHandler;
 import com.muczynski.library.email.EmailChangeKinds;
-import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.email.EmailSender;
 import com.muczynski.library.email.HtmlText;
 import com.muczynski.library.email.LoanMailSnapshot;
-import com.muczynski.library.email.OutgoingEmail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * One email for a loan, with the borrower and the librarians together in To.
+ * One email per recipient for a loan. A user gets an unsubscribe link for that account.
  */
 @Service
 public class LoanChangeEmailService implements EmailChangeHandler {
@@ -37,7 +37,7 @@ public class LoanChangeEmailService implements EmailChangeHandler {
 
     private final GlobalSettingsService globalSettingsService;
     private final ApplicationEmailService applicationEmailService;
-    private final OutgoingEmail outgoingEmail;
+    private final AccountNoticeMail accountNoticeMail;
     private final ObjectMapper objectMapper;
 
     @Value("${app.external-base-url:https://library.muczynskifamily.com}")
@@ -45,11 +45,11 @@ public class LoanChangeEmailService implements EmailChangeHandler {
 
     public LoanChangeEmailService(GlobalSettingsService globalSettingsService,
                                   ApplicationEmailService applicationEmailService,
-                                  OutgoingEmail outgoingEmail,
+                                  AccountNoticeMail accountNoticeMail,
                                   ObjectMapper objectMapper) {
         this.globalSettingsService = globalSettingsService;
         this.applicationEmailService = applicationEmailService;
-        this.outgoingEmail = outgoingEmail;
+        this.accountNoticeMail = accountNoticeMail;
         this.objectMapper = objectMapper;
     }
 
@@ -124,19 +124,21 @@ public class LoanChangeEmailService implements EmailChangeHandler {
             subject = "Library loan changed: " + title;
         }
         String link = loanUrl(shown.id());
-
-        EmailMessage message = new EmailMessage();
-        message.getTo().addAll(recipients);
-        message.setFromAddress(settings.getEmailFromAddress() != null ? settings.getEmailFromAddress().trim() : null);
-        message.setFromName(settings.getEmailFromName() != null ? settings.getEmailFromName().trim() : null);
-        message.setEvent(EVENT);
-        message.setSubject(subject);
-        outgoingEmail.apply(message,
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("loanId", shown.id());
+        payload.put("bookTitle", shown.bookTitle());
+        accountNoticeMail.send(sender, settings, recipients, new AccountNoticeMail.Draft(
+                trim(settings.getEmailFromAddress()),
+                trim(settings.getEmailFromName()),
+                EVENT,
+                subject,
+                payload,
                 ChangeDescription.text(intro, lines, link),
-                ChangeDescription.html(intro, lines, link));
-        message.getEventPayload().put("loanId", shown.id());
-        message.getEventPayload().put("bookTitle", shown.bookTitle());
-        sender.send(message, settings);
+                ChangeDescription.html(intro, lines, link)));
+    }
+
+    private static String trim(String value) {
+        return value == null ? null : value.trim();
     }
 
     private LoanMailSnapshot read(String json) {

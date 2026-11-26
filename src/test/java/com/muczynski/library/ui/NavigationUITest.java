@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * UI Tests for Navigation component using Playwright.
@@ -73,6 +74,10 @@ public class NavigationUITest {
      * Helper method to login as librarian
      */
     private void loginAsLibrarian() {
+        loginAs("librarian", "**/books");
+    }
+
+    private void loginAs(String username, String urlGlob) {
         page.navigate(getBaseUrl() + "/login");
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
@@ -81,14 +86,14 @@ public class NavigationUITest {
                 new Page.WaitForSelectorOptions().setTimeout(30000L));
 
         // Fill login form
-        page.fill("[data-test='login-username']", "librarian");
+        page.fill("[data-test='login-username']", username);
         page.fill("[data-test='login-password']", "password");
 
         // Submit
         page.click("[data-test='login-submit']");
 
         // Wait for successful login
-        page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
+        page.waitForURL(urlGlob, new Page.WaitForURLOptions().setTimeout(10000L));
     }
 
     private void openAccountMenu() {
@@ -188,19 +193,26 @@ public class NavigationUITest {
             assertThat(mobilePage.locator("[data-test='nav-loans-mobile']")).isVisible();
             assertThat(mobilePage.locator("[data-test='nav-mailing-lists-mobile']")).isVisible();
             assertThat(mobilePage.locator("[data-test='nav-my-card']")).not().isVisible();
-            assertThat(mobilePage.locator("[data-test='nav-global-settings']")).not().isVisible();
+            assertThat(mobilePage.locator("nav[aria-label='Primary mobile'] [data-test='nav-branches']")).hasCount(0);
+            assertThat(mobilePage.locator("nav[aria-label='Primary mobile'] [data-test='nav-users']")).hasCount(0);
+            assertThat(mobilePage.locator("nav[aria-label='Primary mobile'] [data-test='nav-applications']")).hasCount(0);
+            assertThat(mobilePage.locator("nav[aria-label='Primary mobile'] [data-test='nav-global-settings']")).hasCount(0);
 
-            // My Card lives in the account menu
+            // My Card lives in the account menu, with librarian links beside Logout
             Locator mobileUserMenu = mobilePage.locator("[data-test='nav-user-menu']");
             mobileUserMenu.click();
             mobilePage.locator("[data-test='nav-logout']").waitFor(
                     new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(10000L));
 
             Locator myCardLink = mobilePage.locator("[data-test='nav-my-card']");
+            assertThat(mobilePage.locator("[data-test='nav-branches']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='nav-users']")).isVisible();
+            assertThat(mobilePage.locator("[data-test='nav-applications']")).isVisible();
             assertThat(mobilePage.locator("[data-test='nav-global-settings']")).isVisible();
             assertThat(myCardLink).isVisible();
             assertThat(myCardLink).containsText("My Card");
             assertThat(myCardLink).hasAttribute("href", "/my-card");
+            assertAccountMenuOrder(mobilePage.locator("[data-test='nav-account-menu']").innerText(), true);
         } finally {
             // Close mobile context; do not update page field to avoid double-close in @AfterEach
             mobileContext.close();
@@ -208,7 +220,7 @@ public class NavigationUITest {
     }
 
     @Test
-    @DisplayName("Account menu should contain Settings, Global Settings, My Card, and Logout for a librarian")
+    @DisplayName("Account menu should contain Settings, My Card, librarian links, and Logout")
     void testAuthenticatedNavigationItemsVisible() {
         // Login as librarian
         loginAsLibrarian();
@@ -224,16 +236,81 @@ public class NavigationUITest {
         assertThat(page.locator("[data-test='nav-loans']")).isVisible();
         assertThat(page.locator("[data-test='nav-mailing-lists']")).isVisible();
         assertThat(page.locator("[data-test='nav-user-menu']")).isVisible();
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-branches']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-users']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-applications']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-global-settings']")).hasCount(0);
         assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
 
         openAccountMenu();
 
         assertThat(page.locator("[data-test='nav-settings']")).isVisible();
-        assertThat(page.locator("[data-test='nav-global-settings']")).isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).isVisible();
+        assertThat(page.locator("[data-test='nav-branches']")).isVisible();
+        assertThat(page.locator("[data-test='nav-users']")).isVisible();
+        assertThat(page.locator("[data-test='nav-applications']")).isVisible();
+        assertThat(page.locator("[data-test='nav-global-settings']")).isVisible();
         assertThat(page.locator("[data-test='nav-logout']")).isVisible();
         assertThat(page.locator("[data-test='nav-settings']")).hasAttribute("href", "/settings");
+        assertThat(page.locator("[data-test='nav-branches']")).hasAttribute("href", "/branches");
+        assertThat(page.locator("[data-test='nav-users']")).hasAttribute("href", "/users");
+        assertThat(page.locator("[data-test='nav-applications']")).hasAttribute("href", "/applications");
         assertThat(page.locator("[data-test='nav-global-settings']")).hasAttribute("href", "/global-settings");
+        assertAccountMenuOrder(page.locator("[data-test='nav-account-menu']").innerText(), true);
+    }
+
+    @Test
+    @DisplayName("A patron does not see librarian links in the account menu")
+    void testPatronAccountMenuOmitsLibrarianItems() {
+        loginAs("patron", "**/search");
+        page.waitForSelector("[data-test='navigation']",
+                new Page.WaitForSelectorOptions().setTimeout(10000L).setState(WaitForSelectorState.VISIBLE));
+
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-branches']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-users']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-applications']")).hasCount(0);
+        assertThat(page.locator("nav[aria-label='Primary'] [data-test='nav-global-settings']")).hasCount(0);
+
+        openAccountMenu();
+
+        assertThat(page.locator("[data-test='nav-settings']")).isVisible();
+        assertThat(page.locator("[data-test='nav-my-card']")).isVisible();
+        assertThat(page.locator("[data-test='nav-logout']")).isVisible();
+        assertThat(page.locator("[data-test='nav-branches']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-users']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-applications']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
+        assertAccountMenuOrder(page.locator("[data-test='nav-account-menu']").innerText(), false);
+    }
+
+    private static void assertAccountMenuOrder(String menuText, boolean librarian) {
+        int settings = lineOf(menuText, "Settings");
+        int myCard = lineOf(menuText, "My Card");
+        int logout = lineOf(menuText, "Logout");
+        assertTrue(settings >= 0 && settings < myCard && myCard < logout, menuText);
+        if (!librarian) {
+            assertTrue(lineOf(menuText, "Branches") < 0, menuText);
+            assertTrue(lineOf(menuText, "Users") < 0, menuText);
+            assertTrue(lineOf(menuText, "Applications") < 0, menuText);
+            assertTrue(lineOf(menuText, "Global Settings") < 0, menuText);
+            return;
+        }
+        int branches = lineOf(menuText, "Branches");
+        int users = lineOf(menuText, "Users");
+        int applications = lineOf(menuText, "Applications");
+        int globalSettings = lineOf(menuText, "Global Settings");
+        assertTrue(myCard < branches && branches < users && users < applications
+                && applications < globalSettings && globalSettings < logout, menuText);
+    }
+
+    private static int lineOf(String menuText, String label) {
+        String[] lines = menuText.split("\\R");
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].trim().equals(label)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Test
@@ -255,6 +332,9 @@ public class NavigationUITest {
         assertThat(page.locator("[data-test='nav-mailing-lists']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-user-menu']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-settings']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-branches']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-users']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-applications']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-my-card']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-logout']")).not().isVisible();

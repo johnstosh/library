@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.regex.Pattern;
+
 /**
  * Records the email in application logs. Useful for verifying the pending-
  * application flow in Cloud Run or locally without a mail vendor.
@@ -49,10 +51,13 @@ public class LogEmailSender implements EmailSender {
     /**
      * Header names are logged. Unsubscribe URLs are not, because they contain the token.
      */
-    static String redact(String value) {
+    public static String redact(String value) {
         if (value == null) {
             return "";
         }
-        return value.replaceAll("(/mailing-lists/unsubscribe/)[^\\s\"'<>]+", "$1[redacted]");
+        String noticePath = Pattern.quote(NoticeUnsubscribePaths.PREFIX);
+        return value
+                .replaceAll("(/mailing-lists/unsubscribe/)[^\\s\"'<>]+", "$1[redacted]")
+                .replaceAll("(" + noticePath + ")[^\\s\"'<>]+", "$1[redacted]");
     }
 }

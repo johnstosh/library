@@ -140,6 +140,34 @@ class OutgoingEmailTest {
     }
 
     @Test
+    void applyPutsUnsubscribeAfterTheSignOffAndTheRepeatedBrand() {
+        when(branchRepository.findAll()).thenReturn(List.of(
+                branch("St. Martin de Porres", "Sacred Heart Library System")));
+        EmailMessage message = new EmailMessage();
+        String url = "https://library.muczynskifamily.com/notifications/unsubscribe/abc";
+
+        outgoingEmail.apply(message, "A library loan was changed.\n", "<p>A library loan was changed.</p>", url);
+
+        String text = message.getTextBody();
+        int signOff = text.indexOf(SIGN_OFF);
+        int brandAgain = text.indexOf(PROD_HEADER, signOff + SIGN_OFF.length());
+        int unsub = text.lastIndexOf("Unsubscribe");
+        assertTrue(signOff >= 0);
+        assertTrue(brandAgain > signOff);
+        assertTrue(unsub > brandAgain);
+        assertTrue(text.endsWith("Unsubscribe\n" + url));
+        assertFalse(text.substring(unsub).contains("St. Martin"));
+
+        String html = message.getHtmlBody();
+        int htmlSign = html.indexOf("-Saint Martin de Porres");
+        int htmlBrand = html.lastIndexOf("font-size:22px");
+        int htmlUnsub = html.lastIndexOf(">Unsubscribe</a>");
+        assertTrue(htmlSign < htmlBrand && htmlBrand < htmlUnsub);
+        assertTrue(html.endsWith("<p><a href=\"" + url + "\">Unsubscribe</a></p></div>"));
+        assertEquals(1, count(html, ">Unsubscribe</a>"));
+    }
+
+    @Test
     void mailingListHtmlPutsTheLastUnsubscribeAfterTheClosing() {
         when(branchRepository.findAll()).thenReturn(List.of(
                 branch("St. Martin de Porres", "Sacred Heart Library System")));

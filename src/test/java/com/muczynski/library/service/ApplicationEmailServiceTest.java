@@ -45,6 +45,9 @@ class ApplicationEmailServiceTest {
     @Mock
     private EmailSender logSender;
 
+    @Mock
+    private NotificationUnsubscribeService unsubscribes;
+
     private ApplicationEmailService service;
     private OutgoingEmail outgoingEmail;
     private GlobalSettings settings;
@@ -60,7 +63,8 @@ class ApplicationEmailServiceTest {
         branch.setLibrarySystemName("Sacred Heart Library System");
         lenient().when(branchRepository.findAll()).thenReturn(List.of(branch));
         service = new ApplicationEmailService(
-                globalSettingsService, userRepository, objectMapper, outgoingEmail, List.of(logSender));
+                globalSettingsService, userRepository, objectMapper, outgoingEmail,
+                new AccountNoticeMail(outgoingEmail, unsubscribes), List.of(logSender));
         ReflectionTestUtils.setField(service, "externalBaseUrl", "https://library.example.com");
         settings = new GlobalSettings();
         settings.setEmailMethod(EmailMethod.LOG);
@@ -109,8 +113,9 @@ class ApplicationEmailServiceTest {
         service.sendPendingNotifications(notice());
 
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
-        verify(logSender).send(captor.capture(), eq(settings));
-        assertEquals(List.of("librarian@example.com", "staff@example.com"), captor.getValue().getTo());
+        verify(logSender, times(2)).send(captor.capture(), eq(settings));
+        assertEquals(List.of("librarian@example.com"), captor.getAllValues().get(0).getTo());
+        assertEquals(List.of("staff@example.com"), captor.getAllValues().get(1).getTo());
     }
 
     @Test
@@ -133,12 +138,47 @@ class ApplicationEmailServiceTest {
         service.sendPendingNotifications(notice());
 
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
-        verify(logSender, times(1)).send(captor.capture(), eq(settings));
-        EmailMessage message = captor.getValue();
-        assertEquals("library.application.pending", message.getEvent());
-        assertEquals(List.of("librarian@example.com", "jane@example.com"), message.getTo());
-        assertTrue(message.getSubject().contains("Jane Doe"));
-        assertTrue(message.getTextBody().contains("librarian will review"));
+        verify(logSender, times(2)).send(captor.capture(), eq(settings));
+        EmailMessage librarian = captor.getAllValues().get(0);
+        EmailMessage applicant = captor.getAllValues().get(1);
+        assertEquals("library.application.pending", librarian.getEvent());
+        assertEquals(List.of("librarian@example.com"), librarian.getTo());
+        assertEquals(List.of("jane@example.com"), applicant.getTo());
+        assertTrue(librarian.getSubject().contains("Jane Doe"));
+        assertTrue(applicant.getTextBody().contains("librarian will review"));
+    }
+
+    @Test
+    void pending_addsUnsubscribeForAUserAndOmitsItForAStranger() {
+        settings.setEmailNotifyApplicantOnPending(true);
+        when(unsubscribes.urlForAddress("jane@example.com"))
+                .thenReturn("https://library.example.com/notifications/unsubscribe/abc123secret");
+        when(unsubscribes.urlForAddress("librarian@example.com")).thenReturn(null);
+
+        service.sendPendingNotifications(notice());
+
+        ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(logSender, times(2)).send(captor.capture(), eq(settings));
+        EmailMessage librarian = captor.getAllValues().get(0);
+        EmailMessage applicant = captor.getAllValues().get(1);
+        assertEquals(List.of("librarian@example.com"), librarian.getTo());
+        assertTrue(librarian.getHeaders().isEmpty());
+        assertFalse(librarian.getTextBody().contains("Unsubscribe"));
+        assertTrue(librarian.getTextBody().endsWith(
+                "God bless,\n-Saint Martin de Porres\n\nSt. Martin de Porres\nSacred Heart Library System"));
+
+        String url = "https://library.example.com/notifications/unsubscribe/abc123secret";
+        assertEquals(List.of("jane@example.com"), applicant.getTo());
+        assertEquals("<" + url + ">", applicant.getHeaders().get(EmailMessage.LIST_UNSUBSCRIBE));
+        assertEquals("List-Unsubscribe=One-Click", applicant.getHeaders().get(EmailMessage.LIST_UNSUBSCRIBE_POST));
+        assertTrue(applicant.getTextBody().indexOf("-Saint Martin de Porres")
+                < applicant.getTextBody().lastIndexOf("St. Martin de Porres"));
+        assertTrue(applicant.getTextBody().endsWith("Unsubscribe\n" + url));
+        int signOff = applicant.getHtmlBody().indexOf("-Saint Martin de Porres");
+        int lastBrand = applicant.getHtmlBody().lastIndexOf("font-size:22px");
+        int link = applicant.getHtmlBody().lastIndexOf(">Unsubscribe</a>");
+        assertTrue(signOff < lastBrand && lastBrand < link);
+        assertTrue(applicant.getHtmlBody().endsWith("<p><a href=\"" + url + "\">Unsubscribe</a></p></div>"));
     }
 
     @Test

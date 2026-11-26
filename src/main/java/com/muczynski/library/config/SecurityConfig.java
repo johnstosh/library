@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ydl-lookup/**", "/api/emu-lookup/**", "/api/acla-lookup/**", "/api/wcc-lookup/**", "/api/msu-lookup/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/mailing-lists/unsubscribe/**").permitAll()
+                        .requestMatchers("/notifications/unsubscribe/**").permitAll()
                         .requestMatchers("/api/application/public/**").permitAll()
                         .requestMatchers("/api/users/public/**").permitAll()
                         .requestMatchers("/api/global-settings/sso-status").permitAll()

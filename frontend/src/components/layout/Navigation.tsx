@@ -93,9 +93,6 @@ export function Navigation() {
                 {isLibrarian && (
                   <>
                     <div className="w-px h-6 bg-gray-300 mx-1" />
-                    <NavLink to="/branches"        className={desktopNavCls} data-test="nav-branches">Branches</NavLink>
-                    <NavLink to="/users"           className={desktopNavCls} data-test="nav-users">Users</NavLink>
-                    <NavLink to="/applications"    className={desktopNavCls} data-test="nav-applications">Applications</NavLink>
                     <NavLink to="/data-management" className={desktopNavCls} data-test="nav-data">Data</NavLink>
                     <NavLink to="/prices" className={desktopNavCls} data-test="nav-prices">Prices</NavLink>
                     <NavLink to="/sellers" className={desktopNavCls} data-test="nav-sellers">Sellers</NavLink>
@@ -157,19 +154,6 @@ export function Navigation() {
                             </NavLink>
                           )}
                         </MenuItem>
-                        {isLibrarian && (
-                          <MenuItem>
-                            {({ focus }) => (
-                              <NavLink
-                                to="/global-settings"
-                                className={accountMenuItemCls(focus)}
-                                data-test="nav-global-settings"
-                              >
-                                Global Settings
-                              </NavLink>
-                            )}
-                          </MenuItem>
-                        )}
                         <MenuItem>
                           {({ focus }) => (
                             <NavLink
@@ -182,6 +166,54 @@ export function Navigation() {
                           )}
                         </MenuItem>
                       </div>
+                      {isLibrarian && (
+                        <div className="py-1 border-t border-gray-100">
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/branches"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-branches"
+                              >
+                                Branches
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/users"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-users"
+                              >
+                                Users
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/applications"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-applications"
+                              >
+                                Applications
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/global-settings"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-global-settings"
+                              >
+                                Global Settings
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                        </div>
+                      )}
                       <div className="py-1 border-t border-gray-100">
                         <MenuItem>
                           {({ focus }) => (
@@ -229,9 +261,6 @@ export function Navigation() {
               {isLibrarian && (
                 <>
                   <div className="border-t border-gray-200 my-1" />
-                  <NavLink to="/branches"          className={mobileNavCls} data-test="nav-branches-mobile"      onClick={() => close()}>Branches</NavLink>
-                  <NavLink to="/users"             className={mobileNavCls} data-test="nav-users-mobile"         onClick={() => close()}>Users</NavLink>
-                  <NavLink to="/applications"      className={mobileNavCls} data-test="nav-applications-mobile"  onClick={() => close()}>Applications</NavLink>
                   <NavLink to="/data-management"   className={mobileNavCls} data-test="nav-data-mobile"          onClick={() => close()}>Data Management</NavLink>
                   <NavLink to="/prices"            className={mobileNavCls} data-test="nav-prices-mobile"        onClick={() => close()}>Prices</NavLink>
                   <NavLink to="/sellers"           className={mobileNavCls} data-test="nav-sellers-mobile"       onClick={() => close()}>Sellers</NavLink>

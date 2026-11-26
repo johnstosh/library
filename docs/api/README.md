@@ -49,6 +49,7 @@ The heading line is the method, a space, and the full path, for example `## GET 
 | [loans.md](loans.md) | `LoanController` | `/api/loans` | 10 |
 | [loc-bulk-lookup.md](loc-bulk-lookup.md) | `LocBulkLookupController` | `/api/loc-bulk-lookup` | 4 |
 | [mailing-lists.md](mailing-lists.md) | `MailingListController` | `(none)` | 3 |
+| [user-settings.md](user-settings.md) | `NotificationUnsubscribeController` | `(none)` | 2 |
 | [maintenance.md](maintenance.md) | `MaintenanceController` | `/api/maintenance` | 13 |
 | [msu-lookup.md](msu-lookup.md) | `MsuLookupController` | `/api/msu-lookup` | 1 |
 | [photos.md](photos.md) | `PhotoController` | `/api/photos` | 8 |
@@ -61,4 +62,4 @@ The heading line is the method, a space, and the full path, for example `## GET 
 | [wcc-lookup.md](wcc-lookup.md) | `WccLookupController` | `/api/wcc-lookup` | 1 |
 | [ydl-lookup.md](ydl-lookup.md) | `YdlLookupController` | `/api/ydl-lookup` | 1 |
 
-257 mappings.
+259 mappings.

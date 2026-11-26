@@ -59,3 +59,39 @@ Ordering: Not specified by this endpoint.
 Notes:
 
 None.
+
+## GET /notifications/unsubscribe/{token}
+
+Auth: Public. no `@PreAuthorize`; HTTP `/notifications/unsubscribe/**` is permitAll. No login and no confirmation step.
+
+Parameters:
+
+- Path `token` (`String`, required). The user's unguessable notification-unsubscribe secret. It is not a mailing-list token.
+
+Response: `200 OK` `text/html`. The page says email notifications are turned off, or were already off. `404 Not Found` `text/html` when the token matches no user.
+
+Paging: None.
+
+Ordering: Not specified by this endpoint.
+
+Notes:
+
+Sets `receiveEmails` false for that user and does nothing else. A second GET with the same token is idempotent. The token stays on the user so the link still resolves. The token is not written to the log. This is not `/mailing-lists/unsubscribe/{token}`.
+
+## POST /notifications/unsubscribe/{token}
+
+Auth: Public. no `@PreAuthorize`; HTTP `/notifications/unsubscribe/**` is permitAll. No login and no confirmation step.
+
+Parameters:
+
+- Path `token` (`String`, required). The same secret as the GET link. A body is not required. Mail clients may POST `List-Unsubscribe=One-Click`.
+
+Response: `200 OK` `text/plain` with the same sentence as the HTML page. `404 Not Found` `text/plain` when the token matches no user.
+
+Paging: None.
+
+Ordering: Not specified by this endpoint.
+
+Notes:
+
+One-click unsubscribe for loan and application notices. A repeated POST stays unsubscribed. The token is not written to the log.

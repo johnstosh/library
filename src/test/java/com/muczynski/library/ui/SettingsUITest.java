@@ -338,6 +338,9 @@ public class SettingsUITest {
         if (!menuOpened && lastError != null) {
             throw lastError;
         }
+        assertThat(page.locator("[data-test='nav-branches']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-users']")).not().isVisible();
+        assertThat(page.locator("[data-test='nav-applications']")).not().isVisible();
         assertThat(page.locator("[data-test='nav-global-settings']")).not().isVisible();
 
         // Try to navigate directly to global settings

@@ -38,15 +38,25 @@ public class OutgoingEmail {
     }
 
     public void apply(EmailMessage message, String textBody, String htmlBody) {
-        Brand brand = currentBrand();
-        message.setTextBody(text(brand.name(), brand.subName(), textBody));
-        message.setHtmlBody(html(brand.name(), brand.subName(), htmlBody));
+        apply(message, textBody, htmlBody, null);
     }
 
     /**
-     * Mailing-list letter. {@link #apply} puts the sign-off and then repeats the
-     * heading, which would bury the final unsubscribe link, so this path does
-     * not call it. Loan and application mail keep using {@link #apply}.
+     * Same letter as {@link #apply(EmailMessage, String, String)}. When
+     * {@code unsubscribeUrl} is set, the Unsubscribe link is the last content,
+     * after the sign-off and the repeated heading, so the heading does not bury it.
+     */
+    public void apply(EmailMessage message, String textBody, String htmlBody, String unsubscribeUrl) {
+        Brand brand = currentBrand();
+        String url = unsubscribeUrl == null || unsubscribeUrl.isBlank() ? null : unsubscribeUrl.trim();
+        message.setTextBody(text(brand.name(), brand.subName(), textBody, url));
+        message.setHtmlBody(html(brand.name(), brand.subName(), htmlBody, url));
+    }
+
+    /**
+     * Mailing-list letter. {@link #apply} repeats the heading after the sign-off.
+     * A link inside the body would sit under that heading, so this path does
+     * not call it. Do not reorder these parts.
      * Order: library name, website, unsubscribe, topic, frequency, issue,
      * sign-off, and a last Unsubscribe link.
      */
@@ -97,6 +107,10 @@ public class OutgoingEmail {
     }
 
     static String text(String name, String subName, String body) {
+        return text(name, subName, body, null);
+    }
+
+    static String text(String name, String subName, String body, String unsubscribeUrl) {
         String header = plainHeader(name, subName);
         String content = stripTrailingNewlines(body == null ? "" : body);
         StringBuilder letter = new StringBuilder();
@@ -109,17 +123,30 @@ public class OutgoingEmail {
         if (!header.isEmpty()) {
             letter.append("\n\n").append(header);
         }
+        if (unsubscribeUrl != null && !unsubscribeUrl.isBlank()) {
+            letter.append("\n\nUnsubscribe\n").append(unsubscribeUrl.trim());
+        }
         return letter.toString();
     }
 
     static String html(String name, String subName, String bodyHtml) {
+        return html(name, subName, bodyHtml, null);
+    }
+
+    static String html(String name, String subName, String bodyHtml, String unsubscribeUrl) {
         String heading = htmlHeading(name, subName);
         String content = bodyHtml == null ? "" : bodyHtml;
+        String unsubscribe = "";
+        if (unsubscribeUrl != null && !unsubscribeUrl.isBlank()) {
+            String escaped = HtmlText.escape(unsubscribeUrl.trim());
+            unsubscribe = "<p><a href=\"" + escaped + "\">Unsubscribe</a></p>";
+        }
         return "<div style=\"font-family:" + FONT + ";\">"
                 + heading
                 + content
                 + "<p>" + SIGN_OFF_HTML + "</p>"
                 + heading
+                + unsubscribe
                 + "</div>";
     }
 

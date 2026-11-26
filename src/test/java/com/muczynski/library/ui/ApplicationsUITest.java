@@ -81,13 +81,35 @@ public class ApplicationsUITest {
         page.waitForURL("**/books", new Page.WaitForURLOptions().setTimeout(10000L));
     }
 
+    private void openApplications() {
+        Locator userMenu = page.locator("[data-test='nav-user-menu']");
+        Locator applications = page.locator("[data-test='nav-applications']");
+        PlaywrightException lastError = null;
+        for (int attempt = 0; attempt < 5; attempt++) {
+            userMenu.click();
+            try {
+                applications.waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(3000L));
+                applications.evaluate("el => el.click()");
+                page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+                return;
+            } catch (PlaywrightException e) {
+                lastError = e;
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new AssertionError("Could not open Applications from the account menu");
+    }
+
     @Test
     @DisplayName("Should show the existing-user error when approving an application")
     void testApproveDuplicateUsernameShowsError() {
         loginAsLibrarian();
 
-        page.click("[data-test='nav-applications']");
-        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        openApplications();
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         page.waitForSelector("[data-test='approve-application-1']", new Page.WaitForSelectorOptions()
@@ -117,8 +139,7 @@ public class ApplicationsUITest {
     void testApproveRemovesApplicationFromList() {
         loginAsLibrarian();
 
-        page.click("[data-test='nav-applications']");
-        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        openApplications();
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         page.waitForSelector("[data-test='approve-application-2']", new Page.WaitForSelectorOptions()
@@ -145,8 +166,7 @@ public class ApplicationsUITest {
     void testDefaultFilterShowsApplicationsNeedingApproval() {
         loginAsLibrarian();
 
-        page.click("[data-test='nav-applications']");
-        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        openApplications();
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         page.waitForSelector("[data-test='filter-needs-approval']", new Page.WaitForSelectorOptions()
@@ -170,8 +190,7 @@ public class ApplicationsUITest {
     void testApprovedFilterShowsApprovedApplications() {
         loginAsLibrarian();
 
-        page.click("[data-test='nav-applications']");
-        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        openApplications();
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         page.waitForSelector("[data-test='filter-needs-approval']", new Page.WaitForSelectorOptions()
@@ -192,8 +211,7 @@ public class ApplicationsUITest {
     void testDoNotApproveRemovesApplicationFromDefaultFilter() {
         loginAsLibrarian();
 
-        page.click("[data-test='nav-applications']");
-        page.waitForURL("**/applications", new Page.WaitForURLOptions().setTimeout(10000L));
+        openApplications();
         page.waitForLoadState(LoadState.NETWORKIDLE);
 
         page.waitForSelector("[data-test='not-approve-application-2']", new Page.WaitForSelectorOptions()

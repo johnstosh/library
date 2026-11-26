@@ -44,6 +44,9 @@ class LoanChangeEmailServiceTest {
     @Mock
     private BranchRepository branchRepository;
 
+    @Mock
+    private NotificationUnsubscribeService unsubscribes;
+
     private LoanChangeEmailService service;
     private OutgoingEmail outgoingEmail;
     private GlobalSettings settings;
@@ -60,7 +63,8 @@ class LoanChangeEmailServiceTest {
         branch.setLibrarySystemName("Sacred Heart Library System");
         lenient().when(branchRepository.findAll()).thenReturn(List.of(branch));
         service = new LoanChangeEmailService(
-                globalSettingsService, applicationEmailService, outgoingEmail, objectMapper);
+                globalSettingsService, applicationEmailService,
+                new AccountNoticeMail(outgoingEmail, unsubscribes), objectMapper);
         ReflectionTestUtils.setField(service, "externalBaseUrl", "https://library.example.com");
         settings = new GlobalSettings();
         settings.setEmailMethod(EmailMethod.LOG);
@@ -87,9 +91,10 @@ class LoanChangeEmailServiceTest {
         service.send(objectMapper.writeValueAsString(before), objectMapper.writeValueAsString(after));
 
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
-        verify(logSender).send(captor.capture(), eq(settings));
-        EmailMessage message = captor.getValue();
-        assertEquals(List.of("librarian@example.com", "pat@example.com"), message.getTo());
+        verify(logSender, times(2)).send(captor.capture(), eq(settings));
+        assertEquals(List.of("librarian@example.com"), captor.getAllValues().get(0).getTo());
+        assertEquals(List.of("pat@example.com"), captor.getAllValues().get(1).getTo());
+        EmailMessage message = captor.getAllValues().get(0);
         assertEquals("Library loan changed: The Hobbit", message.getSubject());
         assertTrue(message.getTextBody().contains("Due date: 2026-10-01 → 2026-10-08"));
         assertFalse(message.getTextBody().contains("Loan date:"));
@@ -111,10 +116,35 @@ class LoanChangeEmailServiceTest {
         service.send(objectMapper.writeValueAsString(before), objectMapper.writeValueAsString(after));
 
         ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
-        verify(logSender).send(captor.capture(), eq(settings));
+        verify(logSender, times(3)).send(captor.capture(), eq(settings));
         assertEquals(List.of("librarian@example.com", "pat@example.com", "sam@example.com"),
-                captor.getValue().getTo());
+                captor.getAllValues().stream().map(message -> message.getTo().get(0)).toList());
         assertTrue(captor.getValue().getTextBody().contains("Borrower: Pat → Sam"));
+    }
+
+    @Test
+    void userRecipientGetsAnUnsubscribeLinkAndAStrangerDoesNot() throws Exception {
+        when(unsubscribes.urlForAddress("pat@example.com"))
+                .thenReturn("https://library.example.com/notifications/unsubscribe/abc123secret");
+        when(unsubscribes.urlForAddress("librarian@example.com")).thenReturn(null);
+        LoanMailSnapshot after = loan(LocalDate.of(2026, 10, 1), null);
+
+        service.send("null", objectMapper.writeValueAsString(after));
+
+        ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(logSender, times(2)).send(captor.capture(), eq(settings));
+        EmailMessage librarian = captor.getAllValues().get(0);
+        EmailMessage borrower = captor.getAllValues().get(1);
+        assertTrue(librarian.getHeaders().isEmpty());
+        assertFalse(librarian.getTextBody().contains("Unsubscribe"));
+        String url = "https://library.example.com/notifications/unsubscribe/abc123secret";
+        assertEquals(List.of("pat@example.com"), borrower.getTo());
+        assertEquals("<" + url + ">", borrower.getHeaders().get(EmailMessage.LIST_UNSUBSCRIBE));
+        assertEquals("List-Unsubscribe=One-Click", borrower.getHeaders().get(EmailMessage.LIST_UNSUBSCRIBE_POST));
+        assertTrue(borrower.getTextBody().endsWith("Unsubscribe\n" + url));
+        assertTrue(borrower.getHtmlBody().endsWith("<p><a href=\"" + url + "\">Unsubscribe</a></p></div>"));
+        assertTrue(borrower.getHtmlBody().lastIndexOf("font-size:22px")
+                < borrower.getHtmlBody().lastIndexOf(">Unsubscribe</a>"));
     }
 
     @Test

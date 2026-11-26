@@ -60,4 +60,29 @@ class LogEmailSenderTest {
             logger.detachAppender(appender);
         }
     }
+
+    @Test
+    void send_redactsNotificationUnsubscribeTokens() {
+        Logger logger = (Logger) LoggerFactory.getLogger(LogEmailSender.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            EmailMessage message = new EmailMessage();
+            message.getTo().add("patron@example.com");
+            message.setSubject("Library loan");
+            message.setTextBody("Unsubscribe\nhttps://library.example/notifications/unsubscribe/abc123secret");
+            message.setListUnsubscribe("https://library.example/notifications/unsubscribe/abc123secret");
+
+            sender.send(message, new GlobalSettings());
+
+            String logged = appender.list.get(0).getFormattedMessage();
+            assertFalse(logged.contains("abc123secret"));
+            assertTrue(logged.contains("/notifications/unsubscribe/[redacted]"));
+            assertTrue(logged.contains(EmailMessage.LIST_UNSUBSCRIBE));
+            assertTrue(logged.contains(EmailMessage.LIST_UNSUBSCRIBE_POST));
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
 }
