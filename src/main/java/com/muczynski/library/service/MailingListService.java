@@ -8,6 +8,7 @@ import com.muczynski.library.domain.GlobalSettings;
 import com.muczynski.library.domain.MailingFrequency;
 import com.muczynski.library.domain.MailingListSubscription;
 import com.muczynski.library.domain.MailingListTopic;
+import com.muczynski.library.domain.MainCharacterSex;
 import com.muczynski.library.dto.MailingListSignupResponse;
 import com.muczynski.library.email.EmailMessage;
 import com.muczynski.library.email.EmailSender;
@@ -344,6 +345,16 @@ public class MailingListService {
                     catalog.feastBooks(),
                     MailingListWindows.saintDays(frequency, origin, today),
                     site);
+            case LIVES_OF_MEN_SAINTS -> MailingListIssues.saints(
+                    catalog.feastBooks(),
+                    MailingListWindows.saintDays(frequency, origin, today),
+                    site,
+                    MainCharacterSex.MALE);
+            case LIVES_OF_WOMEN_SAINTS -> MailingListIssues.saints(
+                    catalog.feastBooks(),
+                    MailingListWindows.saintDays(frequency, origin, today),
+                    site,
+                    MainCharacterSex.FEMALE);
             case NEW_CATALOG_ENTRIES -> {
                 InstantWindow window = MailingListWindows.catalogAdded(frequency, origin, today);
                 yield MailingListIssues.catalog(

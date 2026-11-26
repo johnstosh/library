@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.MainCharacterSex;
 import com.muczynski.library.domain.BookLabels;
 import com.muczynski.library.email.HtmlText;
 import com.muczynski.library.service.MailingListWindows.DayWindow;
@@ -38,13 +39,26 @@ public final class MailingListIssues {
     private MailingListIssues() {
     }
 
+    /** Every saint in the window, whether the main character is male, female, or blank. */
     public static Issue saints(List<Book> books, DayWindow window, String baseUrl) {
+        return saints(books, window, baseUrl, null);
+    }
+
+    /**
+     * Saints in the window. A null sex keeps every book. Male or female keeps
+     * only books whose main character is that sex.
+     */
+    public static Issue saints(List<Book> books, DayWindow window, String baseUrl, MainCharacterSex sex) {
         List<Book> matches = new ArrayList<>();
         if (books != null) {
             for (Book book : books) {
-                if (eligible(book) && MailingListWindows.feastInWindow(book.getRelatedFeastDay(), window)) {
-                    matches.add(book);
+                if (!eligible(book) || !MailingListWindows.feastInWindow(book.getRelatedFeastDay(), window)) {
+                    continue;
                 }
+                if (sex != null && book.getMainCharacterSex() != sex) {
+                    continue;
+                }
+                matches.add(book);
             }
         }
         matches.sort(Comparator

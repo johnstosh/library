@@ -35,7 +35,7 @@ import { formatDateTime, parseISODateSafe } from '@/utils/formatters'
 import { feastDayToWire, formatFeastDay } from '@/utils/feastDay'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, CatalogMatchRef, GenreLookupResultDto, PublicLibrary, RejectedHolding, RejectedUrl } from '@/types/dtos'
-import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
+import { BookCoverType, BookStatus, MainCharacterSex, ReadingDifficulty } from '@/types/enums'
 import { BOOK_BINDING_FILTER_LABELS, BOOK_BINDING_FILTER_VALUES } from '@/utils/bookBinding'
 import { DESIRE_TO_PURCHASE_LABELS } from '@/utils/desireToPurchase'
 import { PiCopy, PiFilePdf, PiBookOpen, PiCamera, PiTrash, PiHeadphones, PiGraduationCap } from 'react-icons/pi'
@@ -84,6 +84,12 @@ const bindingOptions = BOOK_BINDING_FILTER_VALUES.map((value) => ({
   label: BOOK_BINDING_FILTER_LABELS[value],
 }))
 
+const mainCharacterOptions = [
+  { value: '', label: 'Blank' },
+  { value: MainCharacterSex.MALE, label: 'Male' },
+  { value: MainCharacterSex.FEMALE, label: 'Female' },
+]
+
 const desireLabels = DESIRE_TO_PURCHASE_LABELS
 
 export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageProps) {
@@ -101,6 +107,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     relatedWorks: '',
     relatedFeastDay: '',
     relatedFeastDayExplanation: '',
+    mainCharacterSex: '' as '' | MainCharacterSex,
     detailedDescription: '',
     grokipediaUrl: '',
     freeTextUrl: '',
@@ -194,6 +201,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         relatedWorks: book.relatedWorks || '',
         relatedFeastDay: formatFeastDay(book.relatedFeastDay),
         relatedFeastDayExplanation: book.relatedFeastDayExplanation || '',
+        mainCharacterSex: book.mainCharacterSex || '',
         detailedDescription: book.detailedDescription || '',
         grokipediaUrl: book.grokipediaUrl || '',
         freeTextUrl: book.freeTextUrl || '',
@@ -242,6 +250,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         relatedWorks: '',
         relatedFeastDay: '',
         relatedFeastDayExplanation: '',
+        mainCharacterSex: '' as '' | MainCharacterSex,
         detailedDescription: '',
         grokipediaUrl: '',
         freeTextUrl: '',
@@ -930,6 +939,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       msuEbookAvailable: formData.msuEbookAvailable,
       readingDifficulty: formData.readingDifficulty,
       binding: formData.binding,
+      mainCharacterSex: formData.mainCharacterSex || undefined,
       desireToPurchase: formData.desireToPurchase,
       authorId: parseInt(formData.authorId),
       libraryId: parseInt(formData.branchId),
@@ -1281,6 +1291,15 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
             data-test="book-publisher"
           />
         </div>
+
+        <Select
+          label="Main Character"
+          value={formData.mainCharacterSex}
+          onChange={(e) => handleFieldChange('mainCharacterSex', e.target.value)}
+          options={mainCharacterOptions}
+          helpText="Leave blank when the main character is unknown, mixed, or the book has more than one story."
+          data-test="book-main-character"
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
@@ -2178,6 +2197,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 msuEbookAvailable: formData.msuEbookAvailable,
                 readingDifficulty: formData.readingDifficulty,
                 binding: formData.binding,
+                mainCharacterSex: formData.mainCharacterSex || undefined,
                 desireToPurchase: formData.desireToPurchase,
                 authorId: parseInt(formData.authorId),
                 libraryId: parseInt(formData.branchId),

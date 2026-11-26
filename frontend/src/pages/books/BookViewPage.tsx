@@ -427,6 +427,15 @@ export function BookViewPage() {
               </div>
             )}
 
+            {book.mainCharacterSex && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm font-medium text-gray-500">Main Character</p>
+                <p className="text-gray-900" data-test="book-main-character">
+                  {book.mainCharacterSex === 'MALE' ? 'Male' : 'Female'}
+                </p>
+              </div>
+            )}
+
             {book.plotSummary && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm font-medium text-gray-500">Plot Summary</p>

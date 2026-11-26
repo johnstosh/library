@@ -5,6 +5,7 @@ package com.muczynski.library.service;
 
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
+import com.muczynski.library.domain.MainCharacterSex;
 import com.muczynski.library.domain.MailingFrequency;
 import com.muczynski.library.service.MailingListWindows.InstantWindow;
 import com.muczynski.library.service.MailingListWindows.SendOrigin;
@@ -95,6 +96,33 @@ class MailingListIssuesTest {
         assertTrue(issue.html().contains("border:1px solid #DCC4C9"));
         assertTrue(issue.html().contains("color:#2F664B"));
         assertEquals(3, count(issue.html(), "border:1px solid #DCC4C9"));
+    }
+
+    @Test
+    void menAndWomenSaintListsKeepOnlyThatMainCharacter() {
+        Book man = feast(1L, "A Man", MonthDay.of(8, 11), null);
+        man.setMainCharacterSex(MainCharacterSex.MALE);
+        Book woman = feast(2L, "A Woman", MonthDay.of(8, 11), null);
+        woman.setMainCharacterSex(MainCharacterSex.FEMALE);
+        Book unknown = feast(3L, "Unknown Saint", MonthDay.of(8, 12), null);
+        List<Book> books = List.of(man, woman, unknown);
+        var window = MailingListWindows.saintDays(
+                MailingFrequency.MONTHLY, SendOrigin.SCHEDULED, LocalDate.of(2026, 8, 1));
+
+        MailingListIssues.Issue both = MailingListIssues.saints(books, window, BASE);
+        MailingListIssues.Issue men = MailingListIssues.saints(books, window, BASE, MainCharacterSex.MALE);
+        MailingListIssues.Issue women = MailingListIssues.saints(books, window, BASE, MainCharacterSex.FEMALE);
+
+        assertEquals(3, both.bookCount());
+        assertTrue(both.text().contains("Unknown Saint"));
+        assertEquals(1, men.bookCount());
+        assertTrue(men.text().contains("A Man"));
+        assertFalse(men.text().contains("A Woman"));
+        assertFalse(men.text().contains("Unknown Saint"));
+        assertEquals(1, women.bookCount());
+        assertTrue(women.text().contains("A Woman"));
+        assertFalse(women.text().contains("A Man"));
+        assertFalse(women.text().contains("Unknown Saint"));
     }
 
     @Test

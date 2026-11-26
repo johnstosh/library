@@ -4,6 +4,8 @@ import { api } from './client'
 
 export type MailingListId =
   | 'LIVES_OF_SAINTS'
+  | 'LIVES_OF_MEN_SAINTS'
+  | 'LIVES_OF_WOMEN_SAINTS'
   | 'CHILDRENS_FICTION'
   | 'READ_ALOUD_BOOKS'
   | 'NEW_CATALOG_ENTRIES'

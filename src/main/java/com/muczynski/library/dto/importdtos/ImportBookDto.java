@@ -6,6 +6,7 @@ package com.muczynski.library.dto.importdtos;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.MainCharacterSex;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.domain.RejectedUrl;
@@ -36,6 +37,8 @@ public class ImportBookDto {
     private MonthDay relatedFeastDay;
     /** Omitted when blank. Empty when the feast has only one date. */
     private String relatedFeastDayExplanation;
+    /** {@code MALE} or {@code FEMALE}. Omitted when blank. */
+    private MainCharacterSex mainCharacterSex;
     private String detailedDescription;
     private String grokipediaUrl;
     /** Omitted when empty. A missing field leaves the stored list unchanged. An empty list clears it. */

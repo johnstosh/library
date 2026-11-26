@@ -162,6 +162,18 @@ describe('BookFormPage add new book', () => {
     expect(screen.getByTestId('book-binding')).toHaveValue('UNKNOWN')
   })
 
+  it('leaves the main character blank until one is chosen', () => {
+    renderForm()
+
+    expect(screen.getByTestId('book-main-character')).toHaveValue('')
+  })
+
+  it('shows a saved main character when editing', () => {
+    renderForm({ book: { ...editedBook, mainCharacterSex: 'FEMALE' } })
+
+    expect(screen.getByTestId('book-main-character')).toHaveValue('FEMALE')
+  })
+
   it('keeps the book branch when editing', () => {
     renderForm({ book: editedBook })
 

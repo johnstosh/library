@@ -36,3 +36,10 @@ export const BookCoverType = {
 } as const
 
 export type BookCoverType = (typeof BookCoverType)[keyof typeof BookCoverType]
+
+export const MainCharacterSex = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+} as const
+
+export type MainCharacterSex = (typeof MainCharacterSex)[keyof typeof MainCharacterSex]

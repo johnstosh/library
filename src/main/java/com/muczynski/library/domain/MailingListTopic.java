@@ -11,6 +11,8 @@ import java.util.List;
  */
 public enum MailingListTopic {
     LIVES_OF_SAINTS("Lives of Saints"),
+    LIVES_OF_MEN_SAINTS("Lives of Men Saints"),
+    LIVES_OF_WOMEN_SAINTS("Lives of Women Saints"),
     CHILDRENS_FICTION("Childrens Fiction"),
     READ_ALOUD_BOOKS("Read-aloud Books"),
     NEW_CATALOG_ENTRIES("New Catalog Entries"),
@@ -35,7 +37,7 @@ public enum MailingListTopic {
             case CHILDRENS_FICTION -> List.of("childrens", "fiction");
             case READ_ALOUD_BOOKS -> List.of("read-aloud");
             case ADULT_FICTION -> List.of("adult", "fiction");
-            case LIVES_OF_SAINTS, NEW_CATALOG_ENTRIES -> List.of();
+            case LIVES_OF_SAINTS, LIVES_OF_MEN_SAINTS, LIVES_OF_WOMEN_SAINTS, NEW_CATALOG_ENTRIES -> List.of();
         };
     }
 

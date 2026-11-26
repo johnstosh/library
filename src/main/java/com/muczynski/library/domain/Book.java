@@ -86,6 +86,14 @@ public class Book {
     private String relatedFeastDayExplanation;
 
     /**
+     * Male or female main character. Null when that is unknown, mixed,
+     * or the book has more than one story.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "main_character_sex", length = 16)
+    private MainCharacterSex mainCharacterSex;
+
+    /**
      * Same text mapping as {@link #plotEssay}.
      */
     @Lob

@@ -66,6 +66,7 @@ public class MailingListCatalog {
         copy.setTitle(book.getTitle());
         copy.setRelatedFeastDay(book.getRelatedFeastDay());
         copy.setRelatedFeastDayExplanation(book.getRelatedFeastDayExplanation());
+        copy.setMainCharacterSex(book.getMainCharacterSex());
         copy.setDateAddedToLibrary(book.getDateAddedToLibrary());
         if (withTags && book.getTagsList() != null) {
             copy.setTagsList(new ArrayList<>(book.getTagsList()));
