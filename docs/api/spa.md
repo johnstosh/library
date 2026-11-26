@@ -330,6 +330,24 @@ Notes:
 
 ) are not affected by this mapping.
 
+## GET /mailing-lists
+
+Auth: Authenticated. no `@PreAuthorize`; HTTP `anyRequest` requires a logged-in user.
+
+Parameters:
+
+None.
+
+Response: View name string. `SpaController` returns `forward:/index.html`.
+
+Paging: None.
+
+Ordering: Not specified by this endpoint.
+
+Notes:
+
+The signup page for a logged-in user. Unsubscribe stays on `MailingListController` and is not forwarded here.
+
 ## GET /my-card
 
 Auth: Authenticated. no `@PreAuthorize`; HTTP `anyRequest` requires a logged-in user.

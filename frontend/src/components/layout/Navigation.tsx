@@ -84,6 +84,7 @@ export function Navigation() {
                 <NavLink to="/search" className={desktopNavCls} data-test="nav-search">Search</NavLink>
                 {isAuthenticated && (
                   <>
+                    <NavLink to="/mailing-lists" className={desktopNavCls} data-test="nav-mailing-lists">Mailing Lists</NavLink>
                     <NavLink to="/books"    className={desktopNavCls} data-test="nav-books">Books</NavLink>
                     <NavLink to="/authors"  className={desktopNavCls} data-test="nav-authors">Authors</NavLink>
                     <NavLink to="/loans"    className={desktopNavCls} data-test="nav-loans">Loans</NavLink>
@@ -92,15 +93,11 @@ export function Navigation() {
                 {isLibrarian && (
                   <>
                     <div className="w-px h-6 bg-gray-300 mx-1" />
-                    <NavLink to="/branches"        className={desktopNavCls} data-test="nav-branches">Branches</NavLink>
-                    <NavLink to="/users"           className={desktopNavCls} data-test="nav-users">Users</NavLink>
-                    <NavLink to="/applications"    className={desktopNavCls} data-test="nav-applications">Applications</NavLink>
                     <NavLink to="/data-management" className={desktopNavCls} data-test="nav-data">Data</NavLink>
                     <NavLink to="/prices" className={desktopNavCls} data-test="nav-prices">Prices</NavLink>
                     <NavLink to="/sellers" className={desktopNavCls} data-test="nav-sellers">Sellers</NavLink>
                     <NavLink to="/savings" className={desktopNavCls} data-test="nav-savings">Savings</NavLink>
                     <NavLink to="/photos-management" className={desktopNavCls} data-test="nav-photos">Photos</NavLink>
-                    <NavLink to="/global-settings" className={desktopNavCls} data-test="nav-global-settings">Global Settings</NavLink>
                   </>
                 )}
               </nav>
@@ -169,6 +166,54 @@ export function Navigation() {
                           )}
                         </MenuItem>
                       </div>
+                      {isLibrarian && (
+                        <div className="py-1 border-t border-gray-100">
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/branches"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-branches"
+                              >
+                                Branches
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/users"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-users"
+                              >
+                                Users
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/applications"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-applications"
+                              >
+                                Applications
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                          <MenuItem>
+                            {({ focus }) => (
+                              <NavLink
+                                to="/global-settings"
+                                className={accountMenuItemCls(focus)}
+                                data-test="nav-global-settings"
+                              >
+                                Global Settings
+                              </NavLink>
+                            )}
+                          </MenuItem>
+                        </div>
+                      )}
                       <div className="py-1 border-t border-gray-100">
                         <MenuItem>
                           {({ focus }) => (
@@ -204,6 +249,7 @@ export function Navigation() {
               <NavLink to="/search" className={mobileNavCls} data-test="nav-search-mobile" onClick={() => close()}>Search</NavLink>
               {isAuthenticated && (
                 <>
+                  <NavLink to="/mailing-lists" className={mobileNavCls} data-test="nav-mailing-lists-mobile" onClick={() => close()}>Mailing Lists</NavLink>
                   <NavLink to="/books"    className={mobileNavCls} data-test="nav-books-mobile"    onClick={() => close()}>Books</NavLink>
                   <NavLink to="/authors"  className={mobileNavCls} data-test="nav-authors-mobile"  onClick={() => close()}>Authors</NavLink>
                   <NavLink to="/loans"    className={mobileNavCls} data-test="nav-loans-mobile"    onClick={() => close()}>Loans</NavLink>
@@ -215,15 +261,11 @@ export function Navigation() {
               {isLibrarian && (
                 <>
                   <div className="border-t border-gray-200 my-1" />
-                  <NavLink to="/branches"          className={mobileNavCls} data-test="nav-branches-mobile"      onClick={() => close()}>Branches</NavLink>
-                  <NavLink to="/users"             className={mobileNavCls} data-test="nav-users-mobile"         onClick={() => close()}>Users</NavLink>
-                  <NavLink to="/applications"      className={mobileNavCls} data-test="nav-applications-mobile"  onClick={() => close()}>Applications</NavLink>
                   <NavLink to="/data-management"   className={mobileNavCls} data-test="nav-data-mobile"          onClick={() => close()}>Data Management</NavLink>
                   <NavLink to="/prices"            className={mobileNavCls} data-test="nav-prices-mobile"        onClick={() => close()}>Prices</NavLink>
                   <NavLink to="/sellers"           className={mobileNavCls} data-test="nav-sellers-mobile"       onClick={() => close()}>Sellers</NavLink>
                   <NavLink to="/savings"           className={mobileNavCls} data-test="nav-savings-mobile"       onClick={() => close()}>Savings</NavLink>
                   <NavLink to="/photos-management" className={mobileNavCls} data-test="nav-photos-mobile"        onClick={() => close()}>Photos</NavLink>
-                  <NavLink to="/global-settings"   className={mobileNavCls} data-test="nav-global-settings-mobile" onClick={() => close()}>Global Settings</NavLink>
                 </>
               )}
             </nav>

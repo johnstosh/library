@@ -32,6 +32,7 @@ import { useLookupSingleMsu } from '@/api/msu-lookup'
 import { generateLabelsPdf } from '@/api/labels'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDateTime, parseISODateSafe } from '@/utils/formatters'
+import { feastDayToWire, formatFeastDay } from '@/utils/feastDay'
 import { aclaCatalogSearchUrl, emuCatalogSearchUrl, msuCatalogSearchUrl, wccCatalogSearchUrl, ydlCatalogSearchUrl } from '@/utils/bookTitle'
 import type { BookDto, CatalogMatchRef, GenreLookupResultDto, PublicLibrary, RejectedHolding, RejectedUrl } from '@/types/dtos'
 import { BookCoverType, BookStatus, ReadingDifficulty } from '@/types/enums'
@@ -53,6 +54,13 @@ function linesToTitles(text: string): string[] {
 
 function titlesToLines(titles?: string[] | null): string {
   return (titles ?? []).filter((title) => title && title.trim()).join('\n')
+}
+
+function feastFields(day: string, explanation: string) {
+  return {
+    relatedFeastDay: feastDayToWire(day),
+    relatedFeastDayExplanation: explanation.trim() || undefined,
+  }
 }
 
 interface BookFormPageProps {
@@ -91,6 +99,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
     publisher: '',
     plotSummary: '',
     relatedWorks: '',
+    relatedFeastDay: '',
+    relatedFeastDayExplanation: '',
     detailedDescription: '',
     grokipediaUrl: '',
     freeTextUrl: '',
@@ -182,6 +192,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         publisher: book.publisher || '',
         plotSummary: book.plotSummary || '',
         relatedWorks: book.relatedWorks || '',
+        relatedFeastDay: formatFeastDay(book.relatedFeastDay),
+        relatedFeastDayExplanation: book.relatedFeastDayExplanation || '',
         detailedDescription: book.detailedDescription || '',
         grokipediaUrl: book.grokipediaUrl || '',
         freeTextUrl: book.freeTextUrl || '',
@@ -228,6 +240,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         publisher: '',
         plotSummary: '',
         relatedWorks: '',
+        relatedFeastDay: '',
+        relatedFeastDayExplanation: '',
         detailedDescription: '',
         grokipediaUrl: '',
         freeTextUrl: '',
@@ -614,6 +628,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         publisher: updated.publisher || formData.publisher,
         plotSummary: updated.plotSummary || formData.plotSummary,
         relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        relatedFeastDay: updated.relatedFeastDay ? formatFeastDay(updated.relatedFeastDay) : formData.relatedFeastDay,
+        relatedFeastDayExplanation: updated.relatedFeastDayExplanation || formData.relatedFeastDayExplanation,
         detailedDescription: updated.detailedDescription || formData.detailedDescription,
         grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
         freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
@@ -667,6 +683,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         publisher: updated.publisher || formData.publisher,
         plotSummary: updated.plotSummary || formData.plotSummary,
         relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        relatedFeastDay: updated.relatedFeastDay ? formatFeastDay(updated.relatedFeastDay) : formData.relatedFeastDay,
+        relatedFeastDayExplanation: updated.relatedFeastDayExplanation || formData.relatedFeastDayExplanation,
         detailedDescription: updated.detailedDescription || formData.detailedDescription,
         grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
         freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
@@ -752,6 +770,8 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
         publisher: updated.publisher || formData.publisher,
         plotSummary: updated.plotSummary || formData.plotSummary,
         relatedWorks: updated.relatedWorks || formData.relatedWorks,
+        relatedFeastDay: updated.relatedFeastDay ? formatFeastDay(updated.relatedFeastDay) : formData.relatedFeastDay,
+        relatedFeastDayExplanation: updated.relatedFeastDayExplanation || formData.relatedFeastDayExplanation,
         detailedDescription: updated.detailedDescription || formData.detailedDescription,
         grokipediaUrl: updated.grokipediaUrl || formData.grokipediaUrl,
         freeTextUrl: updated.freeTextUrl || formData.freeTextUrl,
@@ -869,6 +889,14 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       return
     }
 
+    let feast
+    try {
+      feast = feastFields(formData.relatedFeastDay, formData.relatedFeastDayExplanation)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Enter a month and day, such as August 11.')
+      return
+    }
+
     const bookData = {
       title: formData.title,
       alternateTitles: linesToTitles(formData.alternateTitles),
@@ -876,6 +904,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
       publisher: formData.publisher || undefined,
       plotSummary: formData.plotSummary || undefined,
       relatedWorks: formData.relatedWorks || undefined,
+      ...feast,
       detailedDescription: formData.detailedDescription || undefined,
       grokipediaUrl: formData.grokipediaUrl || undefined,
       freeTextUrl: formData.freeTextUrl || undefined,
@@ -1302,6 +1331,23 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           onChange={(e) => handleFieldChange('relatedWorks', e.target.value)}
           rows={2}
           data-test="book-related-works"
+        />
+
+        <Input
+          label="Related Feast Day"
+          value={formData.relatedFeastDay}
+          onChange={(e) => handleFieldChange('relatedFeastDay', e.target.value)}
+          placeholder="August 11"
+          helpText="Store the earliest month and day, and leave the explanation empty when the feast has only one date."
+          data-test="book-related-feast-day"
+        />
+
+        <Textarea
+          label="Related Feast Day Explanation"
+          value={formData.relatedFeastDayExplanation}
+          onChange={(e) => handleFieldChange('relatedFeastDayExplanation', e.target.value)}
+          rows={2}
+          data-test="book-related-feast-day-explanation"
         />
 
         <Textarea
@@ -2086,6 +2132,15 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
           setIsRetrying(false)
         }}
         onTryAgain={async () => {
+          let feast
+          try {
+            feast = feastFields(formData.relatedFeastDay, formData.relatedFeastDayExplanation)
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Enter a month and day, such as August 11.')
+            setShowTryAgainDialog(false)
+            setIsRetrying(false)
+            return
+          }
           setIsRetrying(true)
           try {
             if (pendingError) {
@@ -2097,6 +2152,7 @@ export function BookFormPage({ title, book, onSuccess, onCancel }: BookFormPageP
                 publisher: formData.publisher || undefined,
                 plotSummary: formData.plotSummary || undefined,
                 relatedWorks: formData.relatedWorks || undefined,
+                ...feast,
                 detailedDescription: formData.detailedDescription || undefined,
                 grokipediaUrl: formData.grokipediaUrl || undefined,
                 freeTextUrl: formData.freeTextUrl || undefined,

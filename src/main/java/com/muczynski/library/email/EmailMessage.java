@@ -22,6 +22,10 @@ public class EmailMessage {
     private String htmlBody;
     private String event;
     private final Map<String, Object> eventPayload = new LinkedHashMap<>();
+    private final Map<String, String> headers = new LinkedHashMap<>();
+
+    public static final String LIST_UNSUBSCRIBE = "List-Unsubscribe";
+    public static final String LIST_UNSUBSCRIBE_POST = "List-Unsubscribe-Post";
 
     public List<String> getTo() {
         return to;
@@ -77,5 +81,18 @@ public class EmailMessage {
 
     public Map<String, Object> getEventPayload() {
         return eventPayload;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    /**
+     * RFC 2369 / RFC 8058 one-click unsubscribe. The URL is absolute.
+     * Senders copy these onto the transport. Callers must not log the URL.
+     */
+    public void setListUnsubscribe(String absoluteUrl) {
+        headers.put(LIST_UNSUBSCRIBE, "<" + absoluteUrl + ">");
+        headers.put(LIST_UNSUBSCRIBE_POST, "List-Unsubscribe=One-Click");
     }
 }

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.EmailChangeQueueEntry;
 import com.muczynski.library.email.EmailChangeHandler;
+import com.muczynski.library.email.LogEmailSender;
 import com.muczynski.library.email.EmailSendException;
 import com.muczynski.library.repository.EmailChangeQueueRepository;
 import org.slf4j.Logger;
@@ -122,7 +123,8 @@ public class EmailChangeQueue {
                 handler.send(row.getBeforeJson(), row.getAfterJson());
                 repository.delete(row);
             } catch (RuntimeException e) {
-                logger.error("Email queue send failed for {}: {}", row.getSubjectKey(), e.getMessage());
+                logger.error("Email queue send failed for {}: {}", row.getSubjectKey(),
+                        LogEmailSender.redact(e.getMessage()));
             }
         }
     }

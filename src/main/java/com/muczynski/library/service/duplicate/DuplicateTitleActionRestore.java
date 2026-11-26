@@ -5,6 +5,7 @@ package com.muczynski.library.service.duplicate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muczynski.library.domain.FeastMonthDayConverter;
 import com.muczynski.library.exception.LibraryException;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.AuthorState;
 import com.muczynski.library.service.duplicate.DuplicateTitleSnapshots.BookState;
@@ -88,9 +89,9 @@ public class DuplicateTitleActionRestore {
                         msu_audio_available, msu_paper_available, msu_ebook_available, msu_last_checked, msu_lookup_error,
                         reading_difficulty, binding, desire_to_purchase, author_id, library_id,
                         free_text_last_searched, invalid_grokipedia_urls, invalid_free_text_urls,
-                        invalid_free_audio_urls, invalid_holdings)
+                        invalid_free_audio_urls, invalid_holdings, related_feast_day, related_feast_day_explanation)
                     VALUES (?, ?, ?, ?, ?, ?, lo_from_bytea(0, ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
@@ -143,6 +144,8 @@ public class DuplicateTitleActionRestore {
                 setJson(statement, 49, book.getInvalidFreeTextUrls());
                 setJson(statement, 50, book.getInvalidFreeAudioUrls());
                 setJson(statement, 51, book.getInvalidHoldings());
+                setDate(statement, 52, new FeastMonthDayConverter().convertToDatabaseColumn(book.getRelatedFeastDay()));
+                setString(statement, 53, book.getRelatedFeastDayExplanation());
                 statement.executeUpdate();
             }
             return null;

@@ -118,6 +118,9 @@ public class SendGridEmailSender implements EmailSender {
         body.put("from", from);
         body.put("subject", message.getSubject() != null ? message.getSubject() : "");
         body.put("content", content);
+        if (!message.getHeaders().isEmpty()) {
+            body.put("headers", new LinkedHashMap<>(message.getHeaders()));
+        }
         return body;
     }
 

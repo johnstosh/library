@@ -139,6 +139,116 @@ class OutgoingEmailTest {
                         + "<div style=\"font-size:22px;font-weight:bold;\">library-dev<br>DEV</div></div>"));
     }
 
+    @Test
+    void applyPutsUnsubscribeAfterTheSignOffAndTheRepeatedBrand() {
+        when(branchRepository.findAll()).thenReturn(List.of(
+                branch("St. Martin de Porres", "Sacred Heart Library System")));
+        EmailMessage message = new EmailMessage();
+        String url = "https://library.muczynskifamily.com/notifications/unsubscribe/abc";
+
+        outgoingEmail.apply(message, "A library loan was changed.\n", "<p>A library loan was changed.</p>", url);
+
+        String text = message.getTextBody();
+        int signOff = text.indexOf(SIGN_OFF);
+        int brandAgain = text.indexOf(PROD_HEADER, signOff + SIGN_OFF.length());
+        int unsub = text.lastIndexOf("Unsubscribe");
+        assertTrue(signOff >= 0);
+        assertTrue(brandAgain > signOff);
+        assertTrue(unsub > brandAgain);
+        assertTrue(text.endsWith("Unsubscribe\n" + url));
+        assertFalse(text.substring(unsub).contains("St. Martin"));
+
+        String html = message.getHtmlBody();
+        int htmlSign = html.indexOf("-Saint Martin de Porres");
+        int htmlBrand = html.lastIndexOf("font-size:22px");
+        int htmlUnsub = html.lastIndexOf(">Unsubscribe</a>");
+        assertTrue(htmlSign < htmlBrand && htmlBrand < htmlUnsub);
+        assertTrue(html.endsWith("<p><a href=\"" + url + "\">Unsubscribe</a></p></div>"));
+        assertEquals(1, count(html, ">Unsubscribe</a>"));
+    }
+
+    @Test
+    void mailingListHtmlPutsTheLastUnsubscribeAfterTheClosing() {
+        when(branchRepository.findAll()).thenReturn(List.of(
+                branch("St. Martin de Porres", "Sacred Heart Library System")));
+        EmailMessage message = new EmailMessage();
+
+        outgoingEmail.composeMailingList(
+                message,
+                "Lives of Saints",
+                "Frequency: weekly. To change frequency, unsubscribe and sign up again.",
+                "A Book\nhttps://library.muczynskifamily.com/books/3\nFebruary 3",
+                "<p><a href=\"https://library.muczynskifamily.com/books/3\">A Book</a></p>",
+                "https://library.muczynskifamily.com/mailing-lists/unsubscribe/abc");
+
+        String html = message.getHtmlBody();
+        int nameAt = html.indexOf("St. Martin de Porres");
+        int siteAt = html.indexOf("https://library.muczynskifamily.com");
+        int firstUnsub = html.indexOf(">Unsubscribe</a>");
+        int topicAt = html.indexOf("Lives of Saints");
+        int frequencyAt = html.indexOf("Frequency: weekly.");
+        int changeAt = html.indexOf("unsubscribe and sign up again");
+        int bookAt = html.indexOf("A Book");
+        int closingAt = html.indexOf("God bless,");
+        int signOffAt = html.indexOf("-Saint Martin de Porres");
+        int lastUnsub = html.lastIndexOf(">Unsubscribe</a>");
+
+        assertTrue(nameAt >= 0 && nameAt < siteAt);
+        assertTrue(siteAt < firstUnsub);
+        assertTrue(firstUnsub < topicAt);
+        assertTrue(topicAt < frequencyAt);
+        assertTrue(frequencyAt < changeAt);
+        assertTrue(changeAt < bookAt);
+        assertTrue(bookAt < closingAt);
+        assertTrue(closingAt < signOffAt);
+        assertTrue(signOffAt < lastUnsub);
+        assertEquals(2, count(html, ">Unsubscribe</a>"));
+        assertEquals(html.indexOf("font-size:22px"), html.lastIndexOf("font-size:22px"));
+        assertTrue(html.contains("Sacred Heart Library System"));
+        assertTrue(html.contains(OutgoingEmail.PAPER));
+        assertTrue(html.contains(OutgoingEmail.BURGUNDY));
+        assertTrue(html.contains(">Open the library</a>"));
+        assertTrue(html.contains("width=\"600\""));
+        String text = message.getTextBody();
+        assertTrue(text.indexOf("God bless,") < text.lastIndexOf("Unsubscribe"));
+        assertEquals(1, count(text, "God bless,"));
+    }
+
+    @Test
+    void mailingListOnTheDevHostUsesTheDevBrandAndDoesNotRepeatTheHeading() {
+        ReflectionTestUtils.setField(outgoingEmail, "externalBaseUrl", "https://library-dev.example");
+        when(branchRepository.findAll()).thenReturn(List.of(branch("St. Martin de Porres", "Ignored")));
+        EmailMessage message = new EmailMessage();
+
+        outgoingEmail.composeMailingList(message, "Adult Fiction",
+                "Frequency: monthly. To change frequency, unsubscribe and sign up again.",
+                "There are no books in this issue.",
+                "<p>There are no books in this issue.</p>",
+                "https://library-dev.example/mailing-lists/unsubscribe/abc");
+
+        String html = message.getHtmlBody();
+        assertTrue(html.contains("library-dev"));
+        assertTrue(html.contains("DEV"));
+        assertTrue(html.contains("https://library-dev.example"));
+        assertFalse(html.contains("St. Martin de Porres"));
+        assertEquals(1, count(html, "font-size:22px"));
+        assertTrue(html.lastIndexOf(">Unsubscribe</a>") > html.indexOf("-Saint Martin de Porres"));
+    }
+
+    private static int count(String text, String needle) {
+        int found = 0;
+        int from = 0;
+        while (from <= text.length()) {
+            int at = text.indexOf(needle, from);
+            if (at < 0) {
+                return found;
+            }
+            found++;
+            from = at + needle.length();
+        }
+        return found;
+    }
+
     private static Library branch(String name, String system) {
         Library library = new Library();
         library.setBranchName(name);

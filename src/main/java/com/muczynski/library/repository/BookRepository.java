@@ -500,4 +500,13 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("UPDATE Book b SET b.freeTextUrl = :url, b.freeTextLastSearched = :searchedAt, b.lastModified = :searchedAt "
             + "WHERE b.id = :id")
     int updateFreeTextFound(@Param("id") Long id, @Param("url") String url, @Param("searchedAt") LocalDateTime searchedAt);
+
+    @Query("SELECT b FROM Book b WHERE b.relatedFeastDay IS NOT NULL")
+    List<Book> findBooksWithFeastDay();
+
+    @Query("SELECT b FROM Book b WHERE b.dateAddedToLibrary >= :start AND b.dateAddedToLibrary < :end")
+    List<Book> findAddedToLibraryBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT DISTINCT b.id FROM Book b JOIN b.tagsList t WHERE t IN :tags")
+    List<Long> findIdsByAnyTag(@Param("tags") java.util.Collection<String> tags);
 }

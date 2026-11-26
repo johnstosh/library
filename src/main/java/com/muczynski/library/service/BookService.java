@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookCoverType;
+import com.muczynski.library.domain.FeastMonthDayConverter;
 import com.muczynski.library.domain.BookStatus;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.Photo;
@@ -328,6 +329,8 @@ public class BookService {
         book.setPublisher(bookDto.getPublisher());
         book.setPlotEssay(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
+        book.setRelatedFeastDay(bookDto.getRelatedFeastDay());
+        book.setRelatedFeastDayExplanation(FeastMonthDayConverter.explanationOrNull(bookDto.getRelatedFeastDayExplanation()));
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
@@ -460,6 +463,8 @@ public class BookService {
         clone.setPublisher(original.getPublisher());
         clone.setPlotEssay(original.getPlotEssay());
         clone.setRelatedWorks(original.getRelatedWorks());
+        clone.setRelatedFeastDay(original.getRelatedFeastDay());
+        clone.setRelatedFeastDayExplanation(original.getRelatedFeastDayExplanation());
         clone.setDetailedDescription(original.getDetailedDescription());
         clone.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         clone.setLastModified(LocalDateTime.now(ZoneOffset.UTC));

@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { useUserSettings, useUpdateUserSettings } from '@/api/settings'
 import { hashPassword } from '@/utils/auth'
 import { isValidOptionalEmail, isValidOptionalPhone } from '@/utils/contact'
+import { isSsoAccount } from '@/utils/sso'
 import { useAuthStore } from '@/stores/authStore'
 
 interface PasswordChangeForm {
@@ -49,7 +50,7 @@ export function UserSettingsPage() {
     reset,
   } = useForm<PasswordChangeForm>()
 
-  const isSsoUser = !!user?.ssoSubjectId
+  const isSsoUser = isSsoAccount(user) || isSsoAccount(userSettings)
   const isLibrarian = user?.authority === 'LIBRARIAN'
 
   const onSubmit = async (data: PasswordChangeForm) => {
@@ -204,7 +205,7 @@ export function UserSettingsPage() {
     setSuccessMessage('')
     setErrorMessage('')
 
-    if (!isValidOptionalEmail(email)) {
+    if (!isSsoUser && !isValidOptionalEmail(email)) {
       setErrorMessage('Enter a valid email address or leave it blank')
       return
     }
@@ -215,7 +216,7 @@ export function UserSettingsPage() {
 
     try {
       await updateUserSettings.mutateAsync({
-        email: email.trim(),
+        ...(isSsoUser ? {} : { email: email.trim() }),
         phone: phone.trim(),
         receiveEmails,
       })
@@ -300,10 +301,13 @@ export function UserSettingsPage() {
               label="Email address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={isSsoUser ? undefined : (e) => setEmail(e.target.value)}
+              readOnly={isSsoUser}
+              disabled={isSsoUser}
               placeholder="you@example.com"
               data-test="settings-email"
               autoComplete="email"
+              helpText={isSsoUser ? 'This email comes from your sign-in provider and cannot be changed here.' : undefined}
             />
             <Input
               label="Phone number"
@@ -467,7 +471,7 @@ export function UserSettingsPage() {
                   </Button>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  API key for Gemini. Calls use the free-tier model gemini-4-hydrogen.
+                  API key for Gemini. Calls use the free-tier model gemini-3.5-flash-lite.
                 </p>
               </div>
               <Checkbox

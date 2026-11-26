@@ -6,6 +6,7 @@ package com.muczynski.library.mapper;
 import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookTitles;
+import com.muczynski.library.domain.FeastMonthDayConverter;
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.Library;
 import com.muczynski.library.domain.ReadingDifficulty;
@@ -93,6 +94,8 @@ public class BookMapper {
         book.setPublisher(bookDto.getPublisher());
         book.setPlotEssay(bookDto.getPlotSummary());
         book.setRelatedWorks(bookDto.getRelatedWorks());
+        book.setRelatedFeastDay(bookDto.getRelatedFeastDay());
+        book.setRelatedFeastDayExplanation(FeastMonthDayConverter.explanationOrNull(bookDto.getRelatedFeastDayExplanation()));
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
@@ -188,6 +191,8 @@ public class BookMapper {
         bookDto.setPublisher(book.getPublisher());
         bookDto.setPlotSummary(book.getPlotEssay());
         bookDto.setRelatedWorks(book.getRelatedWorks());
+        bookDto.setRelatedFeastDay(book.getRelatedFeastDay());
+        bookDto.setRelatedFeastDayExplanation(book.getRelatedFeastDayExplanation());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
         bookDto.setInvalidGrokipediaUrls(RejectedMatches.orEmptyUrls(book.getInvalidGrokipediaUrls()));

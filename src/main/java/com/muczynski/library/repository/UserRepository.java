@@ -6,6 +6,7 @@ package com.muczynski.library.repository;
 import com.muczynski.library.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -36,6 +37,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT LOWER(u.email) FROM User u "
             + "WHERE u.receiveEmails = false AND u.email IS NOT NULL AND u.email <> ''")
     List<String> findEmailsDecliningNotifications();
+
+    /**
+     * Ids of accounts that still receive notices at this address, lowest id first.
+     * Scalar ids only, so the caller can store a token in a separate transaction
+     * without this persistence context writing a null token back.
+     */
+    @Query("SELECT u.id FROM User u "
+            + "WHERE LOWER(TRIM(u.email)) = LOWER(TRIM(:email)) AND u.receiveEmails = true "
+            + "ORDER BY u.id ASC")
+    List<Long> findReceivingIdsByEmailIgnoreCaseOrderByIdAsc(@Param("email") String email);
+
+    Optional<User> findByNotificationUnsubscribeToken(String notificationUnsubscribeToken);
+
+    /** Sets the token once. A concurrent caller that lost the race updates zero rows. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE User u SET u.notificationUnsubscribeToken = :token "
+            + "WHERE u.id = :id AND u.notificationUnsubscribeToken IS NULL")
+    int assignNotificationUnsubscribeTokenIfAbsent(@Param("id") Long id, @Param("token") String token);
 
     /** Keyset id page for chunked JSON export. */
     @Query("SELECT u.id FROM User u WHERE u.id > :lastId ORDER BY u.id ASC")

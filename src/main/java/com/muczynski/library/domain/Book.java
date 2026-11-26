@@ -12,6 +12,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +70,20 @@ public class Book {
 
     @Lob
     private String relatedWorks;
+
+    /**
+     * Recurring month and day of a related feast. Null when the book has none.
+     * Stored as a DATE in leap year 2000 so February 29 fits. The year is not shown.
+     */
+    @Convert(converter = FeastMonthDayConverter.class)
+    @Column(name = "related_feast_day", columnDefinition = "date")
+    private MonthDay relatedFeastDay;
+
+    /**
+     * Why this feast has more than one date. Null when there is only one date.
+     */
+    @Column(name = "related_feast_day_explanation", columnDefinition = "text")
+    private String relatedFeastDayExplanation;
 
     /**
      * Same text mapping as {@link #plotEssay}.

@@ -80,6 +80,33 @@ class SendGridEmailSenderTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void send_setsListUnsubscribeHeaders() {
+        SendGridEmailSender sender = new SendGridEmailSender(restTemplate);
+        GlobalSettings settings = new GlobalSettings();
+        settings.setSendGridApiKey("SG.test-key");
+        settings.setEmailFromAddress("library@example.com");
+        EmailMessage message = new EmailMessage();
+        message.getTo().add("patron@example.com");
+        message.setSubject("Lives of Saints");
+        message.setTextBody("text");
+        message.setListUnsubscribe("https://library.example/mailing-lists/unsubscribe/abc123");
+        when(restTemplate.exchange(eq(SendGridEmailSender.SENDGRID_URL), eq(HttpMethod.POST),
+                any(HttpEntity.class), eq(String.class)))
+                .thenReturn(new ResponseEntity<>("", HttpStatus.ACCEPTED));
+
+        sender.send(message, settings);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).exchange(eq(SendGridEmailSender.SENDGRID_URL), eq(HttpMethod.POST),
+                captor.capture(), eq(String.class));
+        Map<String, String> headers = (Map<String, String>) captor.getValue().getBody().get("headers");
+        assertEquals("<https://library.example/mailing-lists/unsubscribe/abc123>",
+                headers.get(EmailMessage.LIST_UNSUBSCRIBE));
+        assertEquals("List-Unsubscribe=One-Click", headers.get(EmailMessage.LIST_UNSUBSCRIBE_POST));
+    }
+
+    @Test
     void send_withoutConfig_throws() {
         SendGridEmailSender sender = new SendGridEmailSender(restTemplate);
         EmailMessage message = new EmailMessage();

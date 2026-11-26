@@ -102,6 +102,9 @@ public class WebhookEmailSender implements EmailSender {
         if (!message.getEventPayload().isEmpty()) {
             body.put("payload", message.getEventPayload());
         }
+        if (!message.getHeaders().isEmpty()) {
+            body.put("headers", new LinkedHashMap<>(message.getHeaders()));
+        }
         return body;
     }
 

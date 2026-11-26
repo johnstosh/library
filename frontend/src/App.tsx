@@ -36,6 +36,7 @@ const UserNewPage = lazy(() => import('@/pages/users/UserNewPage').then(m => ({ 
 const UserEditPage = lazy(() => import('@/pages/users/UserEditPage').then(m => ({ default: m.UserEditPage })))
 const UserViewPage = lazy(() => import('@/pages/users/UserViewPage').then(m => ({ default: m.UserViewPage })))
 const SearchPage = lazy(() => import('@/pages/search/SearchPage').then(m => ({ default: m.SearchPage })))
+const MailingListsPage = lazy(() => import('@/pages/mailing-lists/MailingListsPage').then(m => ({ default: m.MailingListsPage })))
 const MyLibraryCardPage = lazy(() => import('@/pages/library-cards/MyLibraryCardPage').then(m => ({ default: m.MyLibraryCardPage })))
 const ApplicationsPage = lazy(() => import('@/pages/library-cards/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
 const UserSettingsPage = lazy(() => import('@/pages/settings/UserSettingsPage').then(m => ({ default: m.UserSettingsPage })))
@@ -112,6 +113,7 @@ function App() {
               <Route path="/loans/:id" element={<LoanViewPage />} />
               <Route path="/loans/:id/edit" element={<LoanEditPage />} />
               <Route path="/my-card" element={<MyLibraryCardPage />} />
+              <Route path="/mailing-lists" element={<MailingListsPage />} />
               <Route path="/settings" element={<UserSettingsPage />} />
 
               {/* Librarian-only routes */}

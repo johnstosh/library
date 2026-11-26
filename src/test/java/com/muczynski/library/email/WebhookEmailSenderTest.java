@@ -79,6 +79,32 @@ class WebhookEmailSenderTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void send_setsListUnsubscribeHeaders() {
+        WebhookEmailSender sender = new WebhookEmailSender(restTemplate);
+        GlobalSettings settings = new GlobalSettings();
+        settings.setWebhookUrl("https://hooks.example.com/email");
+        EmailMessage message = new EmailMessage();
+        message.getTo().add("patron@example.com");
+        message.setSubject("Lives of Saints");
+        message.setTextBody("text");
+        message.setListUnsubscribe("https://library.example/mailing-lists/unsubscribe/abc123");
+        when(restTemplate.exchange(eq("https://hooks.example.com/email"), eq(HttpMethod.POST),
+                any(HttpEntity.class), eq(String.class)))
+                .thenReturn(new ResponseEntity<>("ok", HttpStatus.OK));
+
+        sender.send(message, settings);
+
+        ArgumentCaptor<HttpEntity<Map<String, Object>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).exchange(eq("https://hooks.example.com/email"), eq(HttpMethod.POST),
+                captor.capture(), eq(String.class));
+        Map<String, String> headers = (Map<String, String>) captor.getValue().getBody().get("headers");
+        assertEquals("<https://library.example/mailing-lists/unsubscribe/abc123>",
+                headers.get(EmailMessage.LIST_UNSUBSCRIBE));
+        assertEquals("List-Unsubscribe=One-Click", headers.get(EmailMessage.LIST_UNSUBSCRIBE_POST));
+    }
+
+    @Test
     void send_withoutUrl_throws() {
         WebhookEmailSender sender = new WebhookEmailSender(restTemplate);
         EmailMessage message = new EmailMessage();

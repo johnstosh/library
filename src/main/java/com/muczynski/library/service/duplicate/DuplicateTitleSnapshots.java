@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,6 +102,8 @@ public final class DuplicateTitleSnapshots {
         private String publisher;
         private String plotEssay;
         private String relatedWorks;
+        private MonthDay relatedFeastDay;
+        private String relatedFeastDayExplanation;
         private String detailedDescription;
         private String grokipediaUrl;
         private List<com.muczynski.library.domain.RejectedUrl> invalidGrokipediaUrls;
@@ -157,6 +160,8 @@ public final class DuplicateTitleSnapshots {
             state.publisher = book.getPublisher();
             state.plotEssay = book.getPlotEssay();
             state.relatedWorks = book.getRelatedWorks();
+            state.relatedFeastDay = book.getRelatedFeastDay();
+            state.relatedFeastDayExplanation = book.getRelatedFeastDayExplanation();
             state.detailedDescription = book.getDetailedDescription();
             state.grokipediaUrl = book.getGrokipediaUrl();
             state.invalidGrokipediaUrls = book.getInvalidGrokipediaUrls() == null

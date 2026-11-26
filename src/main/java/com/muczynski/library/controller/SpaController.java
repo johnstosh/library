@@ -44,6 +44,7 @@ public class SpaController {
             "/users/**",
             "/search",
             "/search/**",
+            "/mailing-lists",
             "/my-card",
             "/applications",
             "/applications/**",

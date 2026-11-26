@@ -20,7 +20,8 @@ import java.util.UUID;
     },
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_user_identifier", columnNames = "userIdentifier"),
-        @UniqueConstraint(name = "uk_user_username", columnNames = "username")
+        @UniqueConstraint(name = "uk_user_username", columnNames = "username"),
+        @UniqueConstraint(name = "uk_user_notification_unsubscribe", columnNames = "notification_unsubscribe_token")
     }
 )
 @Getter
@@ -76,6 +77,13 @@ public class User implements Serializable {
      */
     @Column(columnDefinition = "boolean default true")
     private boolean receiveEmails = true;
+
+    /**
+     * Unguessable secret for the public link that turns {@link #receiveEmails} off.
+     * Null until a notice needs it. Do not log it.
+     */
+    @Column(name = "notification_unsubscribe_token", length = 64)
+    private String notificationUnsubscribeToken;
 
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(255) default 'CLASSICAL_DEVOTION'")

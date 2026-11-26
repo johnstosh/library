@@ -15,6 +15,7 @@ import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.util.List;
 
 @Data
@@ -30,6 +31,13 @@ public class BookDto {
     private String publisher;
     private String plotSummary;
     private String relatedWorks;
+    /**
+     * Yearless month and day ({@code --MM-DD}, for example {@code --08-11}).
+     * Null when the book is not tied to a feast. The sentinel year is not serialized.
+     */
+    private MonthDay relatedFeastDay;
+    /** Empty when the feast has only one date. */
+    private String relatedFeastDayExplanation;
     private String detailedDescription;
     private String grokipediaUrl;
     /** Rejected Grokipedia pages. Empty when none have been rejected. */

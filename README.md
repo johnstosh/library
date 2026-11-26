@@ -512,6 +512,7 @@ Optional:
 ### Deployment Scripts
 - `./deploy.sh` - Deploy to Google Cloud Run
 - `./docker-test.sh` - Run tests in Docker
+- `./docker-test-prod.sh` - Build and run the app locally against the production Cloud SQL database
 - `./docker-stop-testing.sh` - Stop Docker test containers
 
 ## Support

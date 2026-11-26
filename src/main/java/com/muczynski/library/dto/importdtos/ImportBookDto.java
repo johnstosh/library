@@ -12,6 +12,7 @@ import com.muczynski.library.domain.RejectedUrl;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.util.List;
 
 @Data
@@ -31,6 +32,10 @@ public class ImportBookDto {
     private String publisher;
     private String plotSummary;
     private String relatedWorks;
+    /** Month and day only ({@code --MM-DD}). The earliest date when there is a choice. */
+    private MonthDay relatedFeastDay;
+    /** Omitted when blank. Empty when the feast has only one date. */
+    private String relatedFeastDayExplanation;
     private String detailedDescription;
     private String grokipediaUrl;
     /** Omitted when empty. A missing field leaves the stored list unchanged. An empty list clears it. */

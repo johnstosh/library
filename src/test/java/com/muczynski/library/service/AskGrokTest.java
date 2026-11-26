@@ -677,7 +677,8 @@ public class AskGrokTest {
 
         assertEquals("essay", result);
         assertTrue(AskGrok.GEMINI_GENERATE_URL.contains(AskGrok.MODEL_GEMINI_FREE));
-        assertEquals("gemini-4-hydrogen", AskGrok.MODEL_GEMINI_FREE);
+        assertEquals("gemini-3.5-flash-lite", AskGrok.MODEL_GEMINI_FREE);
+        assertEquals(List.of("gemini-3.5-flash-lite", "gemini-3.8-flash"), AskGrok.GEMINI_FREE_MODELS);
         HttpHeaders headers = entityCaptor.getValue().getHeaders();
         assertEquals("google-test-key", headers.getFirst("x-goog-api-key"));
         assertNull(headers.getFirst(HttpHeaders.AUTHORIZATION));
@@ -789,54 +790,58 @@ public class AskGrokTest {
         LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestion("q"));
         assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
         assertFalse(ex.getMessage().contains("generativelanguage.googleapis.com"));
-        assertEquals(AskGrok.GEMINI_RATE_LIMIT_COOLDOWN_MS, paused.get());
-        verify(restTemplate, times(AskGrok.GEMINI_FREE_MODELS.size())).postForEntity(
-                anyString(), any(HttpEntity.class), eq(Map.class));
-    }
-
-    @Test
-    void askQuestionFast_gemini429_skipsThatModelOnTheNextBook() {
-        stubGoogleUser("google-test-key");
-        AtomicLong clock = new AtomicLong(1_000_000L);
-        ReflectionTestUtils.setField(askGrok, "geminiNow", (LongSupplier) clock::get);
-        ReflectionTestUtils.setField(askGrok, "geminiPause", (LongConsumer) millis -> { });
-        when(restTemplate.postForEntity(eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
-                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"));
-        when(restTemplate.postForEntity(
-                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class)))
-                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
-
-        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
+        assertEquals(-1L, paused.get());
         verify(restTemplate, times(1)).postForEntity(
                 eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
-
-        clearInvocations(restTemplate);
-        when(restTemplate.postForEntity(
-                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class)))
-                .thenReturn(new ResponseEntity<>(geminiBody("poetry", false), HttpStatus.OK));
-
-        assertEquals("poetry", askGrok.askQuestionFast("tag the next"));
         verify(restTemplate, never()).postForEntity(
-                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
-        verify(restTemplate, times(1)).postForEntity(
                 eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class));
     }
 
     @Test
-    void askQuestionFast_gemini429OnEveryModel_retriesAfterTheCooldown() {
+    void askQuestionFast_gemini429_waitsBeforeAnyModelIsCalledAgain() {
+        stubGoogleUser("google-test-key");
+        AtomicLong clock = new AtomicLong(1_000_000L);
+        AtomicLong paused = new AtomicLong(-1);
+        ReflectionTestUtils.setField(askGrok, "geminiNow", (LongSupplier) clock::get);
+        ReflectionTestUtils.setField(askGrok, "geminiPause", (LongConsumer) paused::set);
+        when(restTemplate.postForEntity(eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
+                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"));
+
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag this"));
+        assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
+        assertEquals(-1L, paused.get());
+        verify(restTemplate, times(1)).postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
+        verify(restTemplate, never()).postForEntity(
+                eq(AskGrok.geminiGenerateUrl("gemini-3.8-flash")), any(HttpEntity.class), eq(Map.class));
+
+        clearInvocations(restTemplate);
+        ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag the next"));
+        assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
+        verifyNoInteractions(restTemplate);
+
+        clock.addAndGet(AskGrok.GEMINI_RATE_LIMIT_COOLDOWN_MS);
+        when(restTemplate.postForEntity(eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class)))
+                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+
+        assertEquals("fiction", askGrok.askQuestionFast("tag after the pause"));
+        verify(restTemplate, times(1)).postForEntity(
+                eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
+    }
+
+    @Test
+    void askQuestionFast_gemini429_doesNotPauseInsideTheRequest() {
         stubGoogleUser("google-test-key");
         AtomicLong clock = new AtomicLong(1_000_000L);
         ReflectionTestUtils.setField(askGrok, "geminiNow", (LongSupplier) clock::get);
         ReflectionTestUtils.setField(askGrok, "geminiPause", (LongConsumer) clock::addAndGet);
         when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(Map.class)))
-                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"))
-                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"))
-                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"))
-                .thenReturn(new ResponseEntity<>(geminiBody("fiction", false), HttpStatus.OK));
+                .thenThrow(geminiClientError(HttpStatus.TOO_MANY_REQUESTS, "{}"));
 
-        assertEquals("fiction", askGrok.askQuestionFast("tag this"));
-        assertEquals(1_000_000L + AskGrok.GEMINI_RATE_LIMIT_COOLDOWN_MS, clock.get());
-        verify(restTemplate, times(AskGrok.GEMINI_FREE_MODELS.size() + 1)).postForEntity(
+        LibraryException ex = assertThrows(LibraryException.class, () -> askGrok.askQuestionFast("tag this"));
+        assertEquals("Gemini rate limit reached. Try again later.", ex.getMessage());
+        assertEquals(1_000_000L, clock.get());
+        verify(restTemplate, times(1)).postForEntity(
                 anyString(), any(HttpEntity.class), eq(Map.class));
     }
 
@@ -858,7 +863,7 @@ public class AskGrokTest {
         verify(restTemplate, times(2)).postForEntity(
                 eq(AskGrok.GEMINI_GENERATE_URL), any(HttpEntity.class), eq(Map.class));
         verify(restTemplate, never()).postForEntity(
-                eq(AskGrok.geminiGenerateUrl("gemini-3.5-flash-lite")), any(HttpEntity.class), eq(Map.class));
+                eq(AskGrok.geminiGenerateUrl("gemini-4-hydrogen")), any(HttpEntity.class), eq(Map.class));
     }
 
     @Test
