@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.BookLabels;
 import com.muczynski.library.email.HtmlText;
@@ -21,7 +22,7 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * Picks the books for one issue and renders their titles as links.
+ * Picks the books for one issue and renders each book as its own HTML block.
  * Book has no deleted or removed flag; blank titles are skipped.
  */
 public final class MailingListIssues {
@@ -143,22 +144,40 @@ public final class MailingListIssues {
                 text.append("\n\n");
             }
             text.append(title).append('\n').append(url);
-            html.append("<p><a href=\"").append(HtmlText.escape(url)).append("\">")
-                    .append(HtmlText.escape(title)).append("</a>");
+            html.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin:0 0 12px 0;\">");
+            html.append("<tr><td style=\"padding:12px 14px;background-color:#FFFFFF;border:1px solid #DCC4C9;\">");
+            html.append("<a href=\"").append(HtmlText.escape(url))
+                    .append("\" style=\"color:#6B2D3C;font-weight:bold;text-decoration:none;\">");
+            html.append(HtmlText.escape(title)).append("</a>");
+            String author = authorName(book);
+            if (!author.isEmpty()) {
+                html.append("<br><span style=\"color:#3E3B36;\">")
+                        .append(HtmlText.escape(author)).append("</span>");
+            }
             if (includeFeast && book.getRelatedFeastDay() != null) {
                 String date = feastDate(book.getRelatedFeastDay());
                 text.append('\n').append(date);
-                html.append("<br>").append(HtmlText.escape(date));
+                html.append("<br><span style=\"color:#2F664B;\">")
+                        .append(HtmlText.escape(date)).append("</span>");
                 String explanation = book.getRelatedFeastDayExplanation();
                 if (explanation != null && !explanation.isBlank()) {
                     String note = explanation.trim();
                     text.append(" — ").append(note);
-                    html.append(" — ").append(HtmlText.escape(note));
+                    html.append("<br><span style=\"color:#6B665E;\">")
+                            .append(HtmlText.escape(note)).append("</span>");
                 }
             }
-            html.append("</p>");
+            html.append("</td></tr></table>");
         }
         return new Issue(text.toString(), html.toString(), books.size());
+    }
+
+    private static String authorName(Book book) {
+        Author author = book.getAuthor();
+        if (author == null || author.getName() == null || author.getName().isBlank()) {
+            return "";
+        }
+        return author.getName().trim();
     }
 
     private static String feastDate(MonthDay feast) {

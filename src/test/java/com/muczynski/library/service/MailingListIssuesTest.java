@@ -3,6 +3,7 @@
  */
 package com.muczynski.library.service;
 
+import com.muczynski.library.domain.Author;
 import com.muczynski.library.domain.Book;
 import com.muczynski.library.domain.MailingFrequency;
 import com.muczynski.library.service.MailingListWindows.InstantWindow;
@@ -91,6 +92,26 @@ class MailingListIssuesTest {
         assertTrue(issue.html().contains("a &lt;note&gt; &amp; more"));
         assertFalse(issue.html().contains("Tom & <Jerry>"));
         assertTrue(issue.html().contains("href=\"" + BASE + "/books/5\""));
+        assertTrue(issue.html().contains("border:1px solid #DCC4C9"));
+        assertTrue(issue.html().contains("color:#2F664B"));
+        assertEquals(3, count(issue.html(), "border:1px solid #DCC4C9"));
+    }
+
+    @Test
+    void htmlBookBlockShowsTheAuthorAndLeavesPlainTextWithoutIt() {
+        Book book = book(9L, "A Book", "read-aloud");
+        Author author = new Author();
+        author.setName("Ada & <Bob>");
+        book.setAuthor(author);
+
+        MailingListIssues.Issue issue = MailingListIssues.oneRandom(
+                List.of(book), List.of("read-aloud"), BASE, new Random(1));
+
+        assertTrue(issue.html().contains("border:1px solid #DCC4C9"));
+        assertTrue(issue.html().contains("Ada &amp; &lt;Bob&gt;"));
+        assertTrue(issue.html().contains("color:#6B2D3C"));
+        assertFalse(issue.text().contains("Ada"));
+        assertTrue(issue.text().startsWith("A Book\n" + BASE + "/books/9"));
     }
 
     @Test
@@ -126,6 +147,20 @@ class MailingListIssuesTest {
         assertEquals(0, issue.bookCount());
         assertEquals(MailingListIssues.NO_BOOKS, issue.text());
         assertTrue(issue.html().contains(MailingListIssues.NO_BOOKS));
+    }
+
+    private static int count(String text, String needle) {
+        int found = 0;
+        int from = 0;
+        while (from <= text.length()) {
+            int at = text.indexOf(needle, from);
+            if (at < 0) {
+                return found;
+            }
+            found++;
+            from = at + needle.length();
+        }
+        return found;
     }
 
     private static Book book(Long id, String title, String... tags) {

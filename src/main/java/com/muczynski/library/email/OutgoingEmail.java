@@ -22,6 +22,10 @@ public class OutgoingEmail {
     static final String FONT =
             "Century Schoolbook L, Century Schoolbook, Times New Roman, Times, serif";
 
+    static final String PAPER = "#F4EBDA";
+    static final String BURGUNDY = "#6B2D3C";
+    static final String CHARCOAL = "#3E3B36";
+
     static final String SIGN_OFF_TEXT = "God bless,\n-Saint Martin de Porres";
 
     static final String SIGN_OFF_HTML = "God bless,<br>-Saint Martin de Porres";
@@ -221,16 +225,45 @@ public class OutgoingEmail {
         String books = issueHtml == null || issueHtml.isBlank()
                 ? "<p>There are no books in this issue.</p>"
                 : issueHtml;
-        return "<div style=\"font-family:" + FONT + ";\">"
-                + htmlHeading(name, subName)
-                + "<p><a href=\"" + HtmlText.escape(site) + "\">" + HtmlText.escape(site) + "</a></p>"
-                + "<p><a href=\"" + HtmlText.escape(unsub) + "\">Unsubscribe</a></p>"
-                + "<p>" + HtmlText.escape(topic) + "</p>"
-                + "<p>" + HtmlText.escape(frequencyLine) + "</p>"
+        String link = "color:" + BURGUNDY + ";";
+        return "<div style=\"font-family:" + FONT + ";background-color:" + PAPER + ";padding:24px 12px;\">"
+                + "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" align=\"center\" width=\"600\" "
+                + "style=\"width:600px;max-width:600px;background-color:" + PAPER + ";margin:0 auto;\">"
+                + "<tr><td style=\"padding:8px 28px 28px 28px;font-family:" + FONT + ";color:" + CHARCOAL + ";\">"
+                + mailingListHeading(name, subName)
+                + "<p style=\"margin:16px 0 8px 0;\"><a href=\"" + HtmlText.escape(site) + "\" style=\"" + link + "\">Open the library</a></p>"
+                + "<p style=\"margin:0 0 20px 0;font-size:13px;\"><a href=\"" + HtmlText.escape(unsub) + "\" style=\"" + link + "\">Unsubscribe</a></p>"
+                + "<p style=\"margin:0 0 8px 0;font-size:20px;font-weight:bold;color:" + BURGUNDY + ";\">" + HtmlText.escape(topic) + "</p>"
+                + "<p style=\"margin:0 0 20px 0;font-size:14px;color:" + CHARCOAL + ";\">" + HtmlText.escape(frequencyLine) + "</p>"
                 + books
-                + "<p>" + SIGN_OFF_HTML + "</p>"
-                + "<p><a href=\"" + HtmlText.escape(unsub) + "\">Unsubscribe</a></p>"
-                + "</div>";
+                + "<p style=\"margin:20px 0 8px 0;\">" + SIGN_OFF_HTML + "</p>"
+                + "<p style=\"margin:0;\"><a href=\"" + HtmlText.escape(unsub) + "\" style=\"" + link + "\">Unsubscribe</a></p>"
+                + "</td></tr></table></div>";
+    }
+
+    /** Branch name stays at 22px so the letter has one heading. The system name is smaller. */
+    private static String mailingListHeading(String name, String subName) {
+        String safeName = name == null ? "" : name;
+        boolean hasSub = subName != null && !subName.isBlank();
+        if (safeName.isEmpty() && !hasSub) {
+            return "";
+        }
+        StringBuilder heading = new StringBuilder();
+        if (!safeName.isEmpty()) {
+            heading.append("<div style=\"font-size:22px;font-weight:bold;color:")
+                    .append(BURGUNDY)
+                    .append(";line-height:1.3;\">");
+            heading.append(HtmlText.escape(safeName));
+            heading.append("</div>");
+        }
+        if (hasSub) {
+            heading.append("<div style=\"font-size:14px;color:")
+                    .append(CHARCOAL)
+                    .append(";margin-top:4px;\">");
+            heading.append(HtmlText.escape(subName.trim()));
+            heading.append("</div>");
+        }
+        return heading.toString();
     }
 
     private static String stripTrailingNewlines(String value) {

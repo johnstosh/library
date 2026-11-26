@@ -205,6 +205,10 @@ class OutgoingEmailTest {
         assertEquals(2, count(html, ">Unsubscribe</a>"));
         assertEquals(html.indexOf("font-size:22px"), html.lastIndexOf("font-size:22px"));
         assertTrue(html.contains("Sacred Heart Library System"));
+        assertTrue(html.contains(OutgoingEmail.PAPER));
+        assertTrue(html.contains(OutgoingEmail.BURGUNDY));
+        assertTrue(html.contains(">Open the library</a>"));
+        assertTrue(html.contains("width=\"600\""));
         String text = message.getTextBody();
         assertTrue(text.indexOf("God bless,") < text.lastIndexOf("Unsubscribe"));
         assertEquals(1, count(text, "God bless,"));
