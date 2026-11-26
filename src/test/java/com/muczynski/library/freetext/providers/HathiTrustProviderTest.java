@@ -5,16 +5,19 @@ package com.muczynski.library.freetext.providers;
 
 import com.muczynski.library.freetext.FreeTextLookupResult;
 import com.muczynski.library.testsupport.RequiresOpenNetwork;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -158,13 +161,53 @@ class HathiTrustProviderTest {
     @Test
     @RequiresOpenNetwork
     @EnabledIfEnvironmentVariable(named = "OPEN_NETWORK", matches = "(?i)true")
-    void live_findsSevenPillarsOfPeace() {
+    void live_findsSevenPillarsOfPeace() throws InterruptedException {
         HathiTrustProvider live = new HathiTrustProvider();
-        ReflectionTestUtils.setField(live, "restTemplate", new RestTemplate());
+        ReflectionTestUtils.setField(live, "restTemplate", liveRestTemplate());
 
-        FreeTextLookupResult result = live.search("Seven Pillars of Peace", "Fulton J. Sheen");
+        FreeTextLookupResult result = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            result = live.search("Seven Pillars of Peace", "Fulton J. Sheen");
+            if (result.isFound() || !transientSearchError(result.getErrorMessage())) {
+                break;
+            }
+            if (attempt < 3) {
+                Thread.sleep(2_000);
+            }
+        }
 
+        // A dropped connection is the network, not a missing volume. A real miss still fails.
+        if (!result.isFound()) {
+            Assumptions.assumeFalse(transientSearchError(result.getErrorMessage()), result.getErrorMessage());
+        }
         assertTrue(result.isFound(), result.getErrorMessage());
         assertTrue(result.getUrl().startsWith("https://hdl.handle.net/2027/"));
+    }
+
+    private static RestTemplate liveRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(10_000);
+        restTemplate.setRequestFactory(factory);
+        restTemplate.setInterceptors(List.of((request, body, execution) -> {
+            request.getHeaders().set("User-Agent", "library.muczynskifamily.com");
+            return execution.execute(request, body);
+        }));
+        return restTemplate;
+    }
+
+    private static boolean transientSearchError(String message) {
+        if (message == null) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        return lower.contains("connection reset")
+                || lower.contains("socketexception")
+                || lower.contains("connectexception")
+                || lower.contains("timeout")
+                || lower.contains("timed out")
+                || lower.contains("unknownhost")
+                || lower.contains("nohttpresponse");
     }
 }
