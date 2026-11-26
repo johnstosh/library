@@ -1,5 +1,5 @@
 // (c) Copyright 2025 by Muczynski
-import type { BookCoverType, BookStatus, ReadingDifficulty } from './enums'
+import type { BookCoverType, BookStatus, MainCharacterSex, ReadingDifficulty } from './enums'
 
 // API Error Response
 export interface ErrorResponse {
@@ -141,6 +141,8 @@ export interface BookDto {
   relatedFeastDay?: string
   /** Why more than one feast date exists. Empty when the feast has only one date. */
   relatedFeastDayExplanation?: string
+  /** Male or female main character. Absent when unknown, mixed, or not one story. */
+  mainCharacterSex?: MainCharacterSex | null
   detailedDescription?: string
   grokipediaUrl?: string
   invalidGrokipediaUrls?: RejectedUrl[]

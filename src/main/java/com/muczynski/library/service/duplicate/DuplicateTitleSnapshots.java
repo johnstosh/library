@@ -104,6 +104,7 @@ public final class DuplicateTitleSnapshots {
         private String relatedWorks;
         private MonthDay relatedFeastDay;
         private String relatedFeastDayExplanation;
+        private String mainCharacterSex;
         private String detailedDescription;
         private String grokipediaUrl;
         private List<com.muczynski.library.domain.RejectedUrl> invalidGrokipediaUrls;
@@ -162,6 +163,8 @@ public final class DuplicateTitleSnapshots {
             state.relatedWorks = book.getRelatedWorks();
             state.relatedFeastDay = book.getRelatedFeastDay();
             state.relatedFeastDayExplanation = book.getRelatedFeastDayExplanation();
+            state.mainCharacterSex = book.getMainCharacterSex() == null
+                    ? null : book.getMainCharacterSex().name();
             state.detailedDescription = book.getDetailedDescription();
             state.grokipediaUrl = book.getGrokipediaUrl();
             state.invalidGrokipediaUrls = book.getInvalidGrokipediaUrls() == null

@@ -5,6 +5,7 @@ package com.muczynski.library.dto;
 
 import com.muczynski.library.domain.BookCoverType;
 import com.muczynski.library.domain.BookStatus;
+import com.muczynski.library.domain.MainCharacterSex;
 import com.muczynski.library.domain.ReadingDifficulty;
 import com.muczynski.library.domain.RejectedHolding;
 import com.muczynski.library.domain.RejectedUrl;
@@ -38,6 +39,8 @@ public class BookDto {
     private MonthDay relatedFeastDay;
     /** Empty when the feast has only one date. */
     private String relatedFeastDayExplanation;
+    /** {@code MALE} or {@code FEMALE}. Null when unknown, mixed, or not one story. */
+    private MainCharacterSex mainCharacterSex;
     private String detailedDescription;
     private String grokipediaUrl;
     /** Rejected Grokipedia pages. Empty when none have been rejected. */

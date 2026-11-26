@@ -331,6 +331,7 @@ public class BookService {
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setRelatedFeastDay(bookDto.getRelatedFeastDay());
         book.setRelatedFeastDayExplanation(FeastMonthDayConverter.explanationOrNull(bookDto.getRelatedFeastDayExplanation()));
+        book.setMainCharacterSex(bookDto.getMainCharacterSex());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
@@ -465,6 +466,7 @@ public class BookService {
         clone.setRelatedWorks(original.getRelatedWorks());
         clone.setRelatedFeastDay(original.getRelatedFeastDay());
         clone.setRelatedFeastDayExplanation(original.getRelatedFeastDayExplanation());
+        clone.setMainCharacterSex(original.getMainCharacterSex());
         clone.setDetailedDescription(original.getDetailedDescription());
         clone.setDateAddedToLibrary(LocalDateTime.now(ZoneOffset.UTC));
         clone.setLastModified(LocalDateTime.now(ZoneOffset.UTC));

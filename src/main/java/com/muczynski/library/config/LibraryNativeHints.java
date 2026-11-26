@@ -39,6 +39,7 @@ public class LibraryNativeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(ReadingDifficulty.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(FavoriteItemType.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(BookCoverType.class, MemberCategory.INVOKE_DECLARED_METHODS);
+        hints.reflection().registerType(MainCharacterSex.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(MailingListTopic.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(MailingFrequency.class, MemberCategory.INVOKE_DECLARED_METHODS);
         hints.reflection().registerType(AdditionalShippingSource.class, MemberCategory.INVOKE_DECLARED_METHODS);

@@ -96,6 +96,7 @@ public class BookMapper {
         book.setRelatedWorks(bookDto.getRelatedWorks());
         book.setRelatedFeastDay(bookDto.getRelatedFeastDay());
         book.setRelatedFeastDayExplanation(FeastMonthDayConverter.explanationOrNull(bookDto.getRelatedFeastDayExplanation()));
+        book.setMainCharacterSex(bookDto.getMainCharacterSex());
         book.setDetailedDescription(bookDto.getDetailedDescription());
         book.setGrokipediaUrl(bookDto.getGrokipediaUrl());
         book.setInvalidGrokipediaUrls(RejectedMatches.acceptEditedUrls(
@@ -193,6 +194,7 @@ public class BookMapper {
         bookDto.setRelatedWorks(book.getRelatedWorks());
         bookDto.setRelatedFeastDay(book.getRelatedFeastDay());
         bookDto.setRelatedFeastDayExplanation(book.getRelatedFeastDayExplanation());
+        bookDto.setMainCharacterSex(book.getMainCharacterSex());
         bookDto.setDetailedDescription(book.getDetailedDescription());
         bookDto.setGrokipediaUrl(book.getGrokipediaUrl());
         bookDto.setInvalidGrokipediaUrls(RejectedMatches.orEmptyUrls(book.getInvalidGrokipediaUrls()));

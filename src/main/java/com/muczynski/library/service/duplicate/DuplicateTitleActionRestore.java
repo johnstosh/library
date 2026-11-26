@@ -89,9 +89,10 @@ public class DuplicateTitleActionRestore {
                         msu_audio_available, msu_paper_available, msu_ebook_available, msu_last_checked, msu_lookup_error,
                         reading_difficulty, binding, desire_to_purchase, author_id, library_id,
                         free_text_last_searched, invalid_grokipedia_urls, invalid_free_text_urls,
-                        invalid_free_audio_urls, invalid_holdings, related_feast_day, related_feast_day_explanation)
+                        invalid_free_audio_urls, invalid_holdings, related_feast_day, related_feast_day_explanation,
+                        main_character_sex)
                     VALUES (?, ?, ?, ?, ?, ?, lo_from_bytea(0, ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """)) {
                 setLong(statement, 1, book.getId());
                 setString(statement, 2, book.getTitle());
@@ -146,6 +147,7 @@ public class DuplicateTitleActionRestore {
                 setJson(statement, 51, book.getInvalidHoldings());
                 setDate(statement, 52, new FeastMonthDayConverter().convertToDatabaseColumn(book.getRelatedFeastDay()));
                 setString(statement, 53, book.getRelatedFeastDayExplanation());
+                setString(statement, 54, book.getMainCharacterSex());
                 statement.executeUpdate();
             }
             return null;
